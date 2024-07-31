@@ -1,0 +1,36 @@
+[package]
+name = "panduza"
+version = "0.0.0"
+edition = "2021"
+
+
+[[bin]]
+name = "test_sync"
+path = "src/examples/test_sync.rs"
+
+
+[[test]]
+name = "mqtt_connection"
+harness = false
+
+
+[dependencies]
+
+rumqttc = "0.24.0"
+
+monitor = "0.1.0"
+
+bytes = "1.0.1"
+thiserror = "1.0.63"
+panduza-proc = { path = "lib/panduza-proc" }
+
+[dev-dependencies]
+
+
+# rumqttd = { git = "https://github.com/Panduza/rumqtt", branch = "pza_tests" }
+
+cucumber = { version = "0.21.1", features = ["tracing", "timestamps"] }
+futures = "0.3"
+# tokio = { version = "1", features = ["full", "tracing"] }
+
+config = "0.14.0"
