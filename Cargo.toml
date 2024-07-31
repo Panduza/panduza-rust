@@ -1,0 +1,65 @@
+[package]
+name = "panduza"
+version = "0.0.0"
+edition = "2021"
+
+
+# [[bin]]
+# name = "test_sync"
+# path = "src/examples/test_sync.rs"
+
+
+[[bin]]
+name = "test_async"
+path = "src/examples/test_async.rs"
+
+
+# [[bin]]
+# name = "test_async"
+# path = "src/examples/test_cb.rs"
+
+
+# [[test]]
+# name = "mqtt_connection"
+# harness = false
+
+
+[dependencies]
+
+# Main async framework for the platform
+tokio = { version = "1.43.0", features = ["full"] }
+# MQTT async client
+rumqttc = "0.24.0"
+# Base for serde
+serde = { version = "1.0", features = ["derive"] }
+# Json serialization & deserialization
+serde_json = "1.0.114"
+# Bytes zero copy mangement
+bytes = "1.10.0"
+# 
+monitor = "0.1.0"
+# 
+thiserror = "1.0.63"
+# 
+futures = "0.3.30"
+# 
+async-trait = "0.1.81"
+# 
+rand = "0.8.5"
+#
+flatbuffers = "25.2.10"
+
+
+yash-fnmatch = "1.1.2"
+
+
+[dev-dependencies]
+
+
+# rumqttd = { git = "https://github.com/Panduza/rumqtt", branch = "pza_tests" }
+
+cucumber = { version = "0.21.1", features = ["tracing", "timestamps"] }
+futures = "0.3"
+# tokio = { version = "1", features = ["full", "tracing"] }
+
+config = "0.14.0"
