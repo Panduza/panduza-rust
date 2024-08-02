@@ -9,9 +9,14 @@ edition = "2021"
 # path = "src/examples/test_sync.rs"
 
 
+# [[bin]]
+# name = "test_async"
+# path = "src/examples/test_async.rs"
+
+
 [[bin]]
 name = "test_async"
-path = "src/examples/test_async.rs"
+path = "src/examples/test_cb.rs"
 
 
 [[test]]
