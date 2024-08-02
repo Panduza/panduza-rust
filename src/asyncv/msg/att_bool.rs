@@ -1,6 +1,7 @@
 mod inner_msg_att_bool;
 use inner_msg_att_bool::InnerAttBool;
 
+use std::future::Future;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -11,17 +12,22 @@ pub use super::CoreMembers;
 pub use super::OnMessageHandler;
 pub use super::ReactorData;
 
-pub trait OnChangeHandler: Send + Sync {
-    fn on_change(&self, new_value: bool);
-}
+// pub trait OnChangeHandler: Send + Sync {
+//     fn on_change(&self, new_value: bool);
+// }
+
+pub use inner_msg_att_bool::OnChangeHandlerFunction;
 
 pub struct AttBool {
     inner: Arc<Mutex<InnerAttBool>>,
 }
 
 impl AttBool {
-    pub async fn set_on_change_handler(&self, handler: Box<dyn OnChangeHandler>) {
-        self.inner.lock().await.set_on_change_handler(handler);
+    // pub async fn set_on_change_handler(&self, handler: Box<dyn OnChangeHandler>) {
+    //     self.inner.lock().await.set_on_change_handler(handler);
+    // }
+    pub async fn on_change(&self, handler: OnChangeHandlerFunction) {
+        self.inner.lock().await.on_change(handler);
     }
 
     /// Set the value of the attribute

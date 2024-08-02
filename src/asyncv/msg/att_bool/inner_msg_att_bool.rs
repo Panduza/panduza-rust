@@ -1,4 +1,9 @@
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
+
+use futures::future::BoxFuture;
+use futures::FutureExt;
 use tokio::sync::Mutex;
 
 use bytes::Bytes;
@@ -6,10 +11,16 @@ use bytes::Bytes;
 use crate::AttributeError;
 
 use super::CoreMembers;
-use super::OnChangeHandler;
+// use super::OnChangeHandler;
 use super::OnMessageHandler;
 
 use monitor::Monitor;
+
+// pub type OnChangeHandlerFunction = Arc<Box<dyn Future<Output = bool> + Send + Sync>>;
+pub type OnChangeHandlerFunction = Pin<Box<dyn Future<Output = bool> + Send + Sync>>;
+// pub type OnChangeHandlerFunction = BoxFuture<'static, ()>;
+
+// type OnChangeHandlerFunction = Arc<dyn 'static + Send + Sync + Fn(bool) -> BoxFuture<'static, ()>>;
 
 /// Inner implementation of the boolean message attribute
 ///
@@ -21,8 +32,8 @@ pub struct InnerAttBool {
     /// Requested value of the attribute (set by the user)
     requested_value: Option<bool>,
     /// Handler to call when the value change
-    on_change_handler: Option<Box<dyn OnChangeHandler>>,
-
+    // on_change_handler: Option<Box<dyn OnChangeHandler>>,
+    on_change_handler: Option<OnChangeHandlerFunction>,
     set_ensure_lock: Arc<Monitor<bool>>,
 }
 
@@ -76,7 +87,7 @@ impl InnerAttBool {
         return self.value;
     }
 
-    pub fn set_on_change_handler(&mut self, handler: Box<dyn OnChangeHandler>) {
+    pub fn on_change(&mut self, handler: OnChangeHandlerFunction) {
         self.on_change_handler = Some(handler);
     }
 
@@ -93,6 +104,27 @@ impl InnerAttBool {
 impl OnMessageHandler for InnerAttBool {
     fn on_message(&mut self, data: &Bytes) {
         println!("boolean");
+
+        // OnChangeHandlerFunction
+
+        // let a = async { true };
+        // let b = || a;
+
+        // self.on_change_handler = Some(Arc::new(|| a));
+        // tokio::spawn(b.clone()());
+        // tokio::spawn(b());
+        // tokio::spawn(b());
+        // tokio::spawn(pp55);
+        // tokio::spawn(pp55);
+
+        // let pp: Pin<Box<dyn Future<Output = bool> + Send>> = async move { true }.boxed();
+        // tokio::spawn(pp);
+        // tokio::spawn(pp);
+        // tokio::spawn(pp);
+
+        // if let Some(handler) = self.on_change_handler.as_ref() {
+        //     tokio::spawn(*(handler.clone()));
+        // }
         if data.len() == 1 {
             match data[0] {
                 b'1' => {

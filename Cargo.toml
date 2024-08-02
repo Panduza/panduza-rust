@@ -31,6 +31,8 @@ panduza-proc = { path = "lib/panduza-proc" }
 
 tokio = { version = "1", features = ["full"] }
 
+futures = "0.3.30"
+
 [dev-dependencies]
 
 
