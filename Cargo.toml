@@ -4,9 +4,14 @@ version = "0.0.0"
 edition = "2021"
 
 
+# [[bin]]
+# name = "test_sync"
+# path = "src/examples/test_sync.rs"
+
+
 [[bin]]
-name = "test_sync"
-path = "src/examples/test_sync.rs"
+name = "test_async"
+path = "src/examples/test_async.rs"
 
 
 [[test]]
@@ -23,6 +28,8 @@ monitor = "0.1.0"
 bytes = "1.0.1"
 thiserror = "1.0.63"
 panduza-proc = { path = "lib/panduza-proc" }
+
+tokio = { version = "1", features = ["full"] }
 
 [dev-dependencies]
 
