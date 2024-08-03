@@ -34,11 +34,11 @@ impl MessageDispatcher {
     /// Trigger the on_message of the attribute
     ///
     pub async fn trigger_on_change(&self, topic: &str, new_value: &Bytes) {
-        // println!("{:?}", self.message_attributes.keys());
+        println!("{:?}", self.message_attributes.keys());
         if let Some(attribute) = self.message_attributes.get(topic) {
             match attribute.upgrade() {
                 Some(attribute) => {
-                    attribute.lock().await.on_message(new_value);
+                    attribute.lock().await.on_message(new_value).await;
                 }
                 None => {
                     println!("Attribute not found");

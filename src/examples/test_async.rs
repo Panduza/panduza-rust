@@ -11,7 +11,9 @@ use tokio::time::Duration;
 
 use tokio::sync::Mutex;
 
-struct TestBehaviour {}
+struct TestBehaviour {
+    a1: AttributeBoolean,
+}
 
 impl TestBehaviour {
     pub fn to_arc_mutex(self) -> Arc<Mutex<TestBehaviour>> {
@@ -43,12 +45,16 @@ async fn main() {
 
     let lll = TestBehaviour {}.to_arc_mutex();
 
-    let pp = reactor
+    let pp: panduza::asyncv::attribute::message::boolean::AttributeBoolean = reactor
         .create_new_attribute()
         .with_topic("test")
         .with_type_boolean()
+        // .control_config (exemple pour la suite)
         .finish()
-        .with_boolean_message_handler(lll);
+        .await
+        .unwrap()
+        .with_boolean_message_handler(lll)
+        .await;
 
     println!("send data");
     pp.set(true).await.unwrap();

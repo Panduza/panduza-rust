@@ -3,6 +3,7 @@ use std::sync::Weak;
 use tokio::sync::Mutex;
 
 use crate::asyncv::attribute::message::AttributeId;
+use crate::AttributeError;
 
 use super::AttributeBoolean;
 use super::AttributeBuilder;
@@ -34,7 +35,7 @@ impl BuilderBoolean {
         }
     }
 
-    pub fn finish(self) -> AttributeBoolean {
-        AttributeBoolean::new(self)
+    pub async fn finish(self) -> Result<AttributeBoolean, AttributeError> {
+        AttributeBoolean::new(self).init().await
     }
 }

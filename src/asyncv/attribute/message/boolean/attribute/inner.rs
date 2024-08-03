@@ -70,6 +70,15 @@ impl InnerBoolean {
     //     }
     // }
 
+    /// Initialize the attribute
+    ///
+    pub async fn init(
+        &self,
+        attribute: Arc<Mutex<dyn OnMessageHandler>>,
+    ) -> Result<(), AttributeError> {
+        self.core.init(attribute).await
+    }
+
     fn set_ensure_ok(&self) -> bool {
         return self.requested_value == self.value;
     }
@@ -127,18 +136,15 @@ impl OnMessageHandler for InnerBoolean {
 
         // OnChangeHandlerFunction
 
-        // if let Some(handler) = self.on_change_handler.as_ref() {
-        //     tokio::spawn(*(handler.clone()));
-        // }
         if data.len() == 1 {
             match data[0] {
                 b'1' => {
                     self.value = Some(true);
-                    self.set_ensure_update();
+                    // self.set_ensure_update();
                 }
                 b'0' => {
                     self.value = Some(false);
-                    self.set_ensure_update();
+                    // self.set_ensure_update();
                 }
                 _ => {
                     println!("unexcpedted payload {:?}", data);
@@ -148,6 +154,14 @@ impl OnMessageHandler for InnerBoolean {
             // Do something with the value
         } else {
             println!("wierd payload {:?}", data);
+        }
+
+        if let Some(handler) = self.on_change_handler.as_ref() {
+            let h = handler.clone();
+            h.lock()
+                .await
+                .on_message_boolean(self.id, self.value.unwrap())
+                .await;
         }
     }
 }
