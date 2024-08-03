@@ -35,8 +35,12 @@ impl AttributeBoolean {
         }
     }
 
-    pub fn with_boolean_message_handler(handler: Arc<Mutex<dyn OnBooleanMessage>>) {
+    pub fn with_boolean_message_handler(
+        mut self,
+        handler: Arc<Mutex<dyn OnBooleanMessage>>,
+    ) -> Self {
         // let Box<dyn
+        self
     }
 
     // pub async fn on_change_handler(&self, handler: Box<dyn OnChangeHandler>) {

@@ -39,11 +39,14 @@ async fn main() {
 
     // reactor.scan_platforms();
 
+    let lll = TestBehaviour {}.to_arc_mutex();
+
     let pp = reactor
         .create_new_attribute()
         .with_topic("test")
         .with_type_boolean()
-        .finish();
+        .finish()
+        .with_boolean_message_handler(lll);
 
     println!("send data");
     pp.set(true).await.unwrap();
