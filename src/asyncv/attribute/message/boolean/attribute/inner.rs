@@ -9,6 +9,7 @@ use tokio::sync::Mutex;
 use bytes::Bytes;
 
 use crate::asyncv::attribute::message::AttributeId;
+use crate::asyncv::attribute::message::OnBooleanMessage;
 use crate::AttributeError;
 
 use super::MessageCoreMembers;
@@ -17,11 +18,6 @@ use super::OnMessageHandler;
 
 pub use super::BuilderBoolean;
 use monitor::Monitor;
-// pub type OnChangeHandlerFunction = Arc<Box<dyn Future<Output = bool> + Send + Sync>>;
-// pub type OnChangeHandlerFunction = Pin<Box<dyn Future<Output = bool> + Send + Sync>>;
-// pub type OnChangeHandlerFunction = BoxFuture<'static, ()>;
-
-// type OnChangeHandlerFunction = Arc<dyn 'static + Send + Sync + Fn(bool) -> BoxFuture<'static, ()>>;
 
 /// Inner implementation of the boolean message attribute
 ///
@@ -35,7 +31,7 @@ pub struct InnerBoolean {
     requested_value: Option<bool>,
     // / Handler to call when the value change
     // on_change_handler: Option<Box<dyn OnChangeHandler>>,
-    // on_change_handler: Option<OnChangeHandlerFunction>,
+    on_change_handler: Option<Arc<Mutex<dyn OnBooleanMessage>>>,
     // set_ensure_lock: Arc<Monitor<bool>>,
 }
 
@@ -51,7 +47,7 @@ impl InnerBoolean {
             ),
             value: None,
             requested_value: None,
-            // set_ensure_lock: None,
+            on_change_handler: None, // set_ensure_lock: None,
         }
     }
 
@@ -104,9 +100,9 @@ impl InnerBoolean {
         return self.value;
     }
 
-    // pub fn on_change_handler(&mut self, handler: Box<dyn OnChangeHandler>) {
-    //     self.on_change_handler = Some(handler);
-    // }
+    pub fn on_change_handler(&mut self, handler: Arc<Mutex<dyn OnBooleanMessage>>) {
+        self.on_change_handler = Some(handler);
+    }
 
     // pub fn on_change(&mut self, handler: OnChangeHandlerFunction) {
     //     self.on_change_handler = Some(handler);

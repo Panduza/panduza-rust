@@ -21,7 +21,9 @@ impl TestBehaviour {
 
 #[async_trait]
 impl OnBooleanMessage for TestBehaviour {
-    async fn on_message_boolean(&mut self, id: AttributeId, data: bool) {}
+    async fn on_message_boolean(&mut self, id: AttributeId, data: bool) {
+        println!("on bool {}{}", id, data)
+    }
 }
 
 #[tokio::main]
