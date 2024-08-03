@@ -10,8 +10,6 @@ use bytes::Bytes;
 
 use async_trait::async_trait;
 
-use crate::asyncv::attribute::message::AttributeId;
-use crate::asyncv::attribute::message::OnBooleanMessage;
 use crate::AttributeError;
 
 use super::MessageCoreMembers;
@@ -23,25 +21,20 @@ use monitor::Monitor;
 
 /// Inner implementation of the boolean message attribute
 ///
-pub struct InnerBoolean {
-    id: AttributeId,
+pub struct AttributeInner<TYPE: Into<Vec<u8>> + From<Vec<u8>> + PartialEq + Copy> {
     /// Members at the core of each attribute
     core: MessageCoreMembers,
     /// Current value of the attribute
-    value: Option<bool>,
+    value: Option<TYPE>,
     /// Requested value of the attribute (set by the user)
-    requested_value: Option<bool>,
+    requested_value: Option<TYPE>,
     // / Handler to call when the value change
-    // on_change_handler: Option<Box<dyn OnChangeHandler>>,
-    on_change_handler: Option<Arc<Mutex<dyn OnBooleanMessage>>>,
-    // set_ensure_lock: Arc<Monitor<bool>>,
 }
 
-impl InnerBoolean {
+impl<TYPE: Into<Vec<u8>> + From<Vec<u8>> + PartialEq + Copy> AttributeInner<TYPE> {
     ///
-    pub fn new(builder: BuilderBoolean) -> InnerBoolean {
-        InnerBoolean {
-            id: builder.id,
+    pub fn new(builder: BuilderBoolean) -> AttributeInner<TYPE> {
+        AttributeInner {
             core: MessageCoreMembers::new(
                 builder.message_client,
                 builder.message_dispatcher,
@@ -49,7 +42,6 @@ impl InnerBoolean {
             ),
             value: None,
             requested_value: None,
-            on_change_handler: None, // set_ensure_lock: None,
         }
     }
 
@@ -79,13 +71,13 @@ impl InnerBoolean {
         self.core.init(attribute).await
     }
 
-    fn set_ensure_ok(&self) -> bool {
-        return self.requested_value == self.value;
-    }
+    // fn set_ensure_ok(&self) -> bool {
+    //     return self.requested_value == self.value;
+    // }
 
     /// Set the value of the attribute
     ///
-    pub async fn set(&mut self, new_value: bool) -> Result<(), AttributeError> {
+    pub async fn set(&mut self, new_value: TYPE) -> Result<(), AttributeError> {
         // Do not go further if the value is already set
         if let Some(current_value) = self.value {
             if current_value == new_value {
@@ -96,10 +88,10 @@ impl InnerBoolean {
         // Set the requested value and publish the request
         self.requested_value = Some(new_value);
         match self.requested_value {
-            Some(requested_value) => match requested_value {
-                true => self.core.publish("1").await,
-                false => self.core.publish("0").await,
-            },
+            Some(requested_value) => {
+                self.core.publish(requested_value.into()).await;
+                Ok(())
+            }
             None => Err(AttributeError::Unkonwn),
         }
     }
@@ -107,12 +99,8 @@ impl InnerBoolean {
     /// Get the value of the attribute
     /// If None, the first value is not yet received
     ///
-    pub fn get(&self) -> Option<bool> {
+    pub fn get(&self) -> Option<TYPE> {
         return self.value;
-    }
-
-    pub fn on_change_handler(&mut self, handler: Arc<Mutex<dyn OnBooleanMessage>>) {
-        self.on_change_handler = Some(handler);
     }
 
     // pub fn on_change(&mut self, handler: OnChangeHandlerFunction) {
@@ -130,7 +118,7 @@ impl InnerBoolean {
 }
 
 #[async_trait]
-impl OnMessageHandler for InnerBoolean {
+impl<TYPE: Into<Vec<u8>> + From<Vec<u8>> + PartialEq + Copy> OnMessageHandler for AttributeInner {
     async fn on_message(&mut self, data: &Bytes) {
         println!("boolean");
 
@@ -154,14 +142,6 @@ impl OnMessageHandler for InnerBoolean {
             // Do something with the value
         } else {
             println!("wierd payload {:?}", data);
-        }
-
-        if let Some(handler) = self.on_change_handler.as_ref() {
-            let h = handler.clone();
-            h.lock()
-                .await
-                .on_message_boolean(self.id, self.value.unwrap())
-                .await;
         }
     }
 }

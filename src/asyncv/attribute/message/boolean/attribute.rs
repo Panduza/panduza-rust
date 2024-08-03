@@ -35,14 +35,6 @@ impl AttributeBoolean {
         }
     }
 
-    pub async fn with_boolean_message_handler(
-        self,
-        handler: Arc<Mutex<dyn OnBooleanMessage>>,
-    ) -> Self {
-        self.inner.lock().await.on_change_handler(handler);
-        self
-    }
-
     /// Initialize the attribute
     ///
     pub async fn init(self) -> Result<Self, AttributeError> {
