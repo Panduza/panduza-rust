@@ -5,6 +5,7 @@ use std::future::Future;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
+use crate::asyncv::attribute::message::OnBooleanMessage;
 use crate::AttributeError;
 use async_trait::async_trait;
 
@@ -32,6 +33,10 @@ impl AttributeBoolean {
         AttributeBoolean {
             inner: InnerBoolean::new(builder).to_arc_mutex(),
         }
+    }
+
+    pub fn with_boolean_message_handler(handler: Arc<Mutex<dyn OnBooleanMessage>>) {
+        // let Box<dyn
     }
 
     // pub async fn on_change_handler(&self, handler: Box<dyn OnChangeHandler>) {

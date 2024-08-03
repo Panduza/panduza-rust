@@ -22,6 +22,6 @@ pub trait OnMessageHandler: Send + Sync {
 }
 
 #[async_trait]
-pub trait OnMessageBoolean: Send + Sync {
+pub trait OnBooleanMessage: Send + Sync {
     async fn on_message_boolean(&mut self, id: AttributeId, data: bool);
 }
