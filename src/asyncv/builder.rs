@@ -2,7 +2,8 @@ use std::sync::Weak;
 
 use tokio::sync::Mutex;
 
-use super::attribute::message::boolean::BuilderBoolean;
+use super::attribute::message::boolean::attribute::Attribute;
+use super::attribute::message::boolean::attribute::AttributePayloadManager;
 use super::attribute::message::AttributeId;
 pub use super::MessageClient;
 pub use super::MessageDispatcher;
@@ -48,7 +49,7 @@ impl AttributeBuilder {
         self
     }
 
-    pub fn with_type_boolean(self) -> BuilderBoolean {
-        BuilderBoolean::new(self)
+    pub fn build_with_payload_type<TYPE: AttributePayloadManager>(self) -> Attribute<TYPE> {
+        Attribute::new(self)
     }
 }

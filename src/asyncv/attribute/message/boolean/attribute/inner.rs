@@ -10,18 +10,20 @@ use bytes::Bytes;
 
 use async_trait::async_trait;
 
+use crate::asyncv::AttributeBuilder;
 use crate::AttributeError;
 
 use super::MessageCoreMembers;
 // use super::OnChangeHandler;
 use super::OnMessageHandler;
 
-pub use super::BuilderBoolean;
-use monitor::Monitor;
+use tokio::sync::Notify;
+
+use super::AttributePayloadManager;
 
 /// Inner implementation of the boolean message attribute
 ///
-pub struct AttributeInner<TYPE: Into<Vec<u8>> + From<Vec<u8>> + PartialEq + Copy> {
+pub struct AttributeInner<TYPE: AttributePayloadManager> {
     /// Members at the core of each attribute
     core: MessageCoreMembers,
     /// Current value of the attribute
@@ -31,9 +33,9 @@ pub struct AttributeInner<TYPE: Into<Vec<u8>> + From<Vec<u8>> + PartialEq + Copy
     // / Handler to call when the value change
 }
 
-impl<TYPE: Into<Vec<u8>> + From<Vec<u8>> + PartialEq + Copy> AttributeInner<TYPE> {
+impl<TYPE: AttributePayloadManager> AttributeInner<TYPE> {
     ///
-    pub fn new(builder: BuilderBoolean) -> AttributeInner<TYPE> {
+    pub fn new(builder: AttributeBuilder) -> AttributeInner<TYPE> {
         AttributeInner {
             core: MessageCoreMembers::new(
                 builder.message_client,
@@ -118,30 +120,30 @@ impl<TYPE: Into<Vec<u8>> + From<Vec<u8>> + PartialEq + Copy> AttributeInner<TYPE
 }
 
 #[async_trait]
-impl<TYPE: Into<Vec<u8>> + From<Vec<u8>> + PartialEq + Copy> OnMessageHandler for AttributeInner {
+impl<TYPE: AttributePayloadManager> OnMessageHandler for AttributeInner<TYPE> {
     async fn on_message(&mut self, data: &Bytes) {
         println!("boolean");
 
         // OnChangeHandlerFunction
 
-        if data.len() == 1 {
-            match data[0] {
-                b'1' => {
-                    self.value = Some(true);
-                    // self.set_ensure_update();
-                }
-                b'0' => {
-                    self.value = Some(false);
-                    // self.set_ensure_update();
-                }
-                _ => {
-                    println!("unexcpedted payload {:?}", data);
-                    return;
-                }
-            };
-            // Do something with the value
-        } else {
-            println!("wierd payload {:?}", data);
-        }
+        // if data.len() == 1 {
+        //     match data[0] {
+        //         b'1' => {
+        //             self.value = Some(true);
+        //             // self.set_ensure_update();
+        //         }
+        //         b'0' => {
+        //             self.value = Some(false);
+        //             // self.set_ensure_update();
+        //         }
+        //         _ => {
+        //             println!("unexcpedted payload {:?}", data);
+        //             return;
+        //         }
+        //     };
+        //     // Do something with the value
+        // } else {
+        //     println!("wierd payload {:?}", data);
+        // }
     }
 }

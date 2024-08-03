@@ -1,8 +1,4 @@
 pub mod attribute;
-pub mod builder;
-
-pub use attribute::AttributeBoolean;
-pub use builder::BuilderBoolean;
 
 pub use super::AttributeBuilder;
 pub use super::MessageClient;

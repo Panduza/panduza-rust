@@ -1,5 +1,5 @@
 mod inner;
-use inner::InnerBoolean;
+use inner::AttributeInner;
 
 use std::future::Future;
 use std::sync::Arc;
@@ -9,8 +9,7 @@ use crate::asyncv::attribute::message::OnBooleanMessage;
 use crate::AttributeError;
 use async_trait::async_trait;
 
-pub use super::BuilderBoolean;
-use super::MessageCoreMembers;
+use super::{AttributeBuilder, MessageCoreMembers};
 
 pub use super::OnMessageHandler;
 
@@ -21,17 +20,22 @@ pub use super::OnMessageHandler;
 
 // pub use inner_msg_att_bool::OnChangeHandlerFunction;
 
-/// Attribute to manage a boolean
-pub struct AttributeBoolean {
-    ///
-    inner: Arc<Mutex<InnerBoolean>>,
+pub trait AttributePayloadManager:
+    Into<Vec<u8>> + From<Vec<u8>> + PartialEq + Copy + Sync + Send + 'static
+{
 }
 
-impl AttributeBoolean {
+/// Attribute to manage a boolean
+pub struct Attribute<TYPE: AttributePayloadManager> {
     ///
-    pub fn new(builder: BuilderBoolean) -> AttributeBoolean {
-        AttributeBoolean {
-            inner: InnerBoolean::new(builder).to_arc_mutex(),
+    inner: Arc<Mutex<AttributeInner<TYPE>>>,
+}
+
+impl<TYPE: AttributePayloadManager> Attribute<TYPE> {
+    ///
+    pub fn new(builder: AttributeBuilder) -> Attribute<TYPE> {
+        Attribute {
+            inner: AttributeInner::new(builder).to_arc_mutex(),
         }
     }
 
@@ -51,8 +55,8 @@ impl AttributeBoolean {
 
     /// Set the value of the attribute
     ///
-    pub async fn set(&self, value: bool) -> Result<(), AttributeError> {
-        self.inner.lock().await.set(value).await?;
+    pub async fn set<INTO_TYPE: Into<TYPE>>(&self, value: INTO_TYPE) -> Result<(), AttributeError> {
+        self.inner.lock().await.set(value.into()).await?;
         // let cv = self.inner.lock().await.set_ensure_lock_clone();
         // cv.with_lock(|mut done| {
         //     while !*done {
@@ -64,7 +68,7 @@ impl AttributeBoolean {
 
     /// Get the value of the attribute
     ///
-    pub async fn get(&self) -> Option<bool> {
+    pub async fn get(&self) -> Option<TYPE> {
         self.inner.lock().await.get()
     }
 }
