@@ -37,12 +37,6 @@ impl Reactor {
     /// * `core` - The core of the reactor
     ///
     pub fn new(settings: ReactorSettings) -> Self {
-        // println!("ReactorCore is running");
-        // let mut mqttoptions = MqttOptions::new("rumqtt-sync", "localhost", 1883);
-        // mqttoptions.set_keep_alive(Duration::from_secs(3));
-
-        // let (client, event_loop) = AsyncClient::new(mqttoptions, 100);
-
         // let data = ;
 
         Reactor {
@@ -51,12 +45,20 @@ impl Reactor {
         }
     }
 
-    pub fn start(&self) {
-        // let message_engine = MessageEngine()
-        // tokio::spawn(async move {
-        //     core.lock().await.run().await;
-        //     println!("ReactorCore is not runiing !!!!!!!!!!!!!!!!!!!!!!");
-        // });
+    pub fn start(&mut self) {
+        println!("ReactorCore is running");
+        let mut mqttoptions = MqttOptions::new("rumqtt-sync", "localhost", 1883);
+        mqttoptions.set_keep_alive(Duration::from_secs(3));
+
+        let (client, event_loop) = AsyncClient::new(mqttoptions, 100);
+
+        self.message_client = Some(client);
+
+        let mut message_engine = MessageEngine::new(self.message_dispatcher.clone(), event_loop);
+        tokio::spawn(async move {
+            message_engine.run().await;
+            println!("ReactorCore is not runiing !!!!!!!!!!!!!!!!!!!!!!");
+        });
     }
 
     pub fn create_new_attribute(&self) -> AttributeBuilder {

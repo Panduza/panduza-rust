@@ -22,7 +22,7 @@ impl MessageEngine {
         }
     }
 
-    async fn task(&mut self) {
+    pub async fn run(&mut self) {
         while let Ok(event) = self.message_event_loop.poll().await {
             // println!("Notification = {:?}", notification);
             // match notification {

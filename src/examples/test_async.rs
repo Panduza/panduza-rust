@@ -6,9 +6,9 @@ use tokio::time::Duration;
 #[tokio::main]
 async fn main() {
     let settings = ReactorSettings::new("localhost", 1883);
-    let reactor = Reactor::new(settings);
+    let mut reactor = Reactor::new(settings);
 
-    // reactor.run_in_thread();
+    reactor.start();
 
     // // wait for connection
 
