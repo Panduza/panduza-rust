@@ -8,6 +8,8 @@ use tokio::sync::Mutex;
 
 use bytes::Bytes;
 
+use async_trait::async_trait;
+
 use crate::asyncv::attribute::message::AttributeId;
 use crate::asyncv::attribute::message::OnBooleanMessage;
 use crate::AttributeError;
@@ -118,60 +120,34 @@ impl InnerBoolean {
     }
 }
 
-// impl OnMessageHandler for InnerBoolean {
-//     fn on_message(&mut self, data: &Bytes) {
-//         println!("boolean");
+#[async_trait]
+impl OnMessageHandler for InnerBoolean {
+    async fn on_message(&mut self, data: &Bytes) {
+        println!("boolean");
 
-//         // OnChangeHandlerFunction
+        // OnChangeHandlerFunction
 
-//         // let a = async { true };
-//         // let b = || a;
-
-//         // self.on_change_handler = Some(Arc::new(|| a));
-//         // tokio::spawn(b.clone()());
-//         // tokio::spawn(b());
-//         // tokio::spawn(b());
-//         // tokio::spawn(pp55);
-//         // tokio::spawn(pp55);
-
-//         // let pp: Pin<Box<dyn Future<Output = bool> + Send>> = async move { true }.boxed();
-//         // tokio::spawn(pp);
-//         // tokio::spawn(pp);
-//         // tokio::spawn(pp);
-
-//         // if let Some(handler) = self.on_change_handler.as_ref() {
-//         //     tokio::spawn(*(handler.clone()));
-//         // }
-//         if data.len() == 1 {
-//             match data[0] {
-//                 b'1' => {
-//                     self.value = Some(true);
-//                     self.set_ensure_update();
-//                 }
-//                 b'0' => {
-//                     self.value = Some(false);
-//                     self.set_ensure_update();
-//                 }
-//                 _ => {
-//                     println!("unexcpedted payload {:?}", data);
-//                     return;
-//                 }
-//             };
-//             // Do something with the value
-//         } else {
-//             println!("wierd payload {:?}", data);
-//         }
-//     }
-// }
-
-// impl From<CoreMembers> for InnerBoolean {
-//     fn from(core_data: CoreMembers) -> Self {
-//         return Self {
-//             core: core_data,
-//             value: None,
-//             requested_value: None,
-//             on_change_handler: None,
-//             set_ensure_lock: Arc::new(Monitor::new(false)),
-//         };
-//     }
-// }
+        // if let Some(handler) = self.on_change_handler.as_ref() {
+        //     tokio::spawn(*(handler.clone()));
+        // }
+        if data.len() == 1 {
+            match data[0] {
+                b'1' => {
+                    self.value = Some(true);
+                    self.set_ensure_update();
+                }
+                b'0' => {
+                    self.value = Some(false);
+                    self.set_ensure_update();
+                }
+                _ => {
+                    println!("unexcpedted payload {:?}", data);
+                    return;
+                }
+            };
+            // Do something with the value
+        } else {
+            println!("wierd payload {:?}", data);
+        }
+    }
+}
