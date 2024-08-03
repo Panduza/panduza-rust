@@ -8,7 +8,7 @@ async fn main() {
     let settings = ReactorSettings::new("localhost", 1883);
     let reactor = Reactor::new(settings);
 
-    reactor.run_in_thread();
+    // reactor.run_in_thread();
 
     // // wait for connection
 
@@ -19,13 +19,12 @@ async fn main() {
     // reactor.scan_platforms();
 
     let pp = reactor
-        .attribute_from_topic("ooo")
-        .await
-        .unwrap()
-        .into_att_bool()
-        .await;
+        .create_new_attribute()
+        .with_topic("test")
+        .with_type_boolean()
+        .finish();
 
-    pp.set(true).await.unwrap();
+    // pp.set(true).await.unwrap();
 
     sleep(Duration::from_secs(60)).await;
 }

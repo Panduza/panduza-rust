@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use tokio::time::sleep;
 use tokio::time::Duration;
 
@@ -31,6 +33,10 @@ impl Test {
     {
         self.b = Some(Box::pin(function));
     }
+
+    // async fn fire(&self) {
+    //     self.b.unwrap().await
+    // }
 }
 
 #[tokio::main]
@@ -48,7 +54,7 @@ async fn main() {
     // cbb = Some(a);
 
     let mut abc = Test { b: None };
-    abc.set_b(async move {
+    att.on_change(async move {
         println!("neww!! !!!!");
         Ok(true)
     });

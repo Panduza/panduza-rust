@@ -9,14 +9,14 @@ edition = "2021"
 # path = "src/examples/test_sync.rs"
 
 
-# [[bin]]
-# name = "test_async"
-# path = "src/examples/test_async.rs"
-
-
 [[bin]]
 name = "test_async"
-path = "src/examples/test_cb.rs"
+path = "src/examples/test_async.rs"
+
+
+# [[bin]]
+# name = "test_async"
+# path = "src/examples/test_cb.rs"
 
 
 [[test]]
@@ -37,6 +37,7 @@ panduza-proc = { path = "lib/panduza-proc" }
 tokio = { version = "1", features = ["full"] }
 
 futures = "0.3.30"
+async-trait = "0.1.81"
 
 [dev-dependencies]
 

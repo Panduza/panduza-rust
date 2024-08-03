@@ -1,25 +1,29 @@
 use std::sync::Arc;
+
 use tokio::sync::Mutex;
 
-use rumqttc::{Connection, EventLoop};
+use crate::asyncv::attribute::message::MessageDispatcher;
 
-use super::reactor_data::ReactorData;
+type MessageEventLoop = rumqttc::EventLoop;
 
-pub struct ReactorCore {
-    data: Arc<Mutex<ReactorData>>,
-    mqtt_connection: EventLoop,
+pub struct MessageEngine {
+    message_dispatcher: Arc<Mutex<MessageDispatcher>>,
+    message_event_loop: MessageEventLoop,
 }
 
-impl ReactorCore {
-    pub fn new(data: Arc<Mutex<ReactorData>>, mqtt_connection: EventLoop) -> Self {
-        ReactorCore {
-            data: data,
-            mqtt_connection: mqtt_connection,
+impl MessageEngine {
+    pub fn new(
+        message_dispatcher: Arc<Mutex<MessageDispatcher>>,
+        message_event_loop: MessageEventLoop,
+    ) -> MessageEngine {
+        MessageEngine {
+            message_dispatcher: message_dispatcher,
+            message_event_loop: message_event_loop,
         }
     }
 
-    pub async fn run(&mut self) {
-        while let Ok(event) = self.mqtt_connection.poll().await {
+    async fn task(&mut self) {
+        while let Ok(event) = self.message_event_loop.poll().await {
             // println!("Notification = {:?}", notification);
             // match notification {
             //     Ok(event) => {
@@ -35,7 +39,7 @@ impl ReactorCore {
                             // let payload_str = std::str::from_utf8(&payload).unwrap();
                             // println!("Received = {:?} {:?}", payload_str, packet.topic);
 
-                            self.data
+                            self.message_dispatcher
                                 .lock()
                                 .await
                                 .trigger_on_change(&packet.topic, &packet.payload)

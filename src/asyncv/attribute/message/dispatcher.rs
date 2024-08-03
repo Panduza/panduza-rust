@@ -8,13 +8,13 @@ use super::OnMessageHandler;
 
 /// Data used by the core the dispatch input data
 ///
-pub struct ReactorData {
+pub struct MessageDispatcher {
     /// List of attributes to trigger on message
     message_attributes: HashMap<String, Weak<Mutex<dyn OnMessageHandler>>>,
 }
 
-impl ReactorData {
-    /// Create a new ReactorData
+impl MessageDispatcher {
+    /// Create a new MessageDispatcher
     ///
     pub fn new() -> Self {
         Self {

@@ -1,21 +1,20 @@
-pub mod reactor_core;
-pub mod reactor_data;
+mod message_engine;
+use message_engine::MessageEngine;
 
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use crate::{AttributeError, ReactorSettings};
 
-use reactor_core::ReactorCore;
-pub use reactor_data::ReactorData;
-
 use rumqttc::AsyncClient;
 use rumqttc::{Client, MqttOptions, QoS};
 
 use std::time::Duration;
 
-use super::msg::att::Att;
-use super::msg::OnMessageHandler;
+use super::attribute::message::MessageDispatcher;
+
+use super::builder::AttributeBuilder;
+use super::MessageClient;
 
 /// The reactor is the main structure that will handle the connections and the events
 ///
@@ -23,10 +22,11 @@ use super::msg::OnMessageHandler;
 ///
 #[derive(Clone)]
 pub struct Reactor {
-    core: Arc<Mutex<ReactorCore>>,
-    data: Arc<Mutex<ReactorData>>,
+    /// The mqtt client
+    message_client: Option<MessageClient>,
 
-    mqtt_client: AsyncClient,
+    ///
+    message_dispatcher: Arc<Mutex<MessageDispatcher>>,
 }
 
 impl Reactor {
@@ -37,46 +37,40 @@ impl Reactor {
     /// * `core` - The core of the reactor
     ///
     pub fn new(settings: ReactorSettings) -> Self {
-        println!("ReactorCore is running");
-        let mut mqttoptions = MqttOptions::new("rumqtt-sync", "localhost", 1883);
-        mqttoptions.set_keep_alive(Duration::from_secs(3));
+        // println!("ReactorCore is running");
+        // let mut mqttoptions = MqttOptions::new("rumqtt-sync", "localhost", 1883);
+        // mqttoptions.set_keep_alive(Duration::from_secs(3));
 
-        let (client, connection) = AsyncClient::new(mqttoptions, 100);
+        // let (client, event_loop) = AsyncClient::new(mqttoptions, 100);
 
-        let data = Arc::new(Mutex::new(ReactorData::new()));
+        // let data = ;
 
         Reactor {
-            core: Arc::new(Mutex::new(ReactorCore::new(data.clone(), connection))),
-            data: data,
-            mqtt_client: client,
+            message_client: None,
+            message_dispatcher: Arc::new(Mutex::new(MessageDispatcher::new())),
         }
     }
 
-    pub fn run_in_thread(&self) {
-        let core = self.core.clone();
-        tokio::spawn(async move {
-            core.lock().await.run().await;
-            println!("ReactorCore is not runiing !!!!!!!!!!!!!!!!!!!!!!");
-        });
+    pub fn start(&self) {
+        // let message_engine = MessageEngine()
+        // tokio::spawn(async move {
+        //     core.lock().await.run().await;
+        //     println!("ReactorCore is not runiing !!!!!!!!!!!!!!!!!!!!!!");
+        // });
     }
 
-    /// Create a new attribute from its topic
-    ///
-    pub async fn attribute_from_topic(&self, topic: &str) -> Result<Att, AttributeError> {
-        Att::new(
-            self.data.clone(),
-            topic.to_string(),
-            self.mqtt_client.clone(),
+    pub fn create_new_attribute(&self) -> AttributeBuilder {
+        AttributeBuilder::new(
+            self.message_client.as_ref().unwrap().clone(),
+            Arc::downgrade(&self.message_dispatcher),
         )
-        .init()
-        .await
     }
 
-    pub async fn scan_platforms(&self) {
-        println!("publish");
-        self.mqtt_client
-            .publish("pza", QoS::AtLeastOnce, true, "pok")
-            .await
-            .unwrap();
-    }
+    // pub async fn scan_platforms(&self) {
+    //     println!("publish");
+    //     self.message_client
+    //         .publish("pza", QoS::AtLeastOnce, true, "pok")
+    //         .await
+    //         .unwrap();
+    // }
 }

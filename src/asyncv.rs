@@ -1,10 +1,17 @@
+pub mod attribute;
+pub mod builder;
+
+pub use builder::AttributeBuilder;
+
+pub use attribute::message::MessageDispatcher;
+
 /// This module manage the message attributes (MQTT/TCP)
-pub mod msg;
+// pub mod msg;
+pub type MessageClient = rumqttc::AsyncClient;
 
 /// This module manage the stream attributes (CUSTOM/QUIC)
-pub mod stream;
+// pub mod stream;
 
 /// This module manage the reactor
 mod reactor;
 pub type Reactor = reactor::Reactor;
-pub type ReactorData = reactor::ReactorData;

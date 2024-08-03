@@ -1,23 +1,24 @@
-use rumqttc::{AsyncClient, QoS};
+use rumqttc::QoS;
 use std::sync::Arc;
 use std::sync::Weak;
 use tokio::sync::Mutex;
 
 use crate::AttributeError;
 
+use super::MessageClient;
+use super::MessageDispatcher;
 use super::OnMessageHandler;
-use super::ReactorData;
 
 /// The core data of the attribute
 /// Those attributes will be moved between Att types
 #[derive(Clone)]
-pub struct CoreMembers {
+pub struct MessageCoreMembers {
     /// The data of the reactor, to be able to subscribe to the
     /// reactor and route messages to the attribute
-    reactor_data: Weak<Mutex<ReactorData>>,
+    message_dispatcher: Weak<Mutex<MessageDispatcher>>,
 
     /// The mqtt client
-    mqtt_client: AsyncClient,
+    message_client: MessageClient,
 
     /// The topic of the attribute
     topic: String,
@@ -26,16 +27,16 @@ pub struct CoreMembers {
     topic_cmd: String,
 }
 
-impl CoreMembers {
+impl MessageCoreMembers {
     /// Create a new core data
     pub fn new(
-        reactor_data: Weak<Mutex<ReactorData>>,
+        message_client: MessageClient,
+        message_dispatcher: Weak<Mutex<MessageDispatcher>>,
         topic: String,
-        mqtt_client: AsyncClient,
     ) -> Self {
         Self {
-            reactor_data: reactor_data,
-            mqtt_client: mqtt_client,
+            message_dispatcher: message_dispatcher,
+            message_client: message_client,
             topic: topic.clone(),
             topic_cmd: format!("{}/cmd", topic),
         }
@@ -57,7 +58,7 @@ impl CoreMembers {
     where
         V: Into<Vec<u8>>,
     {
-        self.mqtt_client
+        self.message_client
             .publish(&self.topic_cmd, QoS::AtMostOnce, true, value)
             .await
             .map_err(|e| AttributeError::Message(e))
@@ -68,7 +69,7 @@ impl CoreMembers {
     pub async fn subscribe(&self) -> Result<(), AttributeError> {
         // no need to store the att topic
         let topic_att = format!("{}/att", self.topic);
-        self.mqtt_client
+        self.message_client
             .subscribe(topic_att, QoS::AtMostOnce)
             .await
             .map_err(|e| AttributeError::Message(e))
@@ -82,7 +83,7 @@ impl CoreMembers {
     ) -> Result<(), AttributeError> {
         // no need to store the att topic
         let topic_att = format!("{}/att", self.topic);
-        self.reactor_data
+        self.message_dispatcher
             .upgrade()
             .ok_or(AttributeError::InternalPointerUpgrade)?
             .lock()
