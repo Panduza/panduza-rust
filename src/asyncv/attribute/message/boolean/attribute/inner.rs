@@ -8,6 +8,7 @@ use tokio::sync::Mutex;
 
 use bytes::Bytes;
 
+use crate::asyncv::attribute::message::AttributeId;
 use crate::AttributeError;
 
 use super::MessageCoreMembers;
@@ -42,6 +43,7 @@ impl InnerBoolean {
     ///
     pub fn new(builder: BuilderBoolean) -> InnerBoolean {
         InnerBoolean {
+            id: builder.id,
             core: MessageCoreMembers::new(
                 builder.message_client,
                 builder.message_dispatcher,

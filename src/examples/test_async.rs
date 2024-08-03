@@ -1,7 +1,17 @@
+use async_trait::async_trait;
+use panduza::asyncv::attribute::message::AttributeId;
+use panduza::asyncv::attribute::message::OnMessageBoolean;
 use panduza::asyncv::Reactor;
 use panduza::ReactorSettings;
 use tokio::time::sleep;
 use tokio::time::Duration;
+
+struct TestBehaviour {}
+
+#[async_trait]
+impl OnMessageBoolean for TestBehaviour {
+    async fn on_message_boolean(&mut self, id: AttributeId, data: bool) {}
+}
 
 #[tokio::main]
 async fn main() {
@@ -24,7 +34,8 @@ async fn main() {
         .with_type_boolean()
         .finish();
 
-    // pp.set(true).await.unwrap();
+    println!("send data");
+    pp.set(true).await.unwrap();
 
     sleep(Duration::from_secs(60)).await;
 }
