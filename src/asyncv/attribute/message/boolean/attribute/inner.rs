@@ -25,6 +25,7 @@ use monitor::Monitor;
 /// Inner implementation of the boolean message attribute
 ///
 pub struct InnerBoolean {
+    id: AttributeId,
     /// Members at the core of each attribute
     core: MessageCoreMembers,
     /// Current value of the attribute

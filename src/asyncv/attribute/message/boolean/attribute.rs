@@ -43,16 +43,16 @@ impl AttributeBoolean {
 
     /// Set the value of the attribute
     ///
-    // pub async fn set(&self, value: bool) -> Result<(), AttributeError> {
-    //     self.inner.lock().await.set(value).await?;
-    //     // let cv = self.inner.lock().await.set_ensure_lock_clone();
-    //     // cv.with_lock(|mut done| {
-    //     //     while !*done {
-    //     //         done.wait();
-    //     //     }
-    //     // });
-    //     // Ok(())
-    // }
+    pub async fn set(&self, value: bool) -> Result<(), AttributeError> {
+        self.inner.lock().await.set(value).await?;
+        // let cv = self.inner.lock().await.set_ensure_lock_clone();
+        // cv.with_lock(|mut done| {
+        //     while !*done {
+        //         done.wait();
+        //     }
+        // });
+        Ok(())
+    }
 
     /// Get the value of the attribute
     ///

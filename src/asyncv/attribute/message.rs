@@ -12,9 +12,16 @@ pub use super::AttributeBuilder;
 
 pub type MessageClient = rumqttc::AsyncClient;
 
+pub type AttributeId = u32;
+
 /// Trait to manage an message attribute (MQTT)
 /// Sync version
 #[async_trait]
 pub trait OnMessageHandler: Send + Sync {
     async fn on_message(&mut self, data: &Bytes);
+}
+
+#[async_trait]
+pub trait OnMessageBoolean: Send + Sync {
+    async fn on_message_boolean(&mut self, id: AttributeId, data: bool);
 }
