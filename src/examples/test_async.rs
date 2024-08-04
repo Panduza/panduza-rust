@@ -1,38 +1,8 @@
-use std::sync::Arc;
-
-use async_trait::async_trait;
-
-use panduza::asyncv::attribute::message::attribute::AttributePayloadManager;
-
 use panduza::asyncv::Reactor;
+use panduza::BooleanMessage;
 use panduza::ReactorSettings;
 use tokio::time::sleep;
 use tokio::time::Duration;
-
-use tokio::sync::Mutex;
-
-#[derive(Copy, Clone, PartialEq)]
-struct BooleanPayload {
-    value: bool,
-}
-
-impl Into<BooleanPayload> for bool {
-    fn into(self) -> BooleanPayload {
-        return BooleanPayload { value: true };
-    }
-}
-
-impl From<Vec<u8>> for BooleanPayload {
-    fn from(value: Vec<u8>) -> Self {
-        return BooleanPayload { value: true };
-    }
-}
-impl Into<Vec<u8>> for BooleanPayload {
-    fn into(self) -> Vec<u8> {
-        return vec![1];
-    }
-}
-impl AttributePayloadManager for BooleanPayload {}
 
 #[tokio::main]
 async fn main() {
@@ -41,24 +11,19 @@ async fn main() {
 
     reactor.start();
 
-    // // wait for connection
-
-    // // sleep(time::Duration::from_secs(5));
-
-    // println!("-----------");
-
-    // reactor.scan_platforms();
-
     let pp = reactor
         .create_new_attribute()
         .with_topic("test")
         // .control_config (exemple pour la suite)
-        .build_with_payload_type::<BooleanPayload>();
+        .build_with_message_type::<BooleanMessage>();
 
     println!("send data");
     pp.set(true).await.unwrap();
 
+    let pp2 = pp.clone();
     pp.when_change(async move {
+        println!("cooucou");
+        let _dat = pp2.get().await.unwrap();
         println!("cooucou");
     });
 

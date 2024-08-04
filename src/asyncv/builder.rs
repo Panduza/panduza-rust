@@ -2,10 +2,11 @@ use std::sync::Weak;
 
 use tokio::sync::Mutex;
 
-use super::attribute::message::attribute::Attribute;
-use super::attribute::message::attribute::AttributePayloadManager;
+use super::attribute::MessageAttribute;
+
 pub use super::MessageClient;
 pub use super::MessageDispatcher;
+use crate::AttributePayloadManager;
 
 /// Object that allow to build an generic attribute
 ///
@@ -19,6 +20,9 @@ pub struct AttributeBuilder {
 
     /// Topic of the attribute
     pub topic: Option<String>,
+
+    /// True if the attribute is readonly
+    pub is_read_only: bool,
 }
 
 impl AttributeBuilder {
@@ -31,6 +35,7 @@ impl AttributeBuilder {
             message_client,
             message_dispatcher,
             topic: None,
+            is_read_only: true,
         }
     }
 
@@ -40,7 +45,12 @@ impl AttributeBuilder {
         self
     }
 
-    pub fn build_with_payload_type<TYPE: AttributePayloadManager>(self) -> Attribute<TYPE> {
-        Attribute::new(self)
+    pub fn as_read_write(mut self) -> Self {
+        self.is_read_only = false;
+        self
+    }
+
+    pub fn build_with_message_type<TYPE: AttributePayloadManager>(self) -> MessageAttribute<TYPE> {
+        MessageAttribute::new(self)
     }
 }

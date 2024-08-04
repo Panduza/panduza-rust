@@ -9,10 +9,11 @@ use tokio::sync::Mutex;
 
 pub use super::MessageClient;
 use crate::AttributeError;
+use crate::AttributePayloadManager;
 
 use super::AttributeBuilder;
 
-pub use super::OnMessageHandler;
+use super::OnMessageHandler;
 
 // use super::att::Att;
 // pub use super::CoreMembers;
@@ -21,12 +22,8 @@ pub use super::OnMessageHandler;
 
 // pub use inner_msg_att_bool::OnChangeHandlerFunction;
 
-pub trait AttributePayloadManager:
-    Into<Vec<u8>> + From<Vec<u8>> + PartialEq + Copy + Sync + Send + 'static
-{
-}
-
 /// Attribute to manage a boolean
+#[derive(Clone)]
 pub struct Attribute<TYPE: AttributePayloadManager> {
     ///
     inner: Arc<Mutex<AttributeInner<TYPE>>>,

@@ -19,19 +19,18 @@ use tokio::sync::Notify;
 
 use super::AttributePayloadManager;
 
-/// Inner implementation of the boolean message attribute
+/// Inner implementation of the message attribute
+/// This inner implementation allow the public part to be cloneable easly
 ///
 pub struct AttributeInner<TYPE: AttributePayloadManager> {
-    /// The data of the reactor, to be able to subscribe to the
-    /// reactor and route messages to the attribute
+    /// Reactor message dispatcher
+    /// (to attach this attribute to the incoming messages)
     message_dispatcher: Weak<Mutex<MessageDispatcher>>,
-
-    /// The mqtt client
+    /// The message client (MQTT)
     message_client: MessageClient,
 
     /// The topic of the attribute
     topic: String,
-
     /// The topic for commands
     topic_cmd: String,
 
@@ -39,7 +38,6 @@ pub struct AttributeInner<TYPE: AttributePayloadManager> {
     value: Option<TYPE>,
     /// Requested value of the attribute (set by the user)
     requested_value: Option<TYPE>,
-    // / Handler to call when the value change
 }
 
 impl<TYPE: AttributePayloadManager> AttributeInner<TYPE> {

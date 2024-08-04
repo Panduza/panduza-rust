@@ -14,3 +14,11 @@ pub type ReactorSettings = common::ReactorSettings;
 pub trait SyncMessageAttribute: Send + Sync {
     fn on_message(&self, data: &Bytes);
 }
+
+pub use common::BooleanMessage;
+/// Trait for type that wan manage an attribute payload
+///
+pub trait AttributePayloadManager:
+    Into<Vec<u8>> + From<Vec<u8>> + PartialEq + Copy + Sync + Send + 'static
+{
+}
