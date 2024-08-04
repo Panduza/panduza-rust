@@ -36,26 +36,19 @@ impl<TYPE: MessagePayloadManager> MessageAttributeRw<TYPE> {
         Ok(self)
     }
 
-    // wait_change()
-    // wait_change_then()
-
-    pub fn when_change<F>(&self, function: F)
-    where
-        F: Future<Output = ()> + Send + 'static,
-        // F: Future<Output = Result<bool, ()>> + Send + 'static,
-    {
-        tokio::spawn(async move {
-            sleep(Duration::from_secs(1)).await;
-            function.await
-        });
+    pub async fn wait_change(&self) {
+        let change_notifier = self.inner.lock().await.base.clone_change_notifier();
+        change_notifier.notified().await
     }
 
-    // pub async fn on_change_handler(&self, handler: Box<dyn OnChangeHandler>) {
-    //     self.inner.lock().await.on_change_handler(handler);
-    // }
-    // pub async fn on_change(&self, handler: OnChangeHandlerFunction) {
-    //     self.inner.lock().await.on_change(handler);
-    // }
+    pub async fn wait_change_then<F>(&self, function: F)
+    where
+        F: Future<Output = ()> + Send + 'static,
+    {
+        let change_notifier = self.inner.lock().await.base.clone_change_notifier();
+        change_notifier.notified().await;
+        function.await;
+    }
 
     /// Set the value of the attribute
     ///

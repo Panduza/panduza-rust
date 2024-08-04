@@ -23,7 +23,7 @@ use tokio::sync::Notify;
 /// This inner implementation allow the public part to be cloneable easly
 pub struct MessageAttributeRwInner<TYPE: MessagePayloadManager> {
     /// Rw is based on Ro
-    base: MessageAttributeRoInner<TYPE>,
+    pub base: MessageAttributeRoInner<TYPE>,
 
     /// The topic for commands
     topic_cmd: String,
