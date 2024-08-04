@@ -109,28 +109,8 @@ impl<TYPE: MessagePayloadManager> Into<Arc<Mutex<MessageAttributeRwInner<TYPE>>>
 #[async_trait]
 impl<TYPE: MessagePayloadManager> OnMessageHandler for MessageAttributeRwInner<TYPE> {
     async fn on_message(&mut self, data: &Bytes) {
-        println!("boolean");
-
-        // OnChangeHandlerFunction
-
-        // if data.len() == 1 {
-        //     match data[0] {
-        //         b'1' => {
-        //             self.value = Some(true);
-        //             // self.set_ensure_update();
-        //         }
-        //         b'0' => {
-        //             self.value = Some(false);
-        //             // self.set_ensure_update();
-        //         }
-        //         _ => {
-        //             println!("unexcpedted payload {:?}", data);
-        //             return;
-        //         }
-        //     };
-        //     // Do something with the value
-        // } else {
-        //     println!("wierd payload {:?}", data);
-        // }
+        let new_value = TYPE::from(data.to_vec());
+        self.base.value = Some(new_value);
+        self.base.change_notifier.notify_waiters();
     }
 }

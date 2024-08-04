@@ -35,7 +35,7 @@ pub struct MessageAttributeRoInner<TYPE: MessagePayloadManager> {
     pub value: Option<TYPE>,
 
     ///
-    change_notifier: Arc<Notify>,
+    pub change_notifier: Arc<Notify>,
 }
 
 impl<TYPE: MessagePayloadManager> MessageAttributeRoInner<TYPE> {
@@ -115,7 +115,7 @@ impl<TYPE: MessagePayloadManager> Into<Arc<Mutex<MessageAttributeRoInner<TYPE>>>
 #[async_trait]
 impl<TYPE: MessagePayloadManager> OnMessageHandler for MessageAttributeRoInner<TYPE> {
     async fn on_message(&mut self, data: &Bytes) {
-        println!("ro_inner::on_message");
+        // println!("ro_inner::on_message");
         let new_value = TYPE::from(data.to_vec());
         self.value = Some(new_value);
         self.change_notifier.notify_waiters();
