@@ -2,11 +2,11 @@ use std::sync::Weak;
 
 use tokio::sync::Mutex;
 
-use super::attribute::MessageAttribute;
-
+use super::attribute::MessageAttributeRo;
+use super::attribute::MessageAttributeRw;
 pub use super::MessageClient;
 pub use super::MessageDispatcher;
-use crate::AttributePayloadManager;
+use crate::MessagePayloadManager;
 
 /// Object that allow to build an generic attribute
 ///
@@ -20,10 +20,21 @@ pub struct AttributeBuilder {
 
     /// Topic of the attribute
     pub topic: Option<String>,
-
-    /// True if the attribute is readonly
-    pub is_read_only: bool,
 }
+
+/// Builder specialisation for Ro Attribute
+pub struct AttributeRoBuilder {
+    base: AttributeBuilder,
+}
+
+/// Builder specialisation for Rw Attribute
+pub struct AttributeRwBuilder {
+    base: AttributeBuilder,
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 impl AttributeBuilder {
     /// Create a new builder
@@ -35,7 +46,6 @@ impl AttributeBuilder {
             message_client,
             message_dispatcher,
             topic: None,
-            is_read_only: true,
         }
     }
 
@@ -45,12 +55,35 @@ impl AttributeBuilder {
         self
     }
 
-    pub fn as_read_write(mut self) -> Self {
-        self.is_read_only = false;
-        self
+    pub fn with_ro_access(self) -> AttributeRoBuilder {
+        AttributeRoBuilder { base: self }
     }
 
-    pub fn build_with_message_type<TYPE: AttributePayloadManager>(self) -> MessageAttribute<TYPE> {
-        MessageAttribute::new(self)
+    pub fn with_rw_access(self) -> AttributeRwBuilder {
+        AttributeRwBuilder { base: self }
+    }
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+impl AttributeRoBuilder {
+    pub async fn finish_with_message_type<TYPE: MessagePayloadManager>(
+        self,
+    ) -> MessageAttributeRo<TYPE> {
+        MessageAttributeRo::from(self.base).init().await.unwrap()
+    }
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+impl AttributeRwBuilder {
+    pub async fn finish_with_message_type<TYPE: MessagePayloadManager>(
+        self,
+    ) -> MessageAttributeRw<TYPE> {
+        MessageAttributeRw::from(self.base).init().await.unwrap()
     }
 }

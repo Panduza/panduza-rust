@@ -1,4 +1,6 @@
-use crate::AttributePayloadManager;
+use std::fmt::Display;
+
+use crate::MessagePayloadManager;
 
 #[derive(Copy, Clone, PartialEq)]
 pub struct BooleanMessage {
@@ -21,4 +23,11 @@ impl Into<Vec<u8>> for BooleanMessage {
         return vec![1];
     }
 }
-impl AttributePayloadManager for BooleanMessage {}
+
+impl Display for BooleanMessage {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{}", self.value))
+    }
+}
+
+impl MessagePayloadManager for BooleanMessage {}

@@ -18,7 +18,7 @@ pub trait SyncMessageAttribute: Send + Sync {
 pub use common::BooleanMessage;
 /// Trait for type that wan manage an attribute payload
 ///
-pub trait AttributePayloadManager:
+pub trait MessagePayloadManager:
     Into<Vec<u8>> + From<Vec<u8>> + PartialEq + Copy + Sync + Send + 'static
 {
 }

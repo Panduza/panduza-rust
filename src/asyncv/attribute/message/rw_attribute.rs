@@ -1,5 +1,3 @@
-mod inner;
-use inner::AttributeInner;
 use tokio::time::sleep;
 
 use std::future::Future;
@@ -7,9 +5,10 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
 
+use super::MessageAttributeRwInner;
 pub use super::MessageClient;
 use crate::AttributeError;
-use crate::AttributePayloadManager;
+use crate::MessagePayloadManager;
 
 use super::AttributeBuilder;
 
@@ -24,19 +23,12 @@ use super::OnMessageHandler;
 
 /// Attribute to manage a boolean
 #[derive(Clone)]
-pub struct Attribute<TYPE: AttributePayloadManager> {
+pub struct MessageAttributeRw<TYPE: MessagePayloadManager> {
     ///
-    inner: Arc<Mutex<AttributeInner<TYPE>>>,
+    inner: Arc<Mutex<MessageAttributeRwInner<TYPE>>>,
 }
 
-impl<TYPE: AttributePayloadManager> Attribute<TYPE> {
-    ///
-    pub fn new(builder: AttributeBuilder) -> Attribute<TYPE> {
-        Attribute {
-            inner: AttributeInner::new(builder).to_arc_mutex(),
-        }
-    }
-
+impl<TYPE: MessagePayloadManager> MessageAttributeRw<TYPE> {
     /// Initialize the attribute
     ///
     pub async fn init(self) -> Result<Self, AttributeError> {
@@ -82,5 +74,14 @@ impl<TYPE: AttributePayloadManager> Attribute<TYPE> {
     ///
     pub async fn get(&self) -> Option<TYPE> {
         self.inner.lock().await.get()
+    }
+}
+
+/// Allow creation from the builder
+impl<TYPE: MessagePayloadManager> From<AttributeBuilder> for MessageAttributeRw<TYPE> {
+    fn from(builder: AttributeBuilder) -> Self {
+        MessageAttributeRw {
+            inner: MessageAttributeRwInner::from(builder).into(),
+        }
     }
 }

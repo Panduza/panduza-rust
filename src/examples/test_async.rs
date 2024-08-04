@@ -11,20 +11,35 @@ async fn main() {
 
     reactor.start();
 
-    let pp = reactor
+    let ro_bool = reactor
         .create_new_attribute()
         .with_topic("test")
-        // .control_config (exemple pour la suite)
-        .build_with_message_type::<BooleanMessage>();
+        .with_ro_access()
+        .finish_with_message_type::<BooleanMessage>()
+        .await;
 
-    println!("send data");
-    pp.set(true).await.unwrap();
+    // Wait then execute the function once
+    let ro_bool_bis = ro_bool.clone();
+    ro_bool
+        .wait_change_then(async move {
+            println!("cooucou");
+            let _dat = ro_bool_bis.get().await.unwrap();
+            println!("cooucou {} ", _dat);
+        })
+        .await;
 
-    let pp2 = pp.clone();
-    pp.when_change(async move {
-        println!("cooucou");
-        let _dat = pp2.get().await.unwrap();
-        println!("cooucou");
+    // Task that run an action every time the value of the attribute change
+    tokio::spawn(async move {
+        loop {
+            let ro_bool_bis = ro_bool.clone();
+            ro_bool
+                .wait_change_then(async move {
+                    println!("cooucou");
+                    let _dat = ro_bool_bis.get().await.unwrap();
+                    println!("cooucou {} ", _dat);
+                })
+                .await;
+        }
     });
 
     sleep(Duration::from_secs(60)).await;

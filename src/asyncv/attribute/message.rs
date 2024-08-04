@@ -1,10 +1,17 @@
-mod attribute;
 mod dispatcher;
+mod ro_attribute;
+mod ro_inner;
+mod rw_attribute;
+mod rw_inner;
 
 use async_trait::async_trait;
 use bytes::Bytes;
 
-pub type MessageAttribute<TYPE> = attribute::Attribute<TYPE>;
+pub use ro_inner::MessageAttributeRoInner;
+pub use rw_inner::MessageAttributeRwInner;
+
+pub use ro_attribute::MessageAttributeRo;
+pub use rw_attribute::MessageAttributeRw;
 
 pub use dispatcher::MessageDispatcher;
 
