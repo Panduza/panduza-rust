@@ -2,18 +2,14 @@ use std::sync::Weak;
 
 use tokio::sync::Mutex;
 
-use super::attribute::message::boolean::attribute::Attribute;
-use super::attribute::message::boolean::attribute::AttributePayloadManager;
-use super::attribute::message::AttributeId;
+use super::attribute::message::attribute::Attribute;
+use super::attribute::message::attribute::AttributePayloadManager;
 pub use super::MessageClient;
 pub use super::MessageDispatcher;
-
-static mut ID_POOL: AttributeId = 0;
 
 /// Object that allow to build an generic attribute
 ///
 pub struct AttributeBuilder {
-    pub id: AttributeId,
     /// The mqtt client
     pub message_client: MessageClient,
 
@@ -31,15 +27,10 @@ impl AttributeBuilder {
         message_client: MessageClient,
         message_dispatcher: Weak<Mutex<MessageDispatcher>>,
     ) -> AttributeBuilder {
-        unsafe {
-            let id = ID_POOL;
-            ID_POOL += 1;
-            AttributeBuilder {
-                id: id,
-                message_client,
-                message_dispatcher,
-                topic: None,
-            }
+        AttributeBuilder {
+            message_client,
+            message_dispatcher,
+            topic: None,
         }
     }
 

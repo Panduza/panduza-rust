@@ -1,15 +1,16 @@
 mod inner;
 use inner::AttributeInner;
+use tokio::time::sleep;
 
 use std::future::Future;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::Mutex;
 
-use crate::asyncv::attribute::message::OnBooleanMessage;
+pub use super::MessageClient;
 use crate::AttributeError;
-use async_trait::async_trait;
 
-use super::{AttributeBuilder, MessageCoreMembers};
+use super::AttributeBuilder;
 
 pub use super::OnMessageHandler;
 
@@ -46,6 +47,20 @@ impl<TYPE: AttributePayloadManager> Attribute<TYPE> {
         Ok(self)
     }
 
+    // wait_change()
+    // wait_change_then()
+
+    pub fn when_change<F>(&self, function: F)
+    where
+        F: Future<Output = ()> + Send + 'static,
+        // F: Future<Output = Result<bool, ()>> + Send + 'static,
+    {
+        tokio::spawn(async move {
+            sleep(Duration::from_secs(1)).await;
+            function.await
+        });
+    }
+
     // pub async fn on_change_handler(&self, handler: Box<dyn OnChangeHandler>) {
     //     self.inner.lock().await.on_change_handler(handler);
     // }
@@ -55,7 +70,7 @@ impl<TYPE: AttributePayloadManager> Attribute<TYPE> {
 
     /// Set the value of the attribute
     ///
-    pub async fn set<INTO_TYPE: Into<TYPE>>(&self, value: INTO_TYPE) -> Result<(), AttributeError> {
+    pub async fn set<I: Into<TYPE>>(&self, value: I) -> Result<(), AttributeError> {
         self.inner.lock().await.set(value.into()).await?;
         // let cv = self.inner.lock().await.set_ensure_lock_clone();
         // cv.with_lock(|mut done| {

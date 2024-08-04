@@ -2,9 +2,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
-use panduza::asyncv::attribute::message::boolean::attribute::AttributePayloadManager;
-use panduza::asyncv::attribute::message::AttributeId;
-use panduza::asyncv::attribute::message::OnBooleanMessage;
+use panduza::asyncv::attribute::message::attribute::AttributePayloadManager;
+
 use panduza::asyncv::Reactor;
 use panduza::ReactorSettings;
 use tokio::time::sleep;
@@ -19,18 +18,18 @@ struct BooleanPayload {
 
 impl Into<BooleanPayload> for bool {
     fn into(self) -> BooleanPayload {
-        todo!()
+        return BooleanPayload { value: true };
     }
 }
 
 impl From<Vec<u8>> for BooleanPayload {
     fn from(value: Vec<u8>) -> Self {
-        todo!()
+        return BooleanPayload { value: true };
     }
 }
 impl Into<Vec<u8>> for BooleanPayload {
     fn into(self) -> Vec<u8> {
-        todo!()
+        return vec![1];
     }
 }
 impl AttributePayloadManager for BooleanPayload {}
@@ -58,6 +57,10 @@ async fn main() {
 
     println!("send data");
     pp.set(true).await.unwrap();
+
+    pp.when_change(async move {
+        println!("cooucou");
+    });
 
     sleep(Duration::from_secs(60)).await;
 }
