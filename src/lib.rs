@@ -2,7 +2,7 @@ use bytes::Bytes;
 
 pub mod asyncv;
 mod common;
-pub mod syncv;
+pub mod structure;
 
 // --- COMMON ---
 
