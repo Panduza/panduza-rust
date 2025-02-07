@@ -47,7 +47,7 @@ impl StructureData {
             if let Some(driver_instances) = driver_instances.as_object() {
                 //
                 for (instance_names, body) in driver_instances.iter() {
-                    println!("Key: {}, Value: {}", instance_names, body);
+                    // println!("Key: {}, Value: {}", instance_names, body);
 
                     self.flatten_value(format!("pza/{}", instance_names), body);
                 }
@@ -56,7 +56,7 @@ impl StructureData {
 
         self.brut = brut;
 
-        println!("******* {:?}", self.flat);
+        // println!("******* {:?}", self.flat);
 
         self.initialized.notify_waiters();
 
@@ -158,7 +158,7 @@ impl Structure {
         tokio::spawn(async move {
             loop {
                 let message = data_receiver.recv().await;
-                println!("!!!!!!!!!!! ssss ttt Notification = {:?}", message);
+                // println!("!!!!!!!!!!! ssss ttt Notification = {:?}", message);
 
                 if let Some(message) = message {
                     match json_value_2.lock() {

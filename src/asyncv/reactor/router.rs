@@ -63,7 +63,7 @@ impl Router {
         loop {
             tokio::select! {
                 Some(rule) = self.rules_receiver.recv() => {
-                    println!("??? Rule = {:?}", rule);
+                    // println!("??? Rule = {:?}", rule);
                     self.routes.insert(rule.topic, rule.sender);
 
                 }
@@ -78,11 +78,11 @@ impl Router {
                             // println!("!!! Received = {:?} {:?}", payload_str, packet.topic);
 
                             if let Some(sender) = self.routes.get(&packet.topic) {
-                                println!("............ROUUUTe");
+                                // println!("............ROUUUTe");
                                 sender.send(Bytes::from(payload)).await.unwrap();
                             }
                             else {
-                                println!("-------- !!! No route for {:?}", packet.topic);
+                                // println!("-------- !!! No route for {:?}", packet.topic);
                             }
 
                         }

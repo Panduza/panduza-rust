@@ -29,16 +29,20 @@ impl BooleanAttribute {
     ) -> Self {
         let b_value = Arc::new(Mutex::new(false));
 
+        let update = Arc::new(Notify::new());
+
+        let update2 = update.clone();
         let json_value_2 = b_value.clone();
         tokio::spawn(async move {
             loop {
                 let message = data_receiver.recv().await;
-                println!("!!!!!!!!!!! BOOLEAN ttt Notification = {:?}", message);
+                // println!("!!!!!!!!!!! BOOLEAN ttt Notification = {:?}", message);
 
                 if let Some(message) = message {
                     match json_value_2.lock() {
                         Ok(mut b_value) => {
                             *b_value = serde_json::from_slice(&message).unwrap();
+                            update2.notify_waiters();
                         }
                         Err(e) => {
                             println!("Error = {:?}", e);
@@ -52,7 +56,7 @@ impl BooleanAttribute {
             cmd_topic: format!("{}/cmd", topic),
             message_client: message_client,
             value: b_value,
-            update: Arc::new(Notify::new()),
+            update: update,
         }
     }
 
