@@ -11,8 +11,14 @@ async fn main() {
     let settings = ReactorSettings::new("127.0.0.1", 1883);
     let mut reactor = Reactor::start(settings).await.unwrap();
 
-    let pp = reactor.find_attribute("truc_1").expect_boolean().await;
+    let mut pp = reactor
+        .find_attribute("truc_1")
+        .expect_boolean()
+        .await
+        .unwrap();
     println!("$$$$$$ {:?}", pp);
+
+    pp.set(true).await;
 
     // Print the elapsed time
     println!("Time elapsed: {:?}", start.elapsed());

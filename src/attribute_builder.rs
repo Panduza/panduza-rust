@@ -1,4 +1,10 @@
-use crate::{asyncv::reactor::Reactor, attribute_metadata::AttributeMetadata, BooleanAttribute};
+use rumqttc::QoS;
+
+use crate::{
+    asyncv::reactor::{self, Reactor},
+    attribute_metadata::AttributeMetadata,
+    BooleanAttribute,
+};
 
 #[derive(Clone)]
 /// Metadata for an attribute
@@ -26,8 +32,18 @@ impl AttributeBuilder {
         let md = self.metadata.as_ref().unwrap();
         let att_topic = format!("{}/att", md.topic);
 
+        self.reactor
+            .message_client
+            .subscribe(att_topic.clone(), QoS::AtLeastOnce)
+            .await
+            .unwrap();
+
         let pp = self.reactor.register_route(att_topic, 20).await?;
 
-        Ok(BooleanAttribute::new(pp))
+        Ok(BooleanAttribute::new(
+            md.topic.clone(),
+            self.reactor.message_client.clone(),
+            pp,
+        ))
     }
 }

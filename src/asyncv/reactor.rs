@@ -1,27 +1,19 @@
 use bytes::Bytes;
-use futures::channel;
 
 mod router;
 use router::{Router, RuleSender};
-use serde_json::json;
-
-use std::sync::Arc;
-use tokio::sync::Mutex;
 
 use crate::attribute_builder::AttributeBuilder;
-use crate::attribute_metadata::AttributeMetadata;
-use crate::structure::{self, Structure};
-use crate::{AttributeError, ReactorSettings};
+use crate::structure::Structure;
+use crate::ReactorSettings;
 
 use rand::distributions::Alphanumeric;
 use rand::Rng;
 use rumqttc::AsyncClient;
-use rumqttc::{Client, MqttOptions, QoS};
+use rumqttc::{MqttOptions, QoS};
 use std::time::Duration;
 
 use super::MessageClient;
-
-use tokio::sync::Notify;
 
 /// Receiver of data payload
 ///
@@ -34,7 +26,7 @@ pub type DataReceiver = tokio::sync::mpsc::Receiver<Bytes>;
 #[derive(Clone)]
 pub struct Reactor {
     /// The mqtt client
-    message_client: MessageClient,
+    pub message_client: MessageClient,
 
     ///
     rules_sender: tokio::sync::mpsc::Sender<router::Rule>,
@@ -73,7 +65,7 @@ impl Reactor {
 
         //
         // At the heart of the reactor, the router will dispatch the messages
-        let mut router = Router::new(event_loop, rules_receiver);
+        let mut router = Router::new(message_client.clone(), event_loop, rules_receiver);
         tokio::spawn(async move {
             router.run().await;
             println!("ReactorCore is not runiing !!!!!!!!!!!!!!!!!!!!!!");

@@ -2,12 +2,15 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use bytes::Bytes;
+use rumqttc::QoS;
 use tokio::sync::Mutex;
 
 type MessageEventLoop = rumqttc::EventLoop;
 
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::mpsc::Sender;
+
+use crate::asyncv::MessageClient;
 
 #[derive(Clone, Debug)]
 /// Object that tells to the router how to dispatch the messages
@@ -26,6 +29,9 @@ pub type RuleSender = tokio::sync::mpsc::Sender<Rule>;
 pub type RuleReceiver = tokio::sync::mpsc::Receiver<Rule>;
 
 pub struct Router {
+    /// The mqtt client
+    pub message_client: MessageClient,
+
     /// The message client
     ///
     message_event_loop: MessageEventLoop,
@@ -40,8 +46,13 @@ pub struct Router {
 }
 
 impl Router {
-    pub fn new(message_event_loop: MessageEventLoop, rules_receiver: Receiver<Rule>) -> Router {
+    pub fn new(
+        message_client: MessageClient,
+        message_event_loop: MessageEventLoop,
+        rules_receiver: Receiver<Rule>,
+    ) -> Router {
         Router {
+            message_client: message_client,
             message_event_loop: message_event_loop,
             rules_receiver: rules_receiver,
             routes: HashMap::new(),
@@ -54,6 +65,7 @@ impl Router {
                 Some(rule) = self.rules_receiver.recv() => {
                     println!("??? Rule = {:?}", rule);
                     self.routes.insert(rule.topic, rule.sender);
+
                 }
                 Ok(event) = self.message_event_loop.poll() => {
                     // println!("*** Notification = {:?}", event);
