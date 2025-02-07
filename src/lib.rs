@@ -4,6 +4,7 @@ pub mod asyncv;
 mod common;
 pub mod structure;
 
+pub mod attribute_builder;
 pub mod attribute_metadata;
 
 pub mod boolean_attribute;

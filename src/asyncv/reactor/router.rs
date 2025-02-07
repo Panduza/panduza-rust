@@ -4,8 +4,6 @@ use std::sync::Arc;
 use bytes::Bytes;
 use tokio::sync::Mutex;
 
-use crate::asyncv::attribute::message::MessageDispatcher;
-
 type MessageEventLoop = rumqttc::EventLoop;
 
 use tokio::sync::mpsc::Receiver;

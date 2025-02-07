@@ -1,15 +1,16 @@
 use serde_json::Value as JsonValue;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Metadata for an attribute
 ///
 pub struct AttributeMetadata {
+    pub topic: String,
     ///
     ///
-    r#type: String,
+    pub r#type: String,
     ///
     ///
-    info: Option<String>,
+    pub info: Option<String>,
     // mode
     // options
 }
@@ -25,7 +26,7 @@ impl AttributeMetadata {
 
     ///
     ///
-    pub fn from_json_value(value: &JsonValue) -> Result<Self, String> {
+    pub fn from_json_value(topic: String, value: &JsonValue) -> Result<Self, String> {
         //
         //
         let t = value
@@ -35,10 +36,9 @@ impl AttributeMetadata {
             .to_string();
 
         Ok(Self {
+            topic,
             r#type: t,
             info: None,
         })
     }
-
-    // try_into
 }

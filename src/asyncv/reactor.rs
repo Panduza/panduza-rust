@@ -1,7 +1,5 @@
-mod message_engine;
 use bytes::Bytes;
 use futures::channel;
-use message_engine::MessageEngine;
 
 mod router;
 use router::{Router, RuleSender};
@@ -10,8 +8,9 @@ use serde_json::json;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
+use crate::attribute_builder::AttributeBuilder;
 use crate::attribute_metadata::AttributeMetadata;
-use crate::structure::Structure;
+use crate::structure::{self, Structure};
 use crate::{AttributeError, ReactorSettings};
 
 use rand::distributions::Alphanumeric;
@@ -20,10 +19,9 @@ use rumqttc::AsyncClient;
 use rumqttc::{Client, MqttOptions, QoS};
 use std::time::Duration;
 
-use super::attribute::message::MessageDispatcher;
-
-use super::builder::AttributeBuilder;
 use super::MessageClient;
+
+use tokio::sync::Notify;
 
 /// Receiver of data payload
 ///
@@ -71,6 +69,8 @@ impl Reactor {
             Self::static_register_route(&rules_sender, "pza/_/structure/att", 5).await?;
         let structure = Structure::new(structure_data_receiver);
 
+        let structure_initialized = structure.initialized_notifier();
+
         //
         // At the heart of the reactor, the router will dispatch the messages
         let mut router = Router::new(event_loop, rules_receiver);
@@ -78,6 +78,8 @@ impl Reactor {
             router.run().await;
             println!("ReactorCore is not runiing !!!!!!!!!!!!!!!!!!!!!!");
         });
+
+        structure_initialized.notified().await;
 
         //
         // Build the reactor
@@ -134,12 +136,8 @@ impl Reactor {
 
     /// find_attribute().try_into
     ///
-    pub fn find_attribute<A: Into<String>>(&self, name: A) -> Option<AttributeMetadata> {
-        // AttributeData::new(
-        //     self.message_client.as_ref().unwrap().clone(),
-        //     Arc::downgrade(&self.message_dispatcher),
-        // )
-        None
+    pub fn find_attribute<A: Into<String>>(&self, name: A) -> AttributeBuilder {
+        return AttributeBuilder::new(self.clone(), self.structure.find_attribute(name));
     }
 
     // pub async fn scan_platforms(&self) {

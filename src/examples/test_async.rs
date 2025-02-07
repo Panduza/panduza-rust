@@ -1,14 +1,21 @@
 use panduza::asyncv::Reactor;
 use panduza::BooleanMessage;
 use panduza::ReactorSettings;
+use std::time::{Duration, Instant};
 use tokio::time::sleep;
-use tokio::time::Duration;
 
 #[tokio::main]
 async fn main() {
+    let start = Instant::now();
+
     let settings = ReactorSettings::new("127.0.0.1", 1883);
     let mut reactor = Reactor::start(settings).await.unwrap();
 
+    let pp = reactor.find_attribute("truc_1").expect_boolean().await;
+    println!("$$$$$$ {:?}", pp);
+
+    // Print the elapsed time
+    println!("Time elapsed: {:?}", start.elapsed());
     // let ro_bool = reactor
     //     .create_new_attribute()
     //     .with_topic("test")

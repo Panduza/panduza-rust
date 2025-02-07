@@ -1,9 +1,4 @@
 pub mod attribute;
-pub mod builder;
-
-pub use builder::AttributeBuilder;
-
-pub use attribute::message::MessageDispatcher;
 
 /// This module manage the message attributes (MQTT/TCP)
 // pub mod msg;

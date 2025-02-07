@@ -3,10 +3,12 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use bytes::Bytes;
-use serde_json::Value as JsonValue;
-
 use crate::{asyncv::reactor::DataReceiver, attribute_metadata::AttributeMetadata};
+use bytes::Bytes;
+use serde_json::{Map, Value as JsonValue};
+use yash_fnmatch::{without_escape, Pattern};
+
+use tokio::sync::Notify;
 
 #[derive(Debug)]
 struct StructureData {
@@ -17,13 +19,20 @@ struct StructureData {
     /// Structure extracted and prepared for easy access
     ///
     flat: HashMap<String, AttributeMetadata>,
+
+    ///
+    ///
+    initialized: Arc<Notify>,
 }
 
 impl StructureData {
+    ///
+    ///
     pub fn new() -> StructureData {
         Self {
             brut: JsonValue::Null,
             flat: HashMap::new(),
+            initialized: Arc::new(Notify::new()),
         }
     }
 
@@ -31,24 +40,104 @@ impl StructureData {
     ///
     pub fn update(&mut self, payload: Bytes) -> Result<(), String> {
         //
-        self.brut = serde_json::from_slice(&payload).map_err(|e| e.to_string())?;
+        let brut: JsonValue = serde_json::from_slice(&payload).map_err(|e| e.to_string())?;
 
         //
-        if let Some(driver_instances) = self.brut.get("driver_instances") {
+        if let Some(driver_instances) = brut.get("driver_instances") {
             if let Some(driver_instances) = driver_instances.as_object() {
                 //
                 for (instance_names, body) in driver_instances.iter() {
                     println!("Key: {}, Value: {}", instance_names, body);
+
+                    self.flatten_value(format!("pza/{}", instance_names), body);
                 }
             }
         }
+
+        self.brut = brut;
+
+        println!("******* {:?}", self.flat);
+
+        self.initialized.notify_waiters();
 
         Ok(())
     }
 
     ///
     ///
-    pub fn register_flat_entry(&mut self, name: String, data: JsonValue) {}
+    pub fn flatten_value(&mut self, level: String, data: &JsonValue) {
+        if let Some(data) = data.as_object() {
+            self.flatten_object(level, data).unwrap();
+        }
+    }
+
+    ///
+    ///
+    pub fn flatten_object(
+        &mut self,
+        level: String,
+        data: &Map<String, JsonValue>,
+    ) -> Result<(), String> {
+        //
+        //
+        match data.get("attributes") {
+            Some(att_values) => {
+                let values = att_values
+                    .as_object()
+                    .ok_or("'attributes' is not an object")?;
+
+                for (att_name, att_data) in values.iter() {
+                    self.register_flat_entry(format!("{}/{}", level, att_name), att_data)?;
+                }
+            }
+            None => {}
+        }
+
+        //
+        //
+        //
+        // #
+        // classes = data.get("classes")
+        // for c_name, c_data in classes.items():
+        //     self.flatten_structure(f"{level}/{c_name}", c_data)
+
+        Ok(())
+    }
+
+    /// Register a entry inside the flat structure
+    ///
+    pub fn register_flat_entry(&mut self, level: String, data: &JsonValue) -> Result<(), String> {
+        self.flat.insert(
+            level.clone(),
+            AttributeMetadata::from_json_value(level, &data)?,
+        );
+
+        Ok(())
+        // .ok_or(format!("cannot insert entry {:?}", &level))
+        // .map(|_| ())
+    }
+
+    pub fn find_attribute<A: Into<String>>(&self, pattern: A) -> Option<AttributeMetadata> {
+        let a: String = pattern.into();
+
+        //
+        let p = Pattern::parse(without_escape(a.as_str())).unwrap();
+        // assert_eq!(p.find("string"), Some(2..6));
+
+        for (topic, metadata) in self.flat.iter() {
+            if p.find(&topic).is_some() {
+                return Some(metadata.clone());
+            }
+        }
+
+        None
+    }
+
+    ///
+    ///
+    pub fn initialized_notifier(&self) -> Arc<Notify> {
+        self.initialized.clone()
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -74,7 +163,7 @@ impl Structure {
                 if let Some(message) = message {
                     match json_value_2.lock() {
                         Ok(mut deref_value) => {
-                            deref_value.update(message);
+                            deref_value.update(message).unwrap();
                         }
                         Err(e) => {
                             println!("Error = {:?}", e);
@@ -87,6 +176,13 @@ impl Structure {
         Structure { value: json_value }
     }
 
+    pub fn find_attribute<A: Into<String>>(&self, name: A) -> Option<AttributeMetadata> {
+        match self.value.lock() {
+            Ok(v) => v.find_attribute(name),
+            Err(_) => None,
+        }
+    }
+
     // pub fn update(&mut self, json_value: JsonValue) {
     //     self.json_value = json_value;
     // }
@@ -94,4 +190,10 @@ impl Structure {
     // pub async fn run(&mut self) {
 
     // }
+
+    ///
+    ///
+    pub fn initialized_notifier(&self) -> Arc<Notify> {
+        self.value.lock().unwrap().initialized_notifier()
+    }
 }
