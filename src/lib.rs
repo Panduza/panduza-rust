@@ -4,6 +4,11 @@ pub mod asyncv;
 mod common;
 pub mod structure;
 
+pub mod attribute_metadata;
+
+pub mod boolean_attribute;
+pub use boolean_attribute::BooleanAttribute;
+
 // --- COMMON ---
 
 pub type AttributeError = common::AttributeError;

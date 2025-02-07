@@ -1,14 +1,16 @@
 mod message_engine;
 use bytes::Bytes;
+use futures::channel;
 use message_engine::MessageEngine;
 
 mod router;
-use router::Router;
+use router::{Router, RuleSender};
 use serde_json::json;
 
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
+use crate::attribute_metadata::AttributeMetadata;
 use crate::structure::Structure;
 use crate::{AttributeError, ReactorSettings};
 
@@ -38,6 +40,8 @@ pub struct Reactor {
 
     ///
     rules_sender: tokio::sync::mpsc::Sender<router::Rule>,
+
+    structure: Structure,
 }
 
 impl Reactor {
@@ -62,6 +66,12 @@ impl Reactor {
         let (rules_sender, rules_receiver) = tokio::sync::mpsc::channel(100);
 
         //
+        // Create the structure
+        let structure_data_receiver =
+            Self::static_register_route(&rules_sender, "pza/_/structure/att", 5).await?;
+        let structure = Structure::new(structure_data_receiver);
+
+        //
         // At the heart of the reactor, the router will dispatch the messages
         let mut router = Router::new(event_loop, rules_receiver);
         tokio::spawn(async move {
@@ -69,19 +79,13 @@ impl Reactor {
             println!("ReactorCore is not runiing !!!!!!!!!!!!!!!!!!!!!!");
         });
 
-        let obj = Self {
-            message_client: message_client,
-            rules_sender: rules_sender,
-        };
-
-        let r = obj.register_route("pza/_/structure").await?;
-        let mut stru = Structure::new(r);
-
-        // stru.update(json!({}));
-
         //
         // Build the reactor
-        Ok(obj)
+        Ok(Self {
+            message_client: message_client,
+            rules_sender: rules_sender,
+            structure: structure,
+        })
     }
 
     fn generate_random_string(length: usize) -> String {
@@ -94,19 +98,32 @@ impl Reactor {
 
     /// Register a new route
     ///
-    pub async fn register_route<A: Into<String>>(&self, topic: A) -> Result<DataReceiver, String> {
+    pub fn register_route<A: Into<String> + 'static>(
+        &self,
+        topic: A,
+        channel_size: usize,
+    ) -> impl std::future::Future<Output = Result<DataReceiver, String>> + '_ {
+        Self::static_register_route(&self.rules_sender, topic, channel_size)
+    }
+
+    /// Register a new route
+    ///
+    async fn static_register_route<A: Into<String>>(
+        rules_sender: &RuleSender,
+        topic: A,
+        channel_size: usize,
+    ) -> Result<DataReceiver, String> {
         //
         // Create the data channel
-        let (data_sender, data_receiver) = tokio::sync::mpsc::channel::<Bytes>(100);
+        let (data_sender, data_receiver) = tokio::sync::mpsc::channel::<Bytes>(channel_size);
 
         //
         // Create the rules on the router
-        let rule = router::Rule {
-            topic: topic.into(),
-            sender: data_sender,
-        };
-        self.rules_sender
-            .send(rule)
+        rules_sender
+            .send(router::Rule {
+                topic: topic.into(),
+                sender: data_sender,
+            })
             .await
             .map_err(|e| e.to_string())?;
 
@@ -115,12 +132,15 @@ impl Reactor {
         Ok(data_receiver)
     }
 
-    // pub fn create_new_attribute(&self) -> AttributeBuilder {
-    //     AttributeBuilder::new(
-    //         self.message_client.as_ref().unwrap().clone(),
-    //         Arc::downgrade(&self.message_dispatcher),
-    //     )
-    // }
+    /// find_attribute().try_into
+    ///
+    pub fn find_attribute<A: Into<String>>(&self, name: A) -> Option<AttributeMetadata> {
+        // AttributeData::new(
+        //     self.message_client.as_ref().unwrap().clone(),
+        //     Arc::downgrade(&self.message_dispatcher),
+        // )
+        None
+    }
 
     // pub async fn scan_platforms(&self) {
     //     println!("publish");
