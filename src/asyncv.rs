@@ -13,5 +13,5 @@ pub type MessageClient = rumqttc::AsyncClient;
 // pub mod stream;
 
 /// This module manage the reactor
-mod reactor;
+pub mod reactor;
 pub type Reactor = reactor::Reactor;

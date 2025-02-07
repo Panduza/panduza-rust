@@ -7,9 +7,7 @@ use tokio::time::Duration;
 #[tokio::main]
 async fn main() {
     let settings = ReactorSettings::new("127.0.0.1", 1883);
-    let mut reactor = Reactor::new(settings);
-
-    reactor.start().await;
+    let mut reactor = Reactor::start(settings).await.unwrap();
 
     // let ro_bool = reactor
     //     .create_new_attribute()
