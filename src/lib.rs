@@ -7,19 +7,23 @@ pub mod router;
 
 /// This module manage the reactor
 pub mod reactor;
-pub type Reactor = reactor::Reactor;
+pub use reactor::create_reactor;
+pub use reactor::Reactor;
 
 // use bytes::Bytes;
 
 // pub mod asyncv;
 // mod common;
-// pub mod structure;
+pub mod structure;
 
-// pub mod attribute_builder;
-// pub mod attribute_metadata;
+pub mod attribute_builder;
+pub use attribute_builder::AttributeBuilder;
 
-// pub mod boolean_attribute;
-// pub use boolean_attribute::BooleanAttribute;
+pub mod attribute_metadata;
+pub use attribute_metadata::AttributeMetadata;
+
+pub mod boolean_attribute;
+pub use boolean_attribute::BooleanAttribute;
 
 // // --- COMMON ---
 

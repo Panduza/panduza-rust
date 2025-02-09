@@ -1,5 +1,4 @@
-use panduza::asyncv::Reactor;
-use panduza::ReactorSettings;
+use panduza::reactor::ReactorOptions;
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
 
@@ -7,21 +6,21 @@ use tokio::time::sleep;
 async fn main() {
     let start = Instant::now();
 
-    let settings = ReactorSettings::new("127.0.0.1", 1883);
-    let mut reactor = Reactor::start(settings).await.unwrap();
+    let options = ReactorOptions::new();
+    let mut reactor = panduza::create_reactor(options).await.unwrap();
 
     let mut pp = reactor
         .find_attribute("truc_1")
         .expect_boolean()
         .await
         .unwrap();
-    // println!("$$$$$$ {:?}", pp);
+    // // println!("$$$$$$ {:?}", pp);
 
-    let mut vvv = true;
-    for _ in 0..1000 {
-        vvv = if vvv { true } else { false };
-        pp.set(vvv).await;
-    }
+    // let mut vvv = true;
+    // for _ in 0..1000 {
+    //     vvv = if vvv { true } else { false };
+    //     pp.set(vvv).await;
+    // }
 
     // Print the elapsed time
     println!("Time elapsed: {:?}", start.elapsed() / 1000);

@@ -3,15 +3,16 @@ use std::sync::{Arc, Mutex};
 use bytes::Bytes;
 use tokio::sync::Notify;
 
-use crate::asyncv::{reactor::DataReceiver, MessageClient};
+use crate::{pubsub::Publisher, reactor::DataReceiver};
 
 #[derive(Clone, Debug)]
 /// Object to manage the BooleanAttribute
 ///
-pub struct BooleanAttribute {
-    cmd_topic: String,
+pub struct BooleanAttribute<P: Publisher> {
+    // cmd_topic: String,
     ///
-    message_client: MessageClient,
+    ///
+    cmd_publisher: P,
 
     /// initial data
     ///
@@ -20,12 +21,10 @@ pub struct BooleanAttribute {
     update: Arc<Notify>,
 }
 
-impl BooleanAttribute {
-    pub fn new(
-        topic: String,
-        message_client: MessageClient,
-        mut data_receiver: DataReceiver,
-    ) -> Self {
+impl<P: Publisher> BooleanAttribute<P> {
+    ///
+    ///
+    pub fn new(cmd_publisher: P, mut att_receiver: DataReceiver) -> Self {
         let b_value = Arc::new(Mutex::new(false));
 
         let update = Arc::new(Notify::new());
@@ -34,7 +33,7 @@ impl BooleanAttribute {
         let json_value_2 = b_value.clone();
         tokio::spawn(async move {
             loop {
-                let message = data_receiver.recv().await;
+                let message = att_receiver.recv().await;
                 // println!("!!!!!!!!!!! BOOLEAN ttt Notification = {:?}", message);
 
                 if let Some(message) = message {
@@ -52,8 +51,9 @@ impl BooleanAttribute {
         });
 
         BooleanAttribute {
-            cmd_topic: format!("{}/cmd", topic),
-            message_client: message_client,
+            // cmd_topic: format!("{}/cmd", topic),
+            // operator: operator,
+            cmd_publisher: cmd_publisher,
             value: b_value,
             update: update,
         }
@@ -64,10 +64,7 @@ impl BooleanAttribute {
     pub async fn set(&mut self, value: bool) {
         let pyl = Bytes::from(serde_json::to_string(&value).unwrap());
 
-        self.message_client
-            .publish_bytes(&self.cmd_topic, rumqttc::QoS::AtMostOnce, false, pyl)
-            .await
-            .unwrap();
+        self.cmd_publisher.publish(pyl).await.unwrap();
 
         self.update.notified().await;
     }

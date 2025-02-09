@@ -147,7 +147,6 @@ pub struct Structure {
     /// initial data
     ///
     value: Arc<Mutex<StructureData>>,
-    // pza_structure_flat
 }
 
 impl Structure {

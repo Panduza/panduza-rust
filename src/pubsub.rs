@@ -18,6 +18,7 @@ pub enum PubSubError {
     ListenError { cause: String },
 }
 
+#[derive(Default)]
 ///
 ///
 pub struct PubSubOptions {}
@@ -62,7 +63,7 @@ pub trait PubSubListener {
 
 /// Entry point to declare operator and use the connection
 ///
-pub trait PubSubOperator {
+pub trait PubSubOperator: Clone {
     ///
     ///
     fn declare_publisher(&self, topic: String, retain: bool)
