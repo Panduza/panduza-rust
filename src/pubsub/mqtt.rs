@@ -1,5 +1,8 @@
-use super::{PubSubError, PubSubEvent, PubSubListener, PubSubOperator, PubSubOptions};
+use super::{
+    PubSubError, PubSubEvent, PubSubListener, PubSubOperator, PubSubOptions, Publisher, Subscriber,
+};
 use async_trait::async_trait;
+use bytes::Bytes;
 use rand::distributions::Alphanumeric;
 use rand::Rng;
 use rumqttc::{AsyncClient, EventLoop};
@@ -77,13 +80,56 @@ impl MqttOperator {
     }
 }
 
-#[async_trait]
 impl PubSubOperator for MqttOperator {
     ///
     ///
-    async fn declare_publisher(&mut self) -> Result<PubSubEvent, PubSubError> {}
+    fn declare_publisher(&self) -> Result<impl Publisher, PubSubError> {}
 
     ///
     ///
-    async fn declare_subscriber(&mut self) -> Result<PubSubEvent, PubSubError> {}
+    fn declare_subscriber(&self) -> Result<impl Subscriber, PubSubError> {
+        Ok(MqttSubscriber::new(self.client.clone()))
+    }
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+pub struct MqttPublisher {
+    client: AsyncClient,
+}
+
+impl MqttPublisher {
+    pub fn new(client: AsyncClient) -> Self {
+        Self { client: client }
+    }
+}
+
+#[async_trait]
+impl Publisher for MqttPublisher {
+    ///
+    ///
+    async fn publish(&self, payload: Bytes) -> Result<(), PubSubError> {}
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+pub struct MqttSubscriber {
+    client: AsyncClient,
+}
+
+impl MqttSubscriber {
+    pub fn new(client: AsyncClient) -> Self {
+        Self { client: client }
+    }
+}
+
+#[async_trait]
+impl Subscriber for MqttSubscriber {
+    ///
+    ///
+    async fn subscribe<S: Into<String>>(&self, topic: S) -> Result<(), PubSubError> {}
 }

@@ -47,13 +47,12 @@ pub trait PubSubListener {
 
 /// Entry point to declare operator and use the connection
 ///
-#[async_trait]
 pub trait PubSubOperator {
     ///
     ///
-    async fn declare_publisher(&mut self) -> Result<PubSubEvent, PubSubError>;
+    fn declare_publisher(&self) -> Result<impl Publisher, PubSubError>;
 
     ///
     ///
-    async fn declare_subscriber(&mut self) -> Result<PubSubEvent, PubSubError>;
+    fn declare_subscriber(&self) -> Result<impl Subscriber, PubSubError>;
 }
