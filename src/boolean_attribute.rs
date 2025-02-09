@@ -1,7 +1,6 @@
 use std::sync::{Arc, Mutex};
 
 use bytes::Bytes;
-use serde_json::Value as JsonValue;
 use tokio::sync::Notify;
 
 use crate::asyncv::{reactor::DataReceiver, MessageClient};

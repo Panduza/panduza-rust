@@ -1,3 +1,5 @@
+pub mod pubsub;
+
 use bytes::Bytes;
 
 pub mod asyncv;

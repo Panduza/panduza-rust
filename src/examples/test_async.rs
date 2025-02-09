@@ -1,5 +1,4 @@
 use panduza::asyncv::Reactor;
-use panduza::BooleanMessage;
 use panduza::ReactorSettings;
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
