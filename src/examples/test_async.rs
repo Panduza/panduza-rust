@@ -14,16 +14,18 @@ async fn main() {
         .expect_boolean()
         .await
         .unwrap();
-    println!("$$$$$$ {:?}", pp);
+    // println!("$$$$$$ {:?}", pp);
 
+    let total = 20;
     let mut vvv = true;
-    for _ in 0..1000 {
+    for i in 0..total {
+        // println!("POK {:?}", i);
         vvv = if vvv { true } else { false };
         pp.set(vvv).await;
     }
 
     // Print the elapsed time
-    println!("Time elapsed: {:?}", start.elapsed() / 1000);
+    println!("Time elapsed: {:?}", start.elapsed() / total);
     // let ro_bool = reactor
     //     .create_new_attribute()
     //     .with_topic("test")
