@@ -2,7 +2,7 @@ use super::{PubSubError, PubSubEvent, PubSubListener, PubSubOperator, PubSubOpti
 use async_trait::async_trait;
 use rand::distributions::Alphanumeric;
 use rand::Rng;
-use rumqttc::AsyncClient;
+use rumqttc::{AsyncClient, EventLoop};
 use rumqttc::{MqttOptions, QoS};
 use std::time::Duration;
 
@@ -40,7 +40,21 @@ pub fn start_connection<O: PubSubOperator, L: PubSubListener>(
     let (client, event_loop) = AsyncClient::new(mqtt_options, 100);
 }
 
-pub struct MqttListener {}
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+pub struct MqttListener {
+    event_loop: EventLoop,
+}
+
+impl MqttListener {
+    pub fn new(event_loop: EventLoop) -> Self {
+        Self {
+            event_loop: event_loop,
+        }
+    }
+}
 
 #[async_trait]
 impl PubSubListener for MqttListener {
@@ -49,7 +63,19 @@ impl PubSubListener for MqttListener {
     async fn poll(&mut self) -> Result<PubSubEvent, PubSubError> {}
 }
 
-pub struct MqttOperator {}
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+pub struct MqttOperator {
+    client: AsyncClient,
+}
+
+impl MqttOperator {
+    pub fn new(client: AsyncClient) -> Self {
+        Self { client: client }
+    }
+}
 
 #[async_trait]
 impl PubSubOperator for MqttOperator {
