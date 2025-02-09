@@ -63,7 +63,41 @@ impl MqttListener {
 impl PubSubListener for MqttListener {
     ///
     ///
-    async fn poll(&mut self) -> Result<PubSubEvent, PubSubError> {}
+    async fn poll(&mut self) -> Result<PubSubEvent, PubSubError> {
+        loop {
+            match self.event_loop.poll().await {
+                Ok(event) => {
+                    // println!("*** Notification = {:?}", event);
+                    match event {
+                        rumqttc::Event::Incoming(incoming) => {
+                            match incoming {
+                                rumqttc::Packet::Publish(packet) => {
+                                    PubSubEvent::IncomingUpdate(())
+                                    //         // let payload = packet.payload;
+                                    //         // let payload_str = std::str::from_utf8(&payload).unwrap();
+                                    //         // // println!("!!! Received = {:?} {:?}", payload_str, packet.topic);
+
+                                    //         // if let Some(sender) = self.routes.get(&packet.topic) {
+                                    //         //     // println!("............ROUUUTe");
+                                    //         //     sender.send(Bytes::from(payload)).await.unwrap();
+                                    //         // }
+                                    //         // else {
+                                    //         //     // println!("-------- !!! No route for {:?}", packet.topic);
+                                }
+                                _ => {}
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                Err(e) => {
+                    return Err(PubSubError::ListenError {
+                        cause: e.to_string(),
+                    })
+                }
+            }
+        }
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -83,7 +117,13 @@ impl MqttOperator {
 impl PubSubOperator for MqttOperator {
     ///
     ///
-    fn declare_publisher(&self) -> Result<impl Publisher, PubSubError> {}
+    fn declare_publisher(
+        &self,
+        topic: String,
+        retain: bool,
+    ) -> Result<impl Publisher, PubSubError> {
+        Ok(MqttPublisher::new(self.client.clone(), topic, retain))
+    }
 
     ///
     ///
@@ -96,27 +136,45 @@ impl PubSubOperator for MqttOperator {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
+///
+///
 pub struct MqttPublisher {
     client: AsyncClient,
+    topic: String,
+    retain: bool,
 }
 
 impl MqttPublisher {
-    pub fn new(client: AsyncClient) -> Self {
-        Self { client: client }
+    pub fn new(client: AsyncClient, topic: String, retain: bool) -> Self {
+        Self {
+            client: client,
+            topic: topic,
+            retain: retain,
+        }
     }
 }
 
 #[async_trait]
 impl Publisher for MqttPublisher {
+    /// Publish the payload
     ///
-    ///
-    async fn publish(&self, payload: Bytes) -> Result<(), PubSubError> {}
+    async fn publish(&self, payload: Bytes) -> Result<(), PubSubError> {
+        self.client
+            .publish_bytes(&self.topic, QoS::AtMostOnce, self.retain, payload)
+            .await
+            .map_err(|e| PubSubError::PublishError {
+                topic: self.topic.clone(),
+                cause: e.to_string(),
+            })
+    }
 }
 
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
+///
+///
 pub struct MqttSubscriber {
     client: AsyncClient,
 }
@@ -131,5 +189,13 @@ impl MqttSubscriber {
 impl Subscriber for MqttSubscriber {
     ///
     ///
-    async fn subscribe<S: Into<String>>(&self, topic: S) -> Result<(), PubSubError> {}
+    async fn subscribe(&self, topic: String) -> Result<(), PubSubError> {
+        self.client
+            .subscribe(&topic, QoS::AtMostOnce)
+            .await
+            .map_err(|e| PubSubError::SubscribeError {
+                topic: topic,
+                cause: e.to_string(),
+            })
+    }
 }

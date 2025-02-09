@@ -8,19 +8,32 @@ use thiserror::Error as ThisError;
 ///
 #[derive(ThisError, Debug, Clone)]
 pub enum PubSubError {
-    #[error("Cannot publish message ({pyl_size:?} bytes) on topic {topic:?} because {cause:?}")]
-    PublishError {
-        topic: String,
-        pyl_size: usize,
-        cause: String,
-    },
+    #[error("Cannot publish message on topic {topic:?} because {cause:?}")]
+    PublishError { topic: String, cause: String },
+
+    #[error("Cannot subscribe to topic {topic:?} because {cause:?}")]
+    SubscribeError { topic: String, cause: String },
+
+    #[error("Error listening network because {cause:?}")]
+    ListenError { cause: String },
 }
 
+///
+///
 pub struct PubSubOptions {}
 
 ///
 ///
-pub enum PubSubEvent {}
+pub struct IncomingUpdate {
+    topic: String,
+    payload: Bytes,
+}
+
+///
+///
+pub enum PubSubEvent {
+    IncomingUpdate(IncomingUpdate),
+}
 
 #[async_trait]
 pub trait Publisher {
@@ -33,7 +46,7 @@ pub trait Publisher {
 pub trait Subscriber {
     ///
     ///
-    async fn subscribe<S: Into<String>>(&self, topic: S) -> Result<(), PubSubError>;
+    async fn subscribe(&self, topic: String) -> Result<(), PubSubError>;
 }
 
 /// Object that make the connection alive and listen incoming messages
@@ -50,7 +63,8 @@ pub trait PubSubListener {
 pub trait PubSubOperator {
     ///
     ///
-    fn declare_publisher(&self) -> Result<impl Publisher, PubSubError>;
+    fn declare_publisher(&self, topic: String, retain: bool)
+        -> Result<impl Publisher, PubSubError>;
 
     ///
     ///
