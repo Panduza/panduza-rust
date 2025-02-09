@@ -14,13 +14,13 @@ async fn main() {
         .expect_boolean()
         .await
         .unwrap();
-    // // println!("$$$$$$ {:?}", pp);
+    println!("$$$$$$ {:?}", pp);
 
-    // let mut vvv = true;
-    // for _ in 0..1000 {
-    //     vvv = if vvv { true } else { false };
-    //     pp.set(vvv).await;
-    // }
+    let mut vvv = true;
+    for _ in 0..1000 {
+        vvv = if vvv { true } else { false };
+        pp.set(vvv).await;
+    }
 
     // Print the elapsed time
     println!("Time elapsed: {:?}", start.elapsed() / 1000);

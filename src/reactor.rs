@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::pubsub::{PubSubOperator, Publisher};
 use crate::router::{create_mqtt_router, RouterHandler};
 use crate::structure::Structure;
@@ -67,7 +69,7 @@ impl<O: PubSubOperator> Reactor<O> {
         &self,
         topic: A,
         retain: bool,
-    ) -> Result<impl Publisher + '_, PubSubError> {
+    ) -> Result<Arc<dyn Publisher>, PubSubError> {
         self.router.register_publisher(topic.into(), retain)
     }
 }

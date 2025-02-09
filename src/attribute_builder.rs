@@ -28,16 +28,10 @@ impl<O: PubSubOperator> AttributeBuilder<O> {
         }
     }
 
-    pub async fn expect_boolean<P: Publisher>(&self) -> Result<BooleanAttribute<P>, String> {
+    pub async fn expect_boolean(&self) -> Result<BooleanAttribute, String> {
         let md = self.metadata.as_ref().unwrap();
         let att_topic = format!("{}/att", md.topic);
         let cmd_topic = format!("{}/cmd", md.topic);
-
-        // self.reactor
-        //     .message_client
-        //     .subscribe(att_topic.clone(), QoS::AtLeastOnce)
-        //     .await
-        //     .unwrap();
 
         let att_receiver = self.reactor.register_listener(att_topic, 20).await?;
 

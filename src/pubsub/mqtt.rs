@@ -8,6 +8,7 @@ use rand::distributions::Alphanumeric;
 use rand::Rng;
 use rumqttc::{AsyncClient, EventLoop, Publish};
 use rumqttc::{MqttOptions, QoS};
+use std::sync::Arc;
 use std::time::Duration;
 
 /// Generate a random string for connections IDs
@@ -127,8 +128,12 @@ impl PubSubOperator for MqttOperator {
         &self,
         topic: String,
         retain: bool,
-    ) -> Result<impl Publisher, PubSubError> {
-        Ok(MqttPublisher::new(self.client.clone(), topic, retain))
+    ) -> Result<Arc<dyn Publisher>, PubSubError> {
+        Ok(Arc::new(MqttPublisher::new(
+            self.client.clone(),
+            topic,
+            retain,
+        )))
     }
 
     ///
@@ -142,6 +147,7 @@ impl PubSubOperator for MqttOperator {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
+#[derive(Clone, Debug)]
 ///
 ///
 pub struct MqttPublisher {

@@ -1,5 +1,6 @@
 use bytes::Bytes;
 use std::collections::HashMap;
+use std::sync::Arc;
 use thiserror::Error as ThisError;
 type MessageEventLoop = rumqttc::EventLoop;
 use crate::pubsub::mqtt::create_connection;
@@ -102,7 +103,7 @@ impl<O: PubSubOperator> RouterHandler<O> {
         &self,
         topic: String,
         retain: bool,
-    ) -> Result<impl Publisher + '_, PubSubError> {
+    ) -> Result<Arc<dyn Publisher>, PubSubError> {
         self.operator.declare_publisher(topic, retain)
     }
 }

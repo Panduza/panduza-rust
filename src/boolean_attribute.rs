@@ -8,11 +8,11 @@ use crate::{pubsub::Publisher, reactor::DataReceiver};
 #[derive(Clone, Debug)]
 /// Object to manage the BooleanAttribute
 ///
-pub struct BooleanAttribute<P: Publisher> {
+pub struct BooleanAttribute {
     // cmd_topic: String,
     ///
     ///
-    cmd_publisher: P,
+    cmd_publisher: Arc<dyn Publisher>,
 
     /// initial data
     ///
@@ -21,10 +21,10 @@ pub struct BooleanAttribute<P: Publisher> {
     update: Arc<Notify>,
 }
 
-impl<P: Publisher> BooleanAttribute<P> {
+impl BooleanAttribute {
     ///
     ///
-    pub fn new(cmd_publisher: P, mut att_receiver: DataReceiver) -> Self {
+    pub fn new(cmd_publisher: Arc<dyn Publisher>, mut att_receiver: DataReceiver) -> Self {
         let b_value = Arc::new(Mutex::new(false));
 
         let update = Arc::new(Notify::new());
@@ -51,8 +51,6 @@ impl<P: Publisher> BooleanAttribute<P> {
         });
 
         BooleanAttribute {
-            // cmd_topic: format!("{}/cmd", topic),
-            // operator: operator,
             cmd_publisher: cmd_publisher,
             value: b_value,
             update: update,

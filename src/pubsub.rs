@@ -1,5 +1,7 @@
 pub mod mqtt;
 
+use std::{fmt::Debug, sync::Arc};
+
 use async_trait::async_trait;
 use bytes::Bytes;
 use thiserror::Error as ThisError;
@@ -39,7 +41,7 @@ pub enum PubSubEvent {
 }
 
 #[async_trait]
-pub trait Publisher {
+pub trait Publisher: Debug {
     ///
     ///
     async fn publish(&self, payload: Bytes) -> Result<(), PubSubError>;
@@ -66,8 +68,11 @@ pub trait PubSubListener {
 pub trait PubSubOperator: Clone {
     ///
     ///
-    fn declare_publisher(&self, topic: String, retain: bool)
-        -> Result<impl Publisher, PubSubError>;
+    fn declare_publisher(
+        &self,
+        topic: String,
+        retain: bool,
+    ) -> Result<Arc<dyn Publisher>, PubSubError>;
 
     ///
     ///
