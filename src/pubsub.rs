@@ -22,13 +22,15 @@ pub enum PubSubError {
 ///
 pub struct PubSubOptions {}
 
+#[derive(Debug)]
 ///
 ///
 pub struct IncomingUpdate {
-    topic: String,
-    payload: Bytes,
+    pub topic: String,
+    pub payload: Bytes,
 }
 
+#[derive(Debug)]
 ///
 ///
 pub enum PubSubEvent {

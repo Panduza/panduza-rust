@@ -1,32 +1,41 @@
+//
 pub mod pubsub;
+pub use pubsub::PubSubError;
+pub use pubsub::PubSubOptions;
 
-use bytes::Bytes;
+pub mod router;
 
-pub mod asyncv;
-mod common;
-pub mod structure;
+/// This module manage the reactor
+pub mod reactor;
+pub type Reactor = reactor::Reactor;
 
-pub mod attribute_builder;
-pub mod attribute_metadata;
+// use bytes::Bytes;
 
-pub mod boolean_attribute;
-pub use boolean_attribute::BooleanAttribute;
+// pub mod asyncv;
+// mod common;
+// pub mod structure;
 
-// --- COMMON ---
+// pub mod attribute_builder;
+// pub mod attribute_metadata;
 
-pub type AttributeError = common::AttributeError;
-pub type ReactorSettings = common::ReactorSettings;
+// pub mod boolean_attribute;
+// pub use boolean_attribute::BooleanAttribute;
 
-/// Trait to manage an message attribute (MQTT)
-/// Sync version
-pub trait SyncMessageAttribute: Send + Sync {
-    fn on_message(&self, data: &Bytes);
-}
+// // --- COMMON ---
 
-pub use common::BooleanMessage;
-/// Trait for type that wan manage an attribute payload
-///
-pub trait MessagePayloadManager:
-    Into<Vec<u8>> + From<Vec<u8>> + PartialEq + Copy + Sync + Send + 'static
-{
-}
+// pub type AttributeError = common::AttributeError;
+// pub type ReactorSettings = common::ReactorSettings;
+
+// /// Trait to manage an message attribute (MQTT)
+// /// Sync version
+// pub trait SyncMessageAttribute: Send + Sync {
+//     fn on_message(&self, data: &Bytes);
+// }
+
+// pub use common::BooleanMessage;
+// /// Trait for type that wan manage an attribute payload
+// ///
+// pub trait MessagePayloadManager:
+//     Into<Vec<u8>> + From<Vec<u8>> + PartialEq + Copy + Sync + Send + 'static
+// {
+// }

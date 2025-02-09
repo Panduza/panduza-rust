@@ -13,8 +13,6 @@ use rumqttc::AsyncClient;
 use rumqttc::{MqttOptions, QoS};
 use std::time::Duration;
 
-use super::MessageClient;
-
 /// Receiver of data payload
 ///
 pub type DataReceiver = tokio::sync::mpsc::Receiver<Bytes>;

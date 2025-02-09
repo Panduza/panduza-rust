@@ -1,11 +1,12 @@
 use super::{
-    PubSubError, PubSubEvent, PubSubListener, PubSubOperator, PubSubOptions, Publisher, Subscriber,
+    IncomingUpdate, PubSubError, PubSubEvent, PubSubListener, PubSubOperator, PubSubOptions,
+    Publisher, Subscriber,
 };
 use async_trait::async_trait;
 use bytes::Bytes;
 use rand::distributions::Alphanumeric;
 use rand::Rng;
-use rumqttc::{AsyncClient, EventLoop};
+use rumqttc::{AsyncClient, EventLoop, Publish};
 use rumqttc::{MqttOptions, QoS};
 use std::time::Duration;
 
@@ -33,14 +34,17 @@ fn pubsub_options_to_mqtt_options(options: PubSubOptions) -> MqttOptions {
 
 /// Start a MQTT connection and return object of the PubSub API
 ///
-pub fn start_connection<O: PubSubOperator, L: PubSubListener>(
+pub fn create_connection(
     options: PubSubOptions,
-) -> Result<(O, L), PubSubError> {
+) -> Result<(impl PubSubOperator, impl PubSubListener), PubSubError> {
     //
     let mqtt_options = pubsub_options_to_mqtt_options(options);
 
     //
     let (client, event_loop) = AsyncClient::new(mqtt_options, 100);
+
+    //
+    Ok((MqttOperator::new(client), MqttListener::new(event_loop)))
 }
 
 // ----------------------------------------------------------------------------
@@ -52,10 +56,21 @@ pub struct MqttListener {
 }
 
 impl MqttListener {
+    ///
+    ///
     pub fn new(event_loop: EventLoop) -> Self {
         Self {
             event_loop: event_loop,
         }
+    }
+
+    ///
+    ///
+    pub fn process_incoming_publish(packet: Publish) -> PubSubEvent {
+        PubSubEvent::IncomingUpdate(IncomingUpdate {
+            topic: packet.topic,
+            payload: packet.payload,
+        })
     }
 }
 
@@ -69,24 +84,12 @@ impl PubSubListener for MqttListener {
                 Ok(event) => {
                     // println!("*** Notification = {:?}", event);
                     match event {
-                        rumqttc::Event::Incoming(incoming) => {
-                            match incoming {
-                                rumqttc::Packet::Publish(packet) => {
-                                    PubSubEvent::IncomingUpdate(())
-                                    //         // let payload = packet.payload;
-                                    //         // let payload_str = std::str::from_utf8(&payload).unwrap();
-                                    //         // // println!("!!! Received = {:?} {:?}", payload_str, packet.topic);
-
-                                    //         // if let Some(sender) = self.routes.get(&packet.topic) {
-                                    //         //     // println!("............ROUUUTe");
-                                    //         //     sender.send(Bytes::from(payload)).await.unwrap();
-                                    //         // }
-                                    //         // else {
-                                    //         //     // println!("-------- !!! No route for {:?}", packet.topic);
-                                }
-                                _ => {}
+                        rumqttc::Event::Incoming(incoming) => match incoming {
+                            rumqttc::Packet::Publish(packet) => {
+                                return Ok(Self::process_incoming_publish(packet));
                             }
-                        }
+                            _ => {}
+                        },
                         _ => {}
                     }
                 }
