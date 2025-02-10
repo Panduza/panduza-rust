@@ -1,5 +1,6 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::Mutex;
 
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 
@@ -38,7 +39,7 @@ impl TaskMonitor {
                 match handle_receiver.recv().await {
                     Some(new_handle) => {
                         println!("new {:?}", new_handle.id());
-                        handles_clone_1.lock().unwrap().push(new_handle);
+                        handles_clone_1.lock().await.push(new_handle);
                     }
                     None => todo!(),
                 }
@@ -51,11 +52,25 @@ impl TaskMonitor {
         let to = tokio::spawn(async move {
             loop {
                 tokio::time::sleep(Duration::from_millis(2000)).await;
-                let mut hlock = handles_clone_2.lock().unwrap();
-                for h in hlock.iter_mut() {
+                let mut hlock = handles_clone_2.lock().await;
+                let mut i = 0;
+
+                if hlock.len() <= 0 {
+                    println!("no more task to monitor")
+                }
+
+                while i < hlock.len() {
+                    let h = &mut hlock[i];
                     println!("{:?}", h.is_finished());
-                    let r = h.await;
-                    // h.abort();
+                    if h.is_finished() {
+                        let r = h.await;
+                        println!("Task finished: {:?}", r);
+                        // Supprimer l'élément du vecteur
+                        hlock.remove(i);
+                    } else {
+                        // Incrémenter l'index seulement si l'élément n'a pas été supprimé
+                        i += 1;
+                    }
                 }
                 drop(hlock);
             }
