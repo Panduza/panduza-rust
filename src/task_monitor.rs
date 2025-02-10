@@ -89,6 +89,22 @@ impl TaskMonitor {
 
     ///
     ///
+    pub async fn cancel_all_monitored_tasks(&mut self) {
+        let mut hlock = self.handles.lock().await;
+
+        for h in hlock.iter_mut() {
+            h.abort();
+        }
+
+        for h in hlock.iter_mut() {
+            h.await.unwrap().unwrap();
+        }
+
+        hlock.clear();
+    }
+
+    ///
+    ///
     pub fn handle_sender(&self) -> Sender<TaskHandle> {
         self.handle_sender.clone()
     }
