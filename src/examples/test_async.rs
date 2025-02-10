@@ -1,4 +1,4 @@
-use panduza::reactor::ReactorOptions;
+use panduza::{reactor::ReactorOptions, task_monitor::TaskMonitor};
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
 
@@ -23,6 +23,27 @@ async fn main() {
         vvv = if vvv { true } else { false };
         pp.set(vvv).await;
     }
+
+    let to = tokio::spawn(async move {
+        for i in 0..2 {
+            tokio::time::sleep(Duration::from_millis(1000)).await;
+            println!("oooo");
+        }
+        Ok(())
+    });
+
+    let (monitor, event_receiver) = TaskMonitor::new();
+
+    monitor.handle_sender().send(to).await.unwrap();
+
+    // What if we create an other attribute on the same topic ?
+    //      need to multiplexer
+
+    // What if we delete the attribute ?
+    //      need to cleanup
+
+    // Is tokio spawn ok ? because it won't catch error ?
+    //      this would force me to
 
     // Print the elapsed time
     println!("Time elapsed: {:?}", start.elapsed() / total);

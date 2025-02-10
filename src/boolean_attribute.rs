@@ -4,7 +4,7 @@ use bytes::Bytes;
 use tokio::sync::Notify;
 
 use crate::{pubsub::Publisher, reactor::DataReceiver};
-
+use tokio::sync::oneshot;
 #[derive(Clone, Debug)]
 /// Object to manage the BooleanAttribute
 ///
@@ -31,10 +31,13 @@ impl BooleanAttribute {
 
         let update2 = update.clone();
         let json_value_2 = b_value.clone();
+
+        // let (send, mut recv) = oneshot::channel();
+
         tokio::spawn(async move {
             loop {
                 let message = att_receiver.recv().await;
-                // println!("!!!!!!!!!!! BOOLEAN ttt Notification = {:?}", message);
+                println!("!!!!!!!!!!! BOOLEAN ttt Notification = {:?}", message);
 
                 if let Some(message) = message {
                     match json_value_2.lock() {
@@ -46,9 +49,16 @@ impl BooleanAttribute {
                             println!("Error = {:?}", e);
                         }
                     }
+                } else {
+                    break;
                 }
+
+                // None => no more message
             }
         });
+
+        // let turc = hhh.id();
+        // println!("{:?}", turc);
 
         BooleanAttribute {
             cmd_publisher: cmd_publisher,
