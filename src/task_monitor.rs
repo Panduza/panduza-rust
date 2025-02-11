@@ -32,16 +32,23 @@ pub struct TaskMonitor {
     task_monitoring: JoinHandle<()>,
 }
 
+// ----------------------------------------------------------------------------
 impl TaskMonitor {
     pub fn new() -> (Self, Receiver<Event>) {
+        //
+        // Initialize handles
         let handles = Arc::new(Mutex::new(Vec::new()));
 
+        //
+        // Initialize events channel to alert the parent listener
         let (event_sender, event_receiver) = channel::<Event>(10);
 
+        //
+        // Initialize handles channel to allow other object to send task handles to monitor
         let (handle_sender, mut handle_receiver) = channel::<TaskHandle>(10);
 
         //
-        //
+        // TASK
         let handles_clone_1 = handles.clone();
         let feed = tokio::spawn(async move {
             loop {
