@@ -1,25 +1,34 @@
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::Mutex;
-
 use tokio::sync::mpsc::{channel, Receiver, Sender};
-
+use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 
 ///
 ///
 pub enum Event {}
 
+/// Type of handle managed by this monitor
+///
 pub type TaskHandle = JoinHandle<Result<(), String>>;
 
-///
+/// This object is able to monitor a group of tokio task and report status
 ///
 pub struct TaskMonitor {
+    /// List of the monitored task handles
+    ///
     handles: Arc<Mutex<Vec<TaskHandle>>>,
 
+    /// Sender that allow other task to send their handle for monitoring
+    ///
     handle_sender: Sender<TaskHandle>,
 
+    /// Internal handle for the task that feed this monitor
+    ///
     task_feeding: JoinHandle<()>,
+
+    /// Internal handle for the task that monitor other tasks
+    ///
     task_monitoring: JoinHandle<()>,
 }
 
