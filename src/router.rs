@@ -1,8 +1,3 @@
-use bytes::Bytes;
-use std::collections::HashMap;
-use std::sync::Arc;
-use thiserror::Error as ThisError;
-type MessageEventLoop = rumqttc::EventLoop;
 use crate::pubsub::mqtt::create_connection;
 use crate::pubsub::PubSubListener;
 use crate::pubsub::PubSubOperator;
@@ -10,6 +5,10 @@ use crate::pubsub::Publisher;
 use crate::pubsub::Subscriber;
 use crate::PubSubError;
 use crate::PubSubOptions;
+use bytes::Bytes;
+use std::collections::HashMap;
+use std::sync::Arc;
+use thiserror::Error as ThisError;
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::mpsc::Sender;
 
@@ -49,11 +48,11 @@ pub type DataReceiver = tokio::sync::mpsc::Receiver<Bytes>;
 ///
 ///
 pub struct RouterHandler<O: PubSubOperator> {
-    ///
+    /// Object that allow network pub/sub operations
     ///
     pub operator: O,
 
-    ///
+    /// Object to send other route to manage
     ///
     pub rules_sender: Sender<Rule>,
 }
@@ -112,16 +111,20 @@ impl<O: PubSubOperator> RouterHandler<O> {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
+/// Pub/Sub Router
+///
+/// This object manage a pub/sub connection and provide helper to build routes
+///
 pub struct Router<O: PubSubOperator, L: PubSubListener> {
-    ///
+    /// Object that allow network pub/sub operations
     ///
     operator: O,
 
-    ///
+    /// Object to listen incoming messages
     ///
     listener: L,
 
-    ///
+    /// Object to send more rules
     ///
     rules_sender: Sender<Rule>,
 
@@ -166,9 +169,7 @@ impl<O: PubSubOperator, L: PubSubListener> Router<O, L> {
         loop {
             tokio::select! {
                 Some(rule) = self.rules_receiver.recv() => {
-                    // println!("??? Rule = {:?}", rule);
                     self.routes.insert(rule.topic, rule.sender);
-
                 }
                 Ok(event) = self.listener.poll() => {
 
