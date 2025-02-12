@@ -45,7 +45,7 @@ pub type DataReceiver = tokio::sync::mpsc::Receiver<Bytes>;
 // ----------------------------------------------------------------------------
 
 #[derive(Clone)]
-///
+/// Object that allow the router to create new routes
 ///
 pub struct RouterHandler<O: PubSubOperator> {
     /// Object that allow network pub/sub operations
@@ -165,7 +165,7 @@ impl<O: PubSubOperator, L: PubSubListener> Router<O, L> {
 
     ///
     ///
-    pub async fn run(&mut self) {
+    pub async fn run(mut self) {
         loop {
             tokio::select! {
                 Some(rule) = self.rules_receiver.recv() => {

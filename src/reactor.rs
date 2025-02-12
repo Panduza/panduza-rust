@@ -79,7 +79,7 @@ impl<O: PubSubOperator> Reactor<O> {
 pub async fn create_reactor(
     options: ReactorOptions,
 ) -> Result<Reactor<impl PubSubOperator>, String> {
-    let mut router = create_mqtt_router(options.pubsub_options).map_err(|e| e.to_string())?;
+    let router = create_mqtt_router(options.pubsub_options).map_err(|e| e.to_string())?;
 
     let handler = router.handler();
 
