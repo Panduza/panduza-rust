@@ -4,24 +4,53 @@ use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 
+/// Payload of event enums
+///
+pub struct EventBody {
+    /// Name of the task
+    ///
+    pub task_name: String,
+
+    /// Id of the task
+    ///
+    pub task_id: String,
+
+    /// Error message if any
+    ///
+    pub error_message: Option<String>,
+}
+
 ///
 ///
-pub enum Event {}
+pub enum Event {
+    TaskMonitorError(String),
+    TaskCreated(EventBody),
+    TaskStopProperly(EventBody),
+    TaskStopWithPain(EventBody),
+    TaskPanicOMG(EventBody),
+}
 
 /// Type of handle managed by this monitor
 ///
 pub type TaskHandle = JoinHandle<Result<(), String>>;
+
+/// Message to request a task monitoring
+///
+/// First parameter of the tupple is the name of the task
+/// The second is the handle of the task
+///
+pub type NamedTaskHandle = (String, TaskHandle);
 
 /// This object is able to monitor a group of tokio task and report status
 ///
 pub struct TaskMonitor {
     /// List of the monitored task handles
     ///
-    handles: Arc<Mutex<Vec<TaskHandle>>>,
+    handles: Arc<Mutex<Vec<NamedTaskHandle>>>,
 
     /// Sender that allow other task to send their handle for monitoring
     ///
-    handle_sender: Sender<TaskHandle>,
+    handle_sender: Sender<NamedTaskHandle>,
 
     /// Internal handle for the task that feed this monitor
     ///
@@ -45,16 +74,27 @@ impl TaskMonitor {
 
         //
         // Initialize handles channel to allow other object to send task handles to monitor
-        let (handle_sender, mut handle_receiver) = channel::<TaskHandle>(10);
+        let (handle_sender, mut handle_receiver) = channel::<NamedTaskHandle>(10);
 
         //
-        // TASK
+        // TASK to register new handles
         let handles_clone_1 = handles.clone();
-        let feed = tokio::spawn(async move {
+        let event_sender_1 = event_sender.clone();
+        let feed_t = tokio::spawn(async move {
             loop {
                 match handle_receiver.recv().await {
                     Some(new_handle) => {
-                        println!("new {:?}", new_handle.id());
+                        // Send an event
+                        event_sender_1
+                            .send(Event::TaskCreated(EventBody {
+                                task_name: new_handle.0.clone(),
+                                task_id: new_handle.1.id().to_string(),
+                                error_message: None,
+                            }))
+                            .await
+                            .unwrap();
+
+                        // Save the handle
                         handles_clone_1.lock().await.push(new_handle);
                     }
                     None => todo!(),
@@ -63,9 +103,9 @@ impl TaskMonitor {
         });
 
         //
-        //
+        // TASK to monitor other tasks
         let handles_clone_2 = handles.clone();
-        let to = tokio::spawn(async move {
+        let monitor_t = tokio::spawn(async move {
             loop {
                 tokio::time::sleep(Duration::from_millis(2000)).await;
                 let mut hlock = handles_clone_2.lock().await;
@@ -77,12 +117,13 @@ impl TaskMonitor {
 
                 while i < hlock.len() {
                     let h = &mut hlock[i];
-                    println!("{:?}", h.is_finished());
-                    if h.is_finished() {
-                        let r = h.await;
+                    println!("{:?}", h.1.is_finished());
+                    if h.1.is_finished() {
+                        let element = hlock.remove(i);
+
+                        let r = element.1.await;
                         println!("Task finished: {:?}", r);
                         // Supprimer l'élément du vecteur
-                        hlock.remove(i);
                     } else {
                         // Incrémenter l'index seulement si l'élément n'a pas été supprimé
                         i += 1;
@@ -96,8 +137,8 @@ impl TaskMonitor {
             Self {
                 handles: handles,
                 handle_sender: handle_sender,
-                task_feeding: feed,
-                task_monitoring: to,
+                task_feeding: feed_t,
+                task_monitoring: monitor_t,
             },
             event_receiver,
         )
@@ -109,11 +150,14 @@ impl TaskMonitor {
         let mut hlock = self.handles.lock().await;
 
         for h in hlock.iter_mut() {
-            h.abort();
+            h.1.abort();
         }
 
-        for h in hlock.iter_mut() {
-            h.await.unwrap().unwrap();
+        let mut i = 0;
+        while i < hlock.len() {
+            let element = hlock.remove(i);
+            element.1.await.unwrap().unwrap();
+            i += 1;
         }
 
         hlock.clear();
@@ -121,22 +165,7 @@ impl TaskMonitor {
 
     ///
     ///
-    pub fn handle_sender(&self) -> Sender<TaskHandle> {
+    pub fn handle_sender(&self) -> Sender<NamedTaskHandle> {
         self.handle_sender.clone()
     }
 }
-
-// Task 1
-// loop
-//      sleep
-//      check handles
-//              if one is dead => send a message
-//
-// => share the status receiver
-
-// Task 2
-// loop
-//      wait for incoming handle
-//          register handle
-//
-// => share the handle sender

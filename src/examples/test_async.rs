@@ -34,7 +34,7 @@ async fn main() {
 
     let (monitor, event_receiver) = TaskMonitor::new();
 
-    monitor.handle_sender().send(to).await.unwrap();
+    // monitor.handle_sender().send(to).await.unwrap();
 
     // What if we create an other attribute on the same topic ?
     //      need to multiplexer
