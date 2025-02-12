@@ -4,6 +4,10 @@ use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 
+/// Delay between 2 monitoring action
+///
+static DELAY_MS_BETWEEN_MONITORING: u64 = 200;
+
 /// Payload of event enums
 ///
 pub struct EventBody {
@@ -20,7 +24,7 @@ pub struct EventBody {
     pub error_message: Option<String>,
 }
 
-///
+/// Monitoring events
 ///
 pub enum Event {
     TaskMonitorError(String),
@@ -28,6 +32,7 @@ pub enum Event {
     TaskStopProperly(EventBody),
     TaskStopWithPain(EventBody),
     TaskPanicOMG(EventBody),
+    NoMoreTask,
 }
 
 /// Type of handle managed by this monitor
@@ -63,6 +68,8 @@ pub struct TaskMonitor {
 
 // ----------------------------------------------------------------------------
 impl TaskMonitor {
+    /// Create a new task monitor
+    ///
     pub fn new() -> (Self, Receiver<Event>) {
         //
         // Initialize handles
@@ -85,14 +92,16 @@ impl TaskMonitor {
                 match handle_receiver.recv().await {
                     Some(new_handle) => {
                         // Send an event
-                        event_sender_1
+                        if let Err(e) = event_sender_1
                             .send(Event::TaskCreated(EventBody {
                                 task_name: new_handle.0.clone(),
                                 task_id: new_handle.1.id().to_string(),
                                 error_message: None,
                             }))
                             .await
-                            .unwrap();
+                        {
+                            println!("{:?} - TaskMonitor warning ! {:?}", line!(), e.to_string());
+                        }
 
                         // Save the handle
                         handles_clone_1.lock().await.push(new_handle);
@@ -105,30 +114,94 @@ impl TaskMonitor {
         //
         // TASK to monitor other tasks
         let handles_clone_2 = handles.clone();
+        let event_sender_2 = event_sender.clone();
         let monitor_t = tokio::spawn(async move {
             loop {
-                tokio::time::sleep(Duration::from_millis(2000)).await;
-                let mut hlock = handles_clone_2.lock().await;
-                let mut i = 0;
+                // Wait before next monitoring
+                tokio::time::sleep(Duration::from_millis(DELAY_MS_BETWEEN_MONITORING)).await;
 
+                // Lock handles
+                let mut hlock = handles_clone_2.lock().await;
+
+                // No more task to check
                 if hlock.len() <= 0 {
-                    println!("no more task to monitor")
+                    if let Err(e) = event_sender_2.send(Event::NoMoreTask).await {
+                        println!("{:?} - TaskMonitor warning ! {:?}", line!(), e.to_string());
+                    }
                 }
 
+                // Monitor tasks, checking for each task if it is finished
+                let mut i = 0;
                 while i < hlock.len() {
                     let h = &mut hlock[i];
-                    println!("{:?}", h.1.is_finished());
                     if h.1.is_finished() {
                         let element = hlock.remove(i);
-
-                        let r = element.1.await;
-                        println!("Task finished: {:?}", r);
-                        // Supprimer l'élément du vecteur
+                        let task_id = element.1.id().to_string();
+                        match element.1.await {
+                            Ok(result) => match result {
+                                //
+                                // Task end properly
+                                Ok(_) => {
+                                    if let Err(e) = event_sender_2
+                                        .send(Event::TaskStopProperly(EventBody {
+                                            task_name: element.0,
+                                            task_id: task_id,
+                                            error_message: None,
+                                        }))
+                                        .await
+                                    {
+                                        println!(
+                                            "{:?} - TaskMonitor warning ! {:?}",
+                                            line!(),
+                                            e.to_string()
+                                        );
+                                    }
+                                }
+                                //
+                                // Task end with an error
+                                Err(e) => {
+                                    if let Err(e) = event_sender_2
+                                        .send(Event::TaskStopWithPain(EventBody {
+                                            task_name: element.0,
+                                            task_id: task_id,
+                                            error_message: Some(e.to_string()),
+                                        }))
+                                        .await
+                                    {
+                                        println!(
+                                            "{:?} - TaskMonitor warning ! {:?}",
+                                            line!(),
+                                            e.to_string()
+                                        );
+                                    }
+                                }
+                            },
+                            //
+                            // Task PANIC
+                            Err(e) => {
+                                if let Err(e) = event_sender_2
+                                    .send(Event::TaskPanicOMG(EventBody {
+                                        task_name: element.0,
+                                        task_id: task_id,
+                                        error_message: Some(e.to_string()),
+                                    }))
+                                    .await
+                                {
+                                    println!(
+                                        "{:?} - TaskMonitor warning ! {:?}",
+                                        line!(),
+                                        e.to_string()
+                                    );
+                                }
+                            }
+                        }
                     } else {
                         // Incrémenter l'index seulement si l'élément n'a pas été supprimé
                         i += 1;
                     }
                 }
+
+                // Release handles
                 drop(hlock);
             }
         });
@@ -144,7 +217,7 @@ impl TaskMonitor {
         )
     }
 
-    ///
+    /// Cancel all tasks
     ///
     pub async fn cancel_all_monitored_tasks(&mut self) {
         let mut hlock = self.handles.lock().await;
@@ -163,9 +236,18 @@ impl TaskMonitor {
         hlock.clear();
     }
 
-    ///
+    /// Provides access to the handler sender to send new handle to monitor
     ///
     pub fn handle_sender(&self) -> Sender<NamedTaskHandle> {
         self.handle_sender.clone()
+    }
+
+    /// Provides access to the handler sender to send new handle to monitor
+    ///
+    pub async fn stop(self) {
+        self.task_feeding.abort();
+        self.task_monitoring.abort();
+        self.task_feeding.await.unwrap();
+        self.task_monitoring.await.unwrap();
     }
 }
