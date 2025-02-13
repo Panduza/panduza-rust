@@ -23,6 +23,8 @@ struct BooleanDataPack {
 }
 
 impl BooleanDataPack {
+    ///
+    ///
     pub fn push(&mut self, v: bool) {
         if self.use_input_queue {
             self.queue.push(v);
@@ -30,10 +32,14 @@ impl BooleanDataPack {
         self.last = Some(v);
     }
 
+    ///
+    ///
     pub fn last(&self) -> Option<bool> {
         self.last
     }
 
+    ///
+    ///
     pub fn pop(&mut self) -> Option<bool> {
         if self.queue.is_empty() {
             None
@@ -42,6 +48,8 @@ impl BooleanDataPack {
         }
     }
 
+    ///
+    ///
     pub fn update_notifier(&self) -> Arc<Notify> {
         self.update_notifier.clone()
     }
@@ -133,6 +141,12 @@ impl BooleanAttribute {
         self.cmd_publisher.publish(pyl).await.unwrap();
     }
 
+    /// Notify when new data have been received
+    ///
+    pub fn update_notifier(&self) -> Arc<Notify> {
+        self.update_notifier.clone()
+    }
+
     ///
     ///
     pub async fn set(&mut self, value: bool) {
@@ -145,7 +159,15 @@ impl BooleanAttribute {
         // get last // if same as value ok else wait or error ?
     }
 
-    // get - last value
-    // pop
-    // on reception
+    ///
+    ///
+    pub fn get(&self) -> Option<bool> {
+        self.pack.lock().unwrap().last()
+    }
+
+    ///
+    ///
+    pub fn pop(&self) -> Option<bool> {
+        self.pack.lock().unwrap().pop()
+    }
 }
