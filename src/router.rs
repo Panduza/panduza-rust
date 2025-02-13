@@ -1,8 +1,9 @@
-use crate::pubsub::mqtt::create_connection;
+use crate::pubsub::mqtt::new_connection;
 use crate::pubsub::PubSubListener;
 use crate::pubsub::PubSubOperator;
 use crate::pubsub::Publisher;
 use crate::pubsub::Subscriber;
+use crate::task_monitor::TaskMonitorLink;
 use crate::PubSubError;
 use crate::PubSubOptions;
 use bytes::Bytes;
@@ -18,6 +19,8 @@ use tokio::sync::mpsc::Sender;
 pub enum RouterError {
     #[error("Cannot create connection because {cause:?}")]
     ConnectionError { cause: String },
+    #[error("A channel refuse operation because {cause:?}")]
+    ChannelError { cause: String },
 }
 
 #[derive(Clone, Debug)]
@@ -111,7 +114,7 @@ impl<O: PubSubOperator> RouterHandler<O> {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-/// Pub/Sub Router
+/// Generic Pub/Sub Router for Panduza
 ///
 /// This object manage a pub/sub connection and provide helper to build routes
 ///
@@ -137,8 +140,8 @@ pub struct Router<O: PubSubOperator, L: PubSubListener> {
     routes: HashMap<String, Sender<Bytes>>,
 }
 
-impl<O: PubSubOperator, L: PubSubListener> Router<O, L> {
-    ///
+impl<O: PubSubOperator + Send + 'static, L: PubSubListener + Send + 'static> Router<O, L> {
+    /// Create a new instance
     ///
     pub fn new(operator: O, listener: L) -> Self {
         //
@@ -154,7 +157,35 @@ impl<O: PubSubOperator, L: PubSubListener> Router<O, L> {
         }
     }
 
+    /// Start the router and just return the handler to interact with him
     ///
+    pub async fn start(
+        self,
+        monitor_link: Option<TaskMonitorLink>,
+    ) -> Result<RouterHandler<O>, RouterError> {
+        // Create an handler before end
+        let handler = self.handler();
+
+        // Create the task
+        let task = tokio::spawn(async move {
+            self.run().await;
+            Err("router stop !".to_string())
+        });
+
+        // Send task to a monitor
+        if let Some(link) = monitor_link {
+            if let Err(e) = link.send(("router".to_string(), task)).await {
+                return Err(RouterError::ChannelError {
+                    cause: e.to_string(),
+                });
+            }
+        }
+
+        // Ok
+        Ok(handler)
+    }
+
+    /// Create a new handler
     ///
     pub fn handler(&self) -> RouterHandler<O> {
         RouterHandler {
@@ -163,7 +194,7 @@ impl<O: PubSubOperator, L: PubSubListener> Router<O, L> {
         }
     }
 
-    ///
+    /// Main run loop
     ///
     pub async fn run(mut self) {
         loop {
@@ -172,7 +203,6 @@ impl<O: PubSubOperator, L: PubSubListener> Router<O, L> {
                     self.routes.insert(rule.topic, rule.sender);
                 }
                 Ok(event) = self.listener.poll() => {
-
                     match event {
                         crate::pubsub::PubSubEvent::IncomingUpdate(incoming_update) =>
                         {
@@ -191,18 +221,18 @@ impl<O: PubSubOperator, L: PubSubListener> Router<O, L> {
     }
 }
 
+/// Create a new MQTT Router
 ///
-///
-pub fn create_mqtt_router(
+pub fn new_mqtt_router(
     options: PubSubOptions,
 ) -> Result<Router<impl PubSubOperator, impl PubSubListener>, RouterError> {
     //
-    //
-    let (op, li) = create_connection(options).map_err(|e| RouterError::ConnectionError {
+    // Create a new network connection
+    let (op, li) = new_connection(options).map_err(|e| RouterError::ConnectionError {
         cause: e.to_string(),
     })?;
 
     //
-    //
+    // Return the router
     Ok(Router::new(op, li))
 }

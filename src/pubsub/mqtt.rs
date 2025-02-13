@@ -35,7 +35,7 @@ fn pubsub_options_to_mqtt_options(options: PubSubOptions) -> MqttOptions {
 
 /// Start a MQTT connection and return object of the PubSub API
 ///
-pub fn create_connection(
+pub fn new_connection(
     options: PubSubOptions,
 ) -> Result<(impl PubSubOperator, impl PubSubListener), PubSubError> {
     //

@@ -7,7 +7,7 @@ async fn main() {
     let start = Instant::now();
 
     let options = ReactorOptions::new();
-    let mut reactor = panduza::create_reactor(options).await.unwrap();
+    let mut reactor = panduza::new_reactor(options).await.unwrap();
 
     let mut pp = reactor
         .find_attribute("truc_1")

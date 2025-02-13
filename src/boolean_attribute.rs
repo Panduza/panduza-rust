@@ -1,79 +1,151 @@
-use std::sync::{Arc, Mutex};
-
+use crate::{pubsub::Publisher, reactor::DataReceiver};
 use bytes::Bytes;
+use std::sync::{Arc, Mutex};
 use tokio::sync::Notify;
 
-use crate::{pubsub::Publisher, reactor::DataReceiver};
-use tokio::sync::oneshot;
+#[derive(Debug)]
+struct BooleanDataPack {
+    /// Last value received
+    ///
+    last: Option<bool>,
+
+    /// Queue of value (need to be poped)
+    ///
+    queue: Vec<bool>,
+
+    /// If True we are going to use the input queue
+    ///
+    pub use_input_queue: bool,
+
+    /// Update notifier
+    ///
+    update_notifier: Arc<Notify>,
+}
+
+impl BooleanDataPack {
+    pub fn push(&mut self, v: bool) {
+        if self.use_input_queue {
+            self.queue.push(v);
+        }
+        self.last = Some(v);
+    }
+
+    pub fn last(&self) -> Option<bool> {
+        self.last
+    }
+
+    pub fn pop(&mut self) -> Option<bool> {
+        if self.queue.is_empty() {
+            None
+        } else {
+            Some(self.queue.remove(0))
+        }
+    }
+
+    pub fn update_notifier(&self) -> Arc<Notify> {
+        self.update_notifier.clone()
+    }
+}
+
+impl Default for BooleanDataPack {
+    fn default() -> Self {
+        Self {
+            last: Default::default(),
+            queue: Default::default(),
+            use_input_queue: false,
+            update_notifier: Default::default(),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 /// Object to manage the BooleanAttribute
 ///
 pub struct BooleanAttribute {
-    // cmd_topic: String,
-    ///
+    /// Object that all the attribute to publish
     ///
     cmd_publisher: Arc<dyn Publisher>,
 
-    /// initial data
+    /// Initial data
     ///
-    value: Arc<Mutex<bool>>,
+    pack: Arc<Mutex<BooleanDataPack>>,
 
-    update: Arc<Notify>,
+    /// Update notifier
+    ///
+    update_notifier: Arc<Notify>,
 }
 
 impl BooleanAttribute {
-    ///
+    /// Create a new instance
     ///
     pub fn new(cmd_publisher: Arc<dyn Publisher>, mut att_receiver: DataReceiver) -> Self {
-        let b_value = Arc::new(Mutex::new(false));
+        //
+        // Create data pack
+        let pack = Arc::new(Mutex::new(BooleanDataPack::default()));
 
-        let update = Arc::new(Notify::new());
+        //
+        //
+        let update_1 = pack.lock().unwrap().update_notifier();
 
-        let update2 = update.clone();
-        let json_value_2 = b_value.clone();
-
-        // let (send, mut recv) = oneshot::channel();
-
+        //
+        // Create the recv task
+        let pack_2 = pack.clone();
         tokio::spawn(async move {
             loop {
+                //
                 let message = att_receiver.recv().await;
-                println!("!!!!!!!!!!! BOOLEAN ttt Notification = {:?}", message);
-
+                // Manage message
                 if let Some(message) = message {
-                    match json_value_2.lock() {
-                        Ok(mut b_value) => {
-                            *b_value = serde_json::from_slice(&message).unwrap();
-                            update2.notify_waiters();
-                        }
-                        Err(e) => {
-                            println!("Error = {:?}", e);
-                        }
-                    }
-                } else {
+                    // Deserialize
+                    let value: bool = serde_json::from_slice(&message).unwrap();
+                    // Push into pack
+                    pack_2.lock().unwrap().push(value);
+                }
+                // None => no more message
+                else {
                     break;
                 }
-
-                // None => no more message
             }
         });
 
-        // let turc = hhh.id();
-        // println!("{:?}", turc);
-
-        BooleanAttribute {
+        //
+        // Return attribute
+        Self {
             cmd_publisher: cmd_publisher,
-            value: b_value,
-            update: update,
+            pack: pack,
+            update_notifier: update_1,
         }
+    }
+
+    /// Enable the input queue buffer (to use pop feature)
+    ///
+    pub fn enable_input_queue(&mut self, enable: bool) {
+        self.pack.lock().unwrap().use_input_queue = enable;
+    }
+
+    /// Send command and do not wait for validation
+    ///
+    pub async fn shoot(&mut self, value: bool) {
+        // Wrap value into payload
+        let pyl = Bytes::from(serde_json::to_string(&value).unwrap());
+
+        // Send the command
+        self.cmd_publisher.publish(pyl).await.unwrap();
     }
 
     ///
     ///
     pub async fn set(&mut self, value: bool) {
-        let pyl = Bytes::from(serde_json::to_string(&value).unwrap());
+        //
+        self.shoot(value).await;
 
-        self.cmd_publisher.publish(pyl).await.unwrap();
+        // Wait for change in the data pack
+        self.update_notifier.notified().await;
 
-        self.update.notified().await;
+        // get last // if same as value ok else wait or error ?
     }
+
+    // get - last value
+    // pop
+    // on reception
 }

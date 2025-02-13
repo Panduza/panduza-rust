@@ -46,6 +46,10 @@ pub type TaskHandle = JoinHandle<Result<(), String>>;
 ///
 pub type NamedTaskHandle = (String, TaskHandle);
 
+/// Object to send new task handle to the monitor
+///
+pub type TaskMonitorLink = Sender<NamedTaskHandle>;
+
 /// This object is able to monitor a group of tokio task and report status
 ///
 pub struct TaskMonitor {
@@ -220,19 +224,24 @@ impl TaskMonitor {
     /// Cancel all tasks
     ///
     pub async fn cancel_all_monitored_tasks(&mut self) {
+        // lock elements
         let mut hlock = self.handles.lock().await;
 
+        // abort all tasks
         for h in hlock.iter_mut() {
             h.1.abort();
         }
 
+        // Wait for them to stop
+        // we do not care about the status
         let mut i = 0;
         while i < hlock.len() {
             let element = hlock.remove(i);
-            element.1.await.unwrap().unwrap();
+            let _ = element.1.await;
             i += 1;
         }
 
+        // vector should be empty here but...
         hlock.clear();
     }
 

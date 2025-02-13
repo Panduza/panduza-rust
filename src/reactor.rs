@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::pubsub::{PubSubOperator, Publisher};
-use crate::router::{create_mqtt_router, RouterHandler};
+use crate::router::{new_mqtt_router, RouterHandler};
 use crate::structure::Structure;
 use crate::{AttributeBuilder, PubSubError, PubSubOptions};
 use bytes::Bytes;
@@ -76,17 +76,10 @@ impl<O: PubSubOperator> Reactor<O> {
 
 /// Start the reactor
 ///
-pub async fn create_reactor(
-    options: ReactorOptions,
-) -> Result<Reactor<impl PubSubOperator>, String> {
-    let router = create_mqtt_router(options.pubsub_options).map_err(|e| e.to_string())?;
+pub async fn new_reactor(options: ReactorOptions) -> Result<Reactor<impl PubSubOperator>, String> {
+    let router = new_mqtt_router(options.pubsub_options).map_err(|e| e.to_string())?;
 
-    let handler = router.handler();
-
-    tokio::spawn(async move {
-        router.run().await;
-        println!("ReactorCore is not runiing !!!!!!!!!!!!!!!!!!!!!!");
-    });
+    let handler = router.start(None).await.unwrap();
 
     let structure_data_receiver = handler.register_listener("pza/_/structure/att", 5).await?;
 

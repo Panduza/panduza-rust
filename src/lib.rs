@@ -7,7 +7,7 @@ pub mod router;
 
 /// This module manage the reactor
 pub mod reactor;
-pub use reactor::create_reactor;
+pub use reactor::new_reactor;
 pub use reactor::Reactor;
 
 pub mod structure;
