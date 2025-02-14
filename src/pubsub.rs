@@ -20,7 +20,7 @@ pub enum PubSubError {
     ListenError { cause: String },
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 ///
 ///
 pub struct PubSubOptions {}
