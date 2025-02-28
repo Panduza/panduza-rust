@@ -4,16 +4,21 @@ use bytes::Bytes;
 use std::time::{SystemTime, UNIX_EPOCH};
 use trigger_v0_generated::{Options, OptionsArgs, Range, Timestamp, Trigger, TriggerArgs};
 
+
+// pub struct  TriggerOptions {
+//     option_id: u8, range: Option<(f32, f32)>, whitelist: Option<Vec<f32>>
+// }
+
 #[derive(Debug)]
 ///
 ///
-pub struct VectorF32Buffer {
+pub struct TriggerBuffer {
     /// Internal Raw Data
     ///
     raw_data: Bytes,
 }
 
-impl VectorF32Buffer {
+impl TriggerBuffer {
     ///
     ///
     pub fn from_raw_data(raw_data: Bytes) -> Self {
@@ -55,7 +60,6 @@ impl VectorF32Buffer {
             None
         };
 
-        
         let range_flat = 
         if let Some(r) = range {
             Some(Range::new(true, r.0, r.1))
