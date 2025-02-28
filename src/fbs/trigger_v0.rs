@@ -2,7 +2,7 @@ pub mod trigger_v0_generated;
 
 use bytes::Bytes;
 use std::time::{SystemTime, UNIX_EPOCH};
-use trigger_v0_generated::{Timestamp, Trigger, TriggerArgs};
+use trigger_v0_generated::{Options, OptionsArgs, Range, Timestamp, Trigger, TriggerArgs};
 
 #[derive(Debug)]
 ///
@@ -44,22 +44,40 @@ impl VectorF32Buffer {
 
     ///
     ///
-    pub fn from_values(values: &Vec<f32>) -> Self {
-        // whitelist
-        // range
-        //
+    pub fn from_values(refresh: f32, option_id: u8, range: Option<(f32, f32)>, whitelist: Option<&Vec<f32>>) -> Self {
 
         let mut builder = flatbuffers::FlatBufferBuilder::new();
 
-        let values = builder.create_vector(values);
+        let whitelist_flat = 
+        if let Some(wl) = whitelist {
+            Some(builder.create_vector(wl))
+        } else {
+            None
+        };
+
+        
+        let range_flat = 
+        if let Some(r) = range {
+            Some(Range::new(true, r.0, r.1))
+        }
+        else {
+            None
+        };
+        
+        let options_flat = Options::create(&mut builder, &OptionsArgs{
+            id: option_id,
+            range: range_flat.as_ref(),
+            whitelist: whitelist_flat
+        });
 
         let timestamp = Self::generate_timestamp();
 
         let object = Trigger::create(
             &mut builder,
             &TriggerArgs {
-                refresh: 0.0,
+                refresh: refresh,
                 timestamp: Some(&timestamp),
+                options: Some(options_flat),
             },
         );
 
