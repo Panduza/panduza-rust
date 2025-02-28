@@ -4,7 +4,6 @@ use bytes::Bytes;
 use std::time::{SystemTime, UNIX_EPOCH};
 use trigger_v0_generated::{Options, OptionsArgs, Range, Timestamp, Trigger, TriggerArgs};
 
-
 // pub struct  TriggerOptions {
 //     option_id: u8, range: Option<(f32, f32)>, whitelist: Option<Vec<f32>>
 // }
@@ -49,30 +48,34 @@ impl TriggerBuffer {
 
     ///
     ///
-    pub fn from_values(refresh: f32, option_id: u8, range: Option<(f32, f32)>, whitelist: Option<&Vec<f32>>) -> Self {
-
+    pub fn from_values(
+        refresh: f32,
+        option_id: u8,
+        range: Option<(f32, f32)>,
+        whitelist: Option<&Vec<f32>>,
+    ) -> Self {
         let mut builder = flatbuffers::FlatBufferBuilder::new();
 
-        let whitelist_flat = 
-        if let Some(wl) = whitelist {
+        let whitelist_flat = if let Some(wl) = whitelist {
             Some(builder.create_vector(wl))
         } else {
             None
         };
 
-        let range_flat = 
-        if let Some(r) = range {
+        let range_flat = if let Some(r) = range {
             Some(Range::new(true, r.0, r.1))
-        }
-        else {
+        } else {
             None
         };
-        
-        let options_flat = Options::create(&mut builder, &OptionsArgs{
-            id: option_id,
-            range: range_flat.as_ref(),
-            whitelist: whitelist_flat
-        });
+
+        let options_flat = Options::create(
+            &mut builder,
+            &OptionsArgs {
+                id: option_id,
+                range: range_flat.as_ref(),
+                whitelist: whitelist_flat,
+            },
+        );
 
         let timestamp = Self::generate_timestamp();
 
@@ -91,5 +94,11 @@ impl TriggerBuffer {
 
         // Here we copy into the buffer
         Self { raw_data: raw_data }
+    }
+
+    ///
+    ///
+    pub fn object(&self) -> Trigger {
+        flatbuffers::root::<Trigger>(&self.raw_data).unwrap()
     }
 }

@@ -13,7 +13,7 @@ pub struct VectorF32Buffer {
     raw_data: Bytes,
 }
 
-impl VectorF32Buffer {
+impl<'O> VectorF32Buffer {
     ///
     ///
     pub fn from_raw_data(raw_data: Bytes) -> Self {
@@ -65,5 +65,11 @@ impl VectorF32Buffer {
 
         // Here we copy into the buffer
         Self { raw_data: raw_data }
+    }
+
+    ///
+    /// 
+    pub fn object(&self) -> VectorF32 {
+        flatbuffers::root::<VectorF32>(&self.raw_data).unwrap()
     }
 }
