@@ -1,0 +1,22 @@
+struct Timestamp {
+   secs: uint64;
+   nanos: uint32;
+}
+
+struct Range {
+   used: bool;
+   min: float32;
+   max: float32;
+}
+
+table Options {
+   id: uint8;
+   range: Range;
+   whitelist: [float32];
+}
+
+table Trigger {
+   refresh: float32;
+   timestamp: Timestamp;
+   options: Options;
+}
