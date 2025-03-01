@@ -1,0 +1,9 @@
+struct Timestamp {
+    secs: uint64;
+    nanos: uint32;
+}
+
+table VectorF32 {
+   values:[float32];
+   timestamp: Timestamp;
+}
