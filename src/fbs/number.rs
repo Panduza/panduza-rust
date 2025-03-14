@@ -27,7 +27,9 @@ impl NumberBuffer {
     ///
     ///
     pub fn raw_data(&self) -> Bytes {
-        let v = serde_json::to_vec(&self.value).unwrap();
+        let mut v = serde_json::to_vec(&self.value).unwrap();
+        v.remove(0);
+        v.pop();
         Bytes::from(v)
     }
 
