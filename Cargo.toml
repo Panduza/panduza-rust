@@ -9,7 +9,32 @@ harness = false
 
 [[test]]
 name = "basics_focus"
+
 harness = false
+
+# [[bin]]
+# name = "test_sync"
+# path = "src/examples/test_sync.rs"
+
+
+[[bin]]
+name = "test_async"
+path = "src/examples/test_async.rs"
+
+[[bin]]
+name = "benchmark_big"
+path = "src/examples/benchmark_big.rs"
+
+#[[bin]]
+#name = "benchmark_multiple"
+#path = "src/examples/benchmark_multiple.rs"
+
+
+# [[bin]]
+# name = "test_async"
+# path = "src/examples/test_cb.rs"
+
+
 
 
 [dependencies]
@@ -39,6 +64,7 @@ flatbuffers = "25.2.10"
 
 
 yash-fnmatch = "1.1.2"
+zenoh = {version = "1.3.3", features = ["unstable"]}
 
 
 [dev-dependencies]

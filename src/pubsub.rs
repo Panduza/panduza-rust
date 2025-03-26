@@ -1,4 +1,5 @@
-mod mqtt;
+// mod mqtt;
+mod zenoh;
 
 use bytes::Bytes;
 use std::fmt::Debug;
@@ -24,25 +25,37 @@ pub enum Error {
 pub struct Options {
     pub ip: String,
     pub port: u16,
-}
-
-impl Options {
-    pub fn new<T: Into<String>>(ip: T, port: u16) -> Self {
-        Self {
-            ip: ip.into(),
-            port,
-        }
-    }
+    pub ca_certificate: String,
 }
 
 impl Default for Options {
     fn default() -> Self {
-        Self {
-            ip: "localhost".to_string(),
-            port: 1883,
+        Options {
+            ip: "127.0.0.1".to_string(),
+            port: 7447,
+            ca_certificate: "./minica.pem".to_string(),
         }
     }
 }
+
+impl Options {
+    pub fn new<T: Into<String>>(ip: T, port: u16, ca_certificate: T) -> Self {
+        Self {
+            ip: ip.into(),
+            port,
+            ca_certificate: ca_certificate.into(),
+        }
+    }
+}
+
+// impl Default for Options {
+//     fn default() -> Self {
+//         Self {
+//             ip: "127.0.0.1".to_string(),
+//             port: 1883,
+//         }
+//     }
+// }
 
 #[derive(Debug)]
 ///
@@ -60,8 +73,14 @@ pub enum PubSubEvent {
 }
 
 // MQTT Implementation
-pub use mqtt::new_connection;
-pub use mqtt::Listener;
-pub use mqtt::Operator;
-pub use mqtt::Publisher;
-pub use mqtt::Subscriber;
+// pub use mqtt::new_connection;
+// pub use mqtt::Listener;
+// pub use mqtt::Operator;
+// pub use mqtt::Publisher;
+// pub use mqtt::Subscriber;
+
+pub use zenoh::new_connection;
+// pub use zenoh::Operator;
+// pub use zenoh::Publisher;
+// pub use zenoh::Subscriber;
+// pub use zenoh::ZenohListener;

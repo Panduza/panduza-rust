@@ -1,14 +1,16 @@
+use crate::attribute_metadata::AttributeMetadata;
+use bytes::Bytes;
+use serde_json::{Map, Value as JsonValue};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
 };
-
-use crate::{attribute_metadata::AttributeMetadata, reactor::DataReceiver};
-use bytes::Bytes;
-use serde_json::{Map, Value as JsonValue};
-use yash_fnmatch::{without_escape, Pattern};
-
 use tokio::sync::Notify;
+use yash_fnmatch::{without_escape, Pattern};
+use zenoh::handlers::FifoChannelHandler;
+use zenoh::pubsub::Subscriber;
+use zenoh::query::Reply;
+use zenoh::sample::Sample;
 
 #[derive(Debug)]
 struct StructureData {
@@ -174,27 +176,75 @@ pub struct Structure {
 }
 
 impl Structure {
-    pub fn new(mut data_receiver: DataReceiver) -> Self {
+    pub async fn new(
+        // mut data_receiver: Subscriber<FifoChannelHandler<Sample>>,
+        query: FifoChannelHandler<Reply>,
+    ) -> Self {
+        // println!("Le default : {:?}", query);
+
+        // let _ = deref_value
+        //     .update(Bytes::copy_from_slice(default.payload().to_bytes()))
+        //     .unwrap();
+        // println!(
+        //     "deededededededededeeddedededededededeeddededede : {:?}",
+        //     data_receiver.clone()
+        // );
+
         let json_value = Arc::new(Mutex::new(StructureData::new()));
 
         let json_value_2 = json_value.clone();
-        tokio::spawn(async move {
-            loop {
-                let message = data_receiver.recv().await;
-                // println!("!!!!!!!!!!! ssss ttt Notification = {:?}", message);
 
-                if let Some(message) = message {
-                    match json_value_2.lock() {
-                        Ok(mut deref_value) => {
-                            deref_value.update(message).unwrap();
-                        }
-                        Err(e) => {
-                            println!("Error = {:?}", e);
-                        }
-                    }
+        while let Ok(sample) = query.recv_async().await {
+            // println!("LE SAMPLE : {:?}", sample.clone());
+            match json_value_2.lock() {
+                Ok(mut deref_value) => {
+                    deref_value
+                        .update(Bytes::copy_from_slice(
+                            &sample.result().unwrap().payload().to_bytes(),
+                        ))
+                        .unwrap();
+                }
+                Err(e) => {
+                    println!("Error = {:?}", e);
                 }
             }
-        });
+        }
+
+        // tokio::spawn(async move {
+        //     loop {
+        //         while let Ok(sample) = query.recv_async().await {
+        //             println!("LE SAMPLE : {:?}", sample.clone());
+        //             match json_value_2.lock() {
+        //                 Ok(mut deref_value) => {
+        //                     deref_value
+        //                         .update(Bytes::copy_from_slice(
+        //                             &sample.result().unwrap().payload().to_bytes(),
+        //                         ))
+        //                         .unwrap();
+        //                 }
+        //                 Err(e) => {
+        //                     println!("Error = {:?}", e);
+        //                 }
+        //             }
+        //         }
+
+        // let message = data_receiver.recv_async().await;
+        // println!("!!!!!!!!!!! ssss ttt Notification = {:?}", message);
+
+        // if let Ok(message) = message {
+        //     match json_value_2.lock() {
+        //         Ok(mut deref_value) => {
+        //             deref_value
+        //                 .update(Bytes::copy_from_slice(&message.payload().to_bytes()))
+        //                 .unwrap();
+        //         }
+        //         Err(e) => {
+        //             println!("Error = {:?}", e);
+        //         }
+        //     }
+        // }
+        //     }
+        // });
 
         Structure { value: json_value }
     }
