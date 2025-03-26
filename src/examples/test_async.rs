@@ -7,9 +7,9 @@ async fn main() {
     let options = ReactorOptions::new();
     let mut reactor = panduza::new_reactor(options).await.unwrap();
 
-    let mut pp = reactor
-        .find_attribute("boolean_rw")
-        .expect_boolean()
+    let mut benchmark_boolean = reactor
+        .find_attribute("string/rw")
+        .expect_string()
         .await
         .unwrap();
     // println!("$$$$$$ {:?}", pp);
@@ -17,12 +17,30 @@ async fn main() {
     let start = Instant::now();
 
     let total = 1000;
+    let mut sisi = "sisi";
     let mut vvv = true;
     for i in 0..total {
         // println!("POK {:?}", i);
         vvv = if vvv { true } else { false };
-        pp.set(vvv).await;
+        benchmark_boolean.set(sisi.to_string()).await;
     }
+
+    // let mut benchmark_boolean = reactor
+    //     .find_attribute("boolean/rw")
+    //     .expect_boolean()
+    //     .await
+    //     .unwrap();
+    // // println!("$$$$$$ {:?}", pp);
+
+    // let start = Instant::now();
+
+    // let total = 1000;
+    // let mut vvv = true;
+    // for i in 0..total {
+    //     // println!("POK {:?}", i);
+    //     vvv = if vvv { true } else { false };
+    //     benchmark_boolean.set(vvv).await;
+    // }
 
     // let to = tokio::spawn(async move {
     //     for i in 0..2 {
