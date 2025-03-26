@@ -1,13 +1,13 @@
 //
 pub mod pubsub;
 
-pub mod router;
+// pub mod router;
+pub mod session;
 
 /// This module manage the reactor
 pub mod reactor;
 pub use reactor::new_reactor;
 pub use reactor::Reactor;
-
 pub mod structure;
 
 ///
@@ -29,6 +29,7 @@ pub use attribute::boolean::BooleanAttribute;
 pub use attribute::bytes::BytesAttribute;
 pub use attribute::json::JsonAttribute;
 pub use attribute::notification::NotificationAttribute;
+pub use attribute::number::NumberAttribute;
 pub use attribute::si::SiAttribute;
 pub use attribute::status::StatusAttribute;
 pub use attribute::string::StringAttribute;
@@ -49,3 +50,6 @@ pub mod fbs;
 ///
 pub mod instance_state;
 pub use instance_state::InstanceState;
+
+pub mod benchmark_config;
+pub use benchmark_config::BenchmarkConfig;

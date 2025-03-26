@@ -1,29 +1,30 @@
-use crate::pubsub::Publisher;
-use crate::reactor::DataReceiver;
+// use crate::pubsub::Publisher;
 use crate::Topic;
 use bytes::Bytes;
+use serde_json::Value as JsonValue;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 use tokio::sync::Notify;
 use tokio::time::timeout;
-use serde_json::Value as JsonValue;
+use zenoh::handlers::FifoChannelHandler;
+use zenoh::pubsub::Subscriber;
+use zenoh::sample::Sample;
+use zenoh::Session;
 
 use super::data_pack::AttributeDataPack;
-
 
 #[derive(Clone, Debug)]
 /// Object to manage the JsonAttribute
 ///
 pub struct JsonAttribute {
-        ///
+    ///
     /// TODO: maybe add this into the data pack
     topic: String,
 
-    
-    /// Object that all the attribute to publish
+    /// Global Session
     ///
-    cmd_publisher: Publisher,
+    session: Session,
 
     /// Initial data
     ///
@@ -37,12 +38,14 @@ pub struct JsonAttribute {
 impl JsonAttribute {
     /// Create a new instance
     ///
-    pub async fn new(topic: String,cmd_publisher: Publisher, mut att_receiver: DataReceiver) -> Self {
+    pub async fn new(
+        session: Session,
+        topic: String,
+        mut att_receiver: Subscriber<FifoChannelHandler<Sample>>,
+    ) -> Self {
         //
         // Create data pack
-        let pack = Arc::new(Mutex::new(
-            AttributeDataPack::<JsonValue>::default()
-        ));
+        let pack = Arc::new(Mutex::new(AttributeDataPack::<JsonValue>::default()));
 
         //
         //
@@ -52,23 +55,12 @@ impl JsonAttribute {
         // Create the recv task
         let pack_2 = pack.clone();
         tokio::spawn(async move {
-            loop {
-                //
-                let message = att_receiver.recv().await;
-
-                println!("new message {:?}", message);
-
-                // Manage message
-                if let Some(message) = message {
-                    // Deserialize
-                    let value = serde_json::from_slice(&message).unwrap();
-                    // Push into pack
-                    pack_2.lock().unwrap().push(value);
-                }
-                // None => no more message
-                else {
-                    break;
-                }
+            while let Ok(sample) = att_receiver.recv_async().await {
+                let value: JsonValue =
+                    serde_json::from_slice(sample.payload().try_to_string().unwrap().as_bytes())
+                        .unwrap();
+                // Push into pack
+                pack_2.lock().unwrap().push(value);
             }
         });
 
@@ -80,12 +72,11 @@ impl JsonAttribute {
         // Return attribute
         Self {
             topic: topic,
-            cmd_publisher: cmd_publisher,
+            session: session,
             pack: pack,
             update_notifier: update_1,
         }
     }
-
 
     /// Send command and do not wait for validation
     ///
@@ -94,7 +85,7 @@ impl JsonAttribute {
         let pyl = Bytes::from(serde_json::to_string(&value).unwrap());
 
         // Send the command
-        self.cmd_publisher.publish(pyl).await.unwrap();
+        self.session.put(self.topic.clone(), pyl).await.unwrap();
     }
 
     /// Notify when new data have been received
@@ -139,6 +130,9 @@ impl JsonAttribute {
     }
 
     pub fn get_instance_status_topic(&self) -> String {
-        format!("pza/_/devices/{}", Topic::from_string(self.topic.clone(), true).instance_name())
+        format!(
+            "pza/_/devices/{}",
+            Topic::from_string(self.topic.clone(), true).instance_name()
+        )
     }
 }

@@ -6,11 +6,10 @@ use worlds::BasicsWorld;
 async fn main() {
     // BasicsWorld::run("tests/features/basics").await;
 
-    
     // BasicsWorld::run("tests/features/basics/boolean.feature").await;
 
-    BasicsWorld::cucumber().max_concurrent_scenarios(1)
+    BasicsWorld::cucumber()
+        .max_concurrent_scenarios(1)
         .run("tests/features/basics")
         .await;
-
 }

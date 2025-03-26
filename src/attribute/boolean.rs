@@ -1,4 +1,5 @@
-use crate::pubsub::Publisher;
+// use crate::pubsub::Publisher;
+use super::data_pack::AttributeDataPack;
 use crate::reactor::DataReceiver;
 use crate::AttributeMode;
 use crate::Topic;
@@ -8,8 +9,10 @@ use std::sync::Mutex;
 use std::time::Duration;
 use tokio::sync::Notify;
 use tokio::time::timeout;
-
-use super::data_pack::AttributeDataPack;
+use zenoh::handlers::FifoChannelHandler;
+use zenoh::pubsub::Subscriber;
+use zenoh::sample::Sample;
+use zenoh::Session;
 
 #[derive(Clone, Debug)]
 /// Object to manage the BooleanAttribute
@@ -19,12 +22,11 @@ pub struct BooleanAttribute {
     /// TODO: maybe add this into the data pack
     topic: String,
 
-    
-    mode : AttributeMode,
-    
-    /// Object that all the attribute to publish
+    mode: AttributeMode,
+
+    /// Global Session
     ///
-    cmd_publisher: Publisher,
+    session: Session,
 
     /// Initial data
     ///
@@ -38,54 +40,52 @@ pub struct BooleanAttribute {
 impl BooleanAttribute {
     /// Create a new instance
     ///
-    pub async fn new(topic: String, mode:AttributeMode, cmd_publisher: Publisher, mut att_receiver: DataReceiver) -> Self {
+    pub async fn new(
+        session: Session,
+        topic_cmd: String,
+        topic_att: String,
+        mode: AttributeMode,
+        mut att_receiver: Subscriber<FifoChannelHandler<Sample>>,
+    ) -> Self {
         //
         // Create data pack
-        let pack = Arc::new(Mutex::new(
-            AttributeDataPack::<bool>::default()
-        ));
+        let pack = Arc::new(Mutex::new(AttributeDataPack::<bool>::default()));
 
         //
         //
         let update_1 = pack.lock().unwrap().update_notifier();
 
+        //
+        // Create the recv task
+        let pack_2 = pack.clone();
+        tokio::spawn(async move {
+            while let Ok(sample) = att_receiver.recv_async().await {
+                let value: bool = sample.payload().try_to_string().unwrap().parse().unwrap();
+                // Push into pack
+                pack_2.lock().unwrap().push(value);
+            }
+        });
+
         // Wait for the first message if mode is not readonly
         if mode != AttributeMode::WriteOnly {
-            //
-            // Create the recv task
-            let pack_2 = pack.clone();
-            tokio::spawn({
-                let topic = topic.clone();
-                async move {
-                loop {
-                    //
-                    let message = att_receiver.recv().await;
-
-                    println!("new message on topic {:?}: {:?}", &topic, message);
-
-                    // Manage message
-                    if let Some(message) = message {
-                        // Deserialize
-                        let value: bool = serde_json::from_slice(&message).unwrap();
-                        // Push into pack
-                        pack_2.lock().unwrap().push(value);
-                    }
-                    // None => no more message
-                    else {
-                        break;
-                    }
-                }
-            }});
-
-            // Need a timeout here
-            update_1.notified().await;
+            let query = session.get(topic_att.clone()).await.unwrap();
+            let result = query.recv_async().await.unwrap();
+            let value: bool = result
+                .result()
+                .unwrap()
+                .payload()
+                .try_to_string()
+                .unwrap()
+                .parse()
+                .unwrap();
+            pack.lock().unwrap().push(value);
         }
 
         //
         // Return attribute
         Self {
-            topic: topic,
-            cmd_publisher: cmd_publisher,
+            topic: topic_cmd,
+            session: session,
             pack: pack,
             update_notifier: update_1,
             mode: mode,
@@ -99,7 +99,7 @@ impl BooleanAttribute {
         let pyl = Bytes::from(serde_json::to_string(&value).unwrap());
 
         // Send the command
-        self.cmd_publisher.publish(pyl).await.unwrap();
+        self.session.put(self.topic.clone(), pyl).await.unwrap();
     }
 
     /// Notify when new data have been received
@@ -115,7 +115,6 @@ impl BooleanAttribute {
         self.shoot(value).await;
 
         if self.mode == AttributeMode::ReadWrite {
-
             let delay = Duration::from_secs(5);
 
             // Wait for change in the data pack
@@ -147,14 +146,13 @@ impl BooleanAttribute {
     }
 
     pub fn get_instance_status_topic(&self) -> String {
-        format!("pza/_/devices/{}", Topic::from_string(self.topic.clone(), true).instance_name())
+        format!(
+            "pza/_/devices/{}",
+            Topic::from_string(self.topic.clone(), true).instance_name()
+        )
     }
 
-
-
-    
     pub async fn wait_for_value(&self, value: bool) -> Result<(), String> {
-
         if self.mode == AttributeMode::WriteOnly {
             return Err("Cannot wait for value in WriteOnly mode".to_string());
         }
@@ -167,5 +165,4 @@ impl BooleanAttribute {
         }
         Ok(())
     }
-
 }

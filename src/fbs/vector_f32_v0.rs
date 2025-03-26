@@ -5,7 +5,7 @@ use bytes::Bytes;
 use std::time::{SystemTime, UNIX_EPOCH};
 use vector_f32_v0_generated::{Timestamp, VectorF32, VectorF32Args};
 
-#[derive(Debug)]
+#[derive(Debug, Default, Clone)]
 ///
 ///
 pub struct VectorF32Buffer {
@@ -69,7 +69,7 @@ impl VectorF32Buffer {
     }
 
     ///
-    /// 
+    ///
     pub fn object(&self) -> VectorF32 {
         flatbuffers::root::<VectorF32>(&self.raw_data).unwrap()
     }

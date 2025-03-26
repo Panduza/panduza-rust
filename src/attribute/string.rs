@@ -1,4 +1,4 @@
-use crate::pubsub::Publisher;
+// use crate::pubsub::Publisher;
 use crate::reactor::DataReceiver;
 use crate::AttributeMode;
 use crate::Topic;
@@ -8,6 +8,10 @@ use std::sync::Mutex;
 use std::time::Duration;
 use tokio::sync::Notify;
 use tokio::time::timeout;
+use zenoh::handlers::FifoChannelHandler;
+use zenoh::pubsub::Subscriber;
+use zenoh::sample::Sample;
+use zenoh::Session;
 
 use super::data_pack::AttributeDataPack;
 
@@ -21,9 +25,9 @@ pub struct StringAttribute {
 
     mode: AttributeMode,
 
-    /// Object that all the attribute to publish
+    /// Global Session
     ///
-    cmd_publisher: Publisher,
+    session: Session,
 
     /// Initial data
     ///
@@ -38,16 +42,15 @@ impl StringAttribute {
     /// Create a new instance
     ///
     pub async fn new(
-        topic: String,
+        session: Session,
+        topic_cmd: String,
+        topic_att: String,
         mode: AttributeMode,
-        cmd_publisher: Publisher,
-        mut att_receiver: DataReceiver,
+        mut att_receiver: Subscriber<FifoChannelHandler<Sample>>,
     ) -> Self {
         //
         // Create data pack
-        let pack = Arc::new(Mutex::new(
-            AttributeDataPack::<String>::default()
-        ));
+        let pack = Arc::new(Mutex::new(AttributeDataPack::<String>::default()));
 
         //
         //
@@ -56,41 +59,33 @@ impl StringAttribute {
         //
         // Create the recv task
         let pack_2 = pack.clone();
-        tokio::spawn({
-            // let topic = topic.clone();
-            async move {
-                loop {
-                    //
-                    let message = att_receiver.recv().await;
-
-                    // println!("new message on topic {:?}: {:?}", &topic, message);
-
-                    // Manage message
-                    if let Some(message) = message {
-                        // Deserialize
-                        let value: String = serde_json::from_slice(&message).unwrap();
-                        // Push into pack
-                        pack_2.lock().unwrap().push(value);
-                    }
-                    // None => no more message
-                    else {
-                        break;
-                    }
-                }
+        tokio::spawn(async move {
+            while let Ok(sample) = att_receiver.recv_async().await {
+                let value: String = sample.payload().try_to_string().unwrap().to_string();
+                // Push into pack
+                pack_2.lock().unwrap().push(value);
             }
         });
 
         // Wait for the first message if mode is not readonly
         if mode != AttributeMode::WriteOnly {
-            // Need a timeout here
-            update_1.notified().await;
+            let query = session.get(topic_att.clone()).await.unwrap();
+            let result = query.recv_async().await.unwrap();
+            let value: String = result
+                .result()
+                .unwrap()
+                .payload()
+                .try_to_string()
+                .unwrap()
+                .to_string();
+            pack.lock().unwrap().push(value);
         }
 
         //
         // Return attribute
         Self {
-            topic: topic,
-            cmd_publisher: cmd_publisher,
+            topic: topic_cmd,
+            session: session,
             pack: pack,
             update_notifier: update_1,
             mode: mode,
@@ -104,7 +99,7 @@ impl StringAttribute {
         let pyl = Bytes::from(serde_json::to_string(&value).unwrap());
 
         // Send the command
-        self.cmd_publisher.publish(pyl).await.unwrap();
+        self.session.put(self.topic.clone(), pyl).await.unwrap();
     }
 
     /// Notify when new data have been received

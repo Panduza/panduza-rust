@@ -2,7 +2,7 @@ pub mod sample_generated;
 use bytes::Bytes;
 use sample_generated::{Sample, SampleArgs};
 
-#[derive(Debug)]
+#[derive(Debug, Default, Clone)]
 ///
 ///
 pub struct SampleBuffer {

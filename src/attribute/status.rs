@@ -1,10 +1,16 @@
 use crate::fbs::status_v0::StatusBuffer;
 use crate::reactor::DataReceiver;
+use bytes::Bytes;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 use tokio::sync::Notify;
 use tokio::time::timeout;
+use zenoh::handlers::FifoChannelHandler;
+use zenoh::pubsub::Subscriber;
+use zenoh::query::Reply;
+use zenoh::sample::Sample;
+use zenoh::Session;
 
 use super::data_pack::AttributeDataPack;
 
@@ -15,6 +21,10 @@ pub struct StatusAttribute {
     ///
     /// TODO: maybe add this into the data pack
     topic: String,
+
+    /// Global Session
+    ///
+    session: Session,
 
     /// Initial data
     ///
@@ -28,49 +38,42 @@ pub struct StatusAttribute {
 impl StatusAttribute {
     /// Create a new instance
     ///
-    pub async fn new(topic: String, mut att_receiver: DataReceiver) -> Self {
-        //
+    pub async fn new(
+        session: Session,
+        topic: String,
+        mut att_receiver: Subscriber<FifoChannelHandler<Sample>>,
+    ) -> Self {
         // Create data pack
         let pack = Arc::new(Mutex::new(AttributeDataPack::<StatusBuffer>::default()));
 
-        //
-        //
         let update_1 = pack.lock().unwrap().update_notifier();
 
-        //
         // Create the recv task
         let pack_2 = pack.clone();
-        tokio::spawn({
-            let topic = topic.clone();
-            async move {
-                loop {
-                    //
-                    let message = att_receiver.recv().await;
 
-                    // println!("new message on topic {:?}: {:?}", &topic, message);
-
-                    // Manage message
-                    if let Some(message) = message {
-                        // Deserialize
-                        let value = StatusBuffer::from_raw_data(message.clone());
-                        // Push into pack
-                        pack_2.lock().unwrap().push(value);
-                    }
-                    // None => no more message
-                    else {
-                        break;
-                    }
-                }
+        tokio::spawn(async move {
+            while let Ok(sample) = att_receiver.recv_async().await {
+                let value = StatusBuffer::from_raw_data(Bytes::copy_from_slice(
+                    &sample.payload().to_bytes(),
+                ));
+                // Push into pack
+                pack_2.lock().unwrap().push(value);
             }
         });
 
-        // Need a timeout here
-        update_1.notified().await;
+        let query = session.get(topic.clone()).await.unwrap();
+        let result = query.recv_async().await.unwrap();
+        let value: StatusBuffer = StatusBuffer::from_raw_data(Bytes::copy_from_slice(
+            &result.result().unwrap().payload().to_bytes(),
+        ));
+        pack.lock().unwrap().push(value);
 
-        //
+        // update_1.notified().await;
+
         // Return attribute
         Self {
             topic: topic,
+            session: session,
             pack: pack,
             update_notifier: update_1,
         }
@@ -112,7 +115,8 @@ impl StatusAttribute {
 
         // Check if we have a value
         if let Some(value) = value {
-            return value.all_instances_are_running();
+            let result = value.all_instances_are_running();
+            return result;
         }
 
         // Return an error if no buffer is available
@@ -142,10 +146,13 @@ impl StatusAttribute {
     ) -> Result<(), &'static str> {
         loop {
             // Check if all instances are running
-            if let Ok(flag) = self.all_instances_are_running() {
-                if flag {
-                    return Ok(());
+            match self.all_instances_are_running() {
+                Ok(flag) => {
+                    if flag {
+                        return Ok(());
+                    }
                 }
+                Err(e) => println!("Error checking instances status: {}", e),
             }
 
             // Wait for a notification or timeout

@@ -1,5 +1,4 @@
-use super::data_pack::AttributeDataPack;
-
+// use crate::{pubsub::Publisher, reactor::DataReceiver};
 use crate::AttributeMode;
 use bytes::Bytes;
 use std::sync::{Arc, Mutex};
@@ -10,6 +9,69 @@ use zenoh::handlers::FifoChannelHandler;
 use zenoh::pubsub::Subscriber;
 use zenoh::sample::Sample;
 use zenoh::Session;
+#[derive(Debug)]
+struct BytesDataPack {
+    /// Last value received
+    ///
+    last: Option<Bytes>,
+
+    /// Queue of value (need to be poped)
+    ///
+    queue: Vec<Bytes>,
+
+    /// If True we are going to use the input queue
+    ///
+    pub use_input_queue: bool,
+
+    /// Update notifier
+    ///
+    update_notifier: Arc<Notify>,
+}
+
+impl BytesDataPack {
+    ///
+    ///
+    pub fn push(&mut self, bytes: Bytes) {
+        if self.use_input_queue {
+            self.queue.push(bytes.clone());
+        }
+        self.last = Some(bytes);
+        self.update_notifier.notify_waiters();
+    }
+
+    ///
+    ///
+    pub fn last(&self) -> Option<Bytes> {
+        self.last.clone()
+    }
+
+    ///
+    ///
+    pub fn pop(&mut self) -> Option<Bytes> {
+        if self.queue.is_empty() {
+            None
+        } else {
+            Some(self.queue.remove(0))
+        }
+    }
+
+    ///
+    ///
+    pub fn update_notifier(&self) -> Arc<Notify> {
+        self.update_notifier.clone()
+    }
+}
+
+impl Default for BytesDataPack {
+    fn default() -> Self {
+        Self {
+            last: Default::default(),
+            queue: Default::default(),
+            use_input_queue: false,
+            update_notifier: Default::default(),
+        }
+    }
+}
 
 #[derive(Debug)]
 /// Object to manage the BytesAttribute
@@ -21,7 +83,7 @@ pub struct BytesAttribute {
 
     /// Initial data
     ///
-    pack: Arc<Mutex<AttributeDataPack<Bytes>>>,
+    pack: Arc<Mutex<BytesDataPack>>,
 
     /// Update notifier
     ///
@@ -39,12 +101,11 @@ impl BytesAttribute {
         session: Session,
         mode: AttributeMode,
         mut att_receiver: Subscriber<FifoChannelHandler<Sample>>,
-        topic_cmd: String,
-        topic_att: String,
+        topic: String,
     ) -> Self {
         //
         // Create data pack
-        let pack = Arc::new(Mutex::new(AttributeDataPack::<Bytes>::default()));
+        let pack = Arc::new(Mutex::new(BytesDataPack::default()));
 
         //
         //
@@ -63,24 +124,21 @@ impl BytesAttribute {
             });
         });
 
-        // Wait for the first message if mode is not writeonly
-        if mode != AttributeMode::WriteOnly {
-            let query = session.get(topic_att.clone()).await.unwrap();
-            let result = query.recv_async().await.unwrap();
-            let value: Bytes =
-                Bytes::copy_from_slice(&result.result().unwrap().payload().to_bytes());
-            pack.lock().unwrap().push(value);
-        }
-
         //
         // Return attribute
         Self {
             session,
             pack: pack,
             update_notifier: update_1,
-            topic: topic_cmd,
+            topic,
             mode,
         }
+    }
+
+    /// Enable the input queue buffer (to use pop feature)
+    ///
+    pub fn enable_input_queue(&mut self, enable: bool) {
+        self.pack.lock().unwrap().use_input_queue = enable;
     }
 
     /// Send command and do not wait for validation
@@ -101,22 +159,6 @@ impl BytesAttribute {
     pub async fn set(&mut self, value: Bytes) -> Result<(), String> {
         //
         self.shoot(value.clone()).await;
-
-        if self.mode == AttributeMode::ReadWrite {
-            let delay = Duration::from_secs(5);
-
-            // Wait for change in the data pack
-            timeout(delay, self.update_notifier.notified())
-                .await
-                .map_err(|e| e.to_string())?;
-
-            while value != self.get().unwrap() {
-                // append 3 retry before failling if update received but not good
-                timeout(delay, self.update_notifier.notified())
-                    .await
-                    .map_err(|e| e.to_string())?;
-            }
-        }
 
         Ok(())
 

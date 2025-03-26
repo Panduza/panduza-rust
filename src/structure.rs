@@ -1,14 +1,16 @@
+use crate::attribute_metadata::AttributeMetadata;
+use bytes::Bytes;
+use serde_json::{Map, Value as JsonValue};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
 };
-
-use crate::{attribute_metadata::AttributeMetadata, reactor::DataReceiver};
-use bytes::Bytes;
-use serde_json::{Map, Value as JsonValue};
-use yash_fnmatch::{without_escape, Pattern, PatternChar};
-
 use tokio::sync::Notify;
+use yash_fnmatch::{without_escape, Pattern};
+use zenoh::handlers::FifoChannelHandler;
+use zenoh::pubsub::Subscriber;
+use zenoh::query::Reply;
+use zenoh::sample::Sample;
 
 #[derive(Debug)]
 struct StructureData {
@@ -133,11 +135,10 @@ impl StructureData {
         Ok(())
         // .ok_or(format!("cannot insert entry {:?}", &level))
         // .map(|_| ())
-    }    
-    
+    }
 
     /// TODO REWORK THIS SERIOUSLY
-    /// 
+    ///
     pub fn find_attribute<A: Into<String>>(&self, pattern: A) -> Option<AttributeMetadata> {
         let pattern_str: String = pattern.into();
 
@@ -151,9 +152,12 @@ impl StructureData {
         println!("Looking for pattern: {:?}", pattern_str);
 
         // Utilisation de yash_fnmatch pour le matching wildcard
-        if let Ok(pattern) = Pattern::parse(without_escape( &pattern_str)) {
+        if let Ok(pattern) = Pattern::parse(without_escape(&pattern_str)) {
             for (topic, metadata) in self.flat.iter() {
-                if pattern.is_match(topic) && topic.chars().rev().take(3).collect::<String>() == pattern_str.chars().rev().take(3).collect::<String>() {
+                if pattern.is_match(topic)
+                    && topic.chars().rev().take(3).collect::<String>()
+                        == pattern_str.chars().rev().take(3).collect::<String>()
+                {
                     println!("Found match: {:?}", topic);
                     return Some(metadata.clone());
                 }
@@ -187,27 +191,26 @@ pub struct Structure {
 }
 
 impl Structure {
-    pub fn new(mut data_receiver: DataReceiver) -> Self {
+    pub async fn new(query: FifoChannelHandler<Reply>) -> Self {
         let json_value = Arc::new(Mutex::new(StructureData::new()));
 
         let json_value_2 = json_value.clone();
-        tokio::spawn(async move {
-            loop {
-                let message = data_receiver.recv().await;
-                // println!("!!!!!!!!!!! ssss ttt Notification = {:?}", message);
 
-                if let Some(message) = message {
-                    match json_value_2.lock() {
-                        Ok(mut deref_value) => {
-                            deref_value.update(message).unwrap();
-                        }
-                        Err(e) => {
-                            println!("Error = {:?}", e);
-                        }
-                    }
+        while let Ok(sample) = query.recv_async().await {
+            // println!("LE SAMPLE : {:?}", sample.clone());
+            match json_value_2.lock() {
+                Ok(mut deref_value) => {
+                    deref_value
+                        .update(Bytes::copy_from_slice(
+                            &sample.result().unwrap().payload().to_bytes(),
+                        ))
+                        .unwrap();
+                }
+                Err(e) => {
+                    println!("Error = {:?}", e);
                 }
             }
-        });
+        }
 
         Structure { value: json_value }
     }

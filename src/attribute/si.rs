@@ -1,13 +1,18 @@
 use crate::fbs::number::NumberBuffer;
-use crate::pubsub::Publisher;
+// use crate::pubsub::Publisher;
 use crate::reactor::DataReceiver;
 use crate::AttributeMode;
 use crate::Topic;
+use bytes::Bytes;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 use tokio::sync::Notify;
 use tokio::time::timeout;
+use zenoh::handlers::FifoChannelHandler;
+use zenoh::pubsub::Subscriber;
+use zenoh::sample::Sample;
+use zenoh::Session;
 
 use super::data_pack::AttributeDataPack;
 
@@ -19,12 +24,11 @@ pub struct SiAttribute {
     /// TODO: maybe add this into the data pack
     topic: String,
 
-    
-    mode : AttributeMode,
-    
-    /// Object that all the attribute to publish
+    mode: AttributeMode,
+
+    /// Global Session
     ///
-    cmd_publisher: Publisher,
+    session: Session,
 
     /// Initial data
     ///
@@ -38,12 +42,16 @@ pub struct SiAttribute {
 impl SiAttribute {
     /// Create a new instance
     ///
-    pub async fn new(topic: String, mode:AttributeMode, cmd_publisher: Publisher, mut att_receiver: DataReceiver) -> Self {
+    pub async fn new(
+        session: Session,
+        topic_cmd: String,
+        topic_att: String,
+        mode: AttributeMode,
+        mut att_receiver: Subscriber<FifoChannelHandler<Sample>>,
+    ) -> Self {
         //
         // Create data pack
-        let pack = Arc::new(Mutex::new(
-            AttributeDataPack::<NumberBuffer>::default()
-        ));
+        let pack = Arc::new(Mutex::new(AttributeDataPack::<NumberBuffer>::default()));
 
         //
         //
@@ -52,46 +60,37 @@ impl SiAttribute {
         //
         // Create the recv task
         let pack_2 = pack.clone();
-        tokio::spawn({
-            let topic = topic.clone();
-            async move {
-            loop {
-                //
-                let message = att_receiver.recv().await;
 
-                println!("new message on topic {:?}: {:?}", &topic, message);
-
-                // Manage message
-                if let Some(message) = message {
-                    // Deserialize
-                    let value = NumberBuffer::from_raw_data(message.clone());
-                    // Push into pack
-                    pack_2.lock().unwrap().push(value);
-                }
-                // None => no more message
-                else {
-                    break;
-                }
+        tokio::spawn(async move {
+            while let Ok(sample) = att_receiver.recv_async().await {
+                let value: NumberBuffer = NumberBuffer::from_raw_data(Bytes::copy_from_slice(
+                    &sample.payload().to_bytes(),
+                ));
+                // Push into pack
+                pack_2.lock().unwrap().push(value);
             }
-        }});
+        });
 
         // Wait for the first message if mode is not readonly
         if mode != AttributeMode::WriteOnly {
-            // Need a timeout here
-            update_1.notified().await;
+            let query = session.get(topic_att.clone()).await.unwrap();
+            let result = query.recv_async().await.unwrap();
+            let value: NumberBuffer = NumberBuffer::from_raw_data(Bytes::copy_from_slice(
+                &result.result().unwrap().payload().to_bytes(),
+            ));
+            pack.lock().unwrap().push(value);
         }
 
         //
         // Return attribute
         Self {
-            topic: topic,
-            cmd_publisher: cmd_publisher,
+            topic: topic_cmd,
+            session: session,
             pack: pack,
             update_notifier: update_1,
             mode: mode,
         }
     }
-
 
     /// Send command and do not wait for validation
     ///
@@ -100,7 +99,7 @@ impl SiAttribute {
         let pyl = value.raw_data();
 
         // Send the command
-        self.cmd_publisher.publish(pyl).await.unwrap();
+        self.session.put(self.topic.clone(), pyl).await.unwrap();
     }
 
     /// Notify when new data have been received
@@ -116,7 +115,6 @@ impl SiAttribute {
         self.shoot(value.clone()).await;
 
         if self.mode == AttributeMode::ReadWrite {
-
             let delay = Duration::from_secs(5);
 
             // Wait for change in the data pack
@@ -151,7 +149,9 @@ impl SiAttribute {
     }
 
     pub fn get_instance_status_topic(&self) -> String {
-        format!("pza/_/devices/{}", Topic::from_string(self.topic.clone(), true).instance_name())
+        format!(
+            "pza/_/devices/{}",
+            Topic::from_string(self.topic.clone(), true).instance_name()
+        )
     }
-
 }

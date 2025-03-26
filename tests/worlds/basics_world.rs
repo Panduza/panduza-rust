@@ -16,9 +16,9 @@ use std::time::Duration;
 use std::{fmt::Debug, str::FromStr};
 
 // --- TEST PARAMETERS ---
-// const PLAFORM_LOCALHOST: &str = "localhost";
 const PLAFORM_LOCALHOST: &str = "127.0.0.1";
-const PLAFORM_PORT: u16 = 1883;
+const PLAFORM_PORT: u16 = 7447;
+const PLAFORM_CA_CERTIFICATE: &str = "minica.pem";
 // -----------------------
 
 #[derive(Debug, Default, Parameter)]
@@ -175,7 +175,7 @@ impl Debug for BasicsWorld {
 ///
 #[given(expr = "a reactor connected on a test platform")]
 async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
-    let options = ReactorOptions::new(PLAFORM_LOCALHOST, PLAFORM_PORT);
+    let options = ReactorOptions::new(PLAFORM_LOCALHOST, PLAFORM_PORT, PLAFORM_CA_CERTIFICATE);
 
     // No additional setup required before connecting to the test platform
     println!("Connecting to {}:{}...", PLAFORM_LOCALHOST, PLAFORM_PORT);

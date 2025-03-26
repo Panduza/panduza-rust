@@ -1,24 +1,34 @@
 use crate::attribute::notification::NotificationAttribute;
 use crate::attribute::status::StatusAttribute;
-use crate::pubsub::Publisher;
-use crate::router::{new_router, RouterHandler};
+use crate::pubsub::Error;
 use crate::structure::Structure;
-use crate::{pubsub, pubsub::Options, AttributeBuilder};
-use crate::{AttributeMetadata, AttributeMode};
+use std::sync::Arc;
+
+use crate::{
+    pubsub::{new_connection, Options},
+    AttributeBuilder, AttributeMetadata, AttributeMode,
+};
 use bytes::Bytes;
+use zenoh::{
+    handlers::FifoChannelHandler,
+    pubsub::{Publisher, Subscriber},
+    sample::Sample,
+    Session,
+};
 
 /// Receiver of data payload
 ///
 pub type DataReceiver = tokio::sync::mpsc::Receiver<Bytes>;
 
+#[derive(Debug)]
 pub struct ReactorOptions {
     pubsub_options: Options,
 }
 
 impl ReactorOptions {
-    pub fn new<T: Into<String>>(ip: T, port: u16) -> Self {
+    pub fn new<T: Into<String>>(ip: T, port: u16, ca_certificate: T) -> Self {
         Self {
-            pubsub_options: Options::new(ip, port),
+            pubsub_options: Options::new(ip, port, ca_certificate),
         }
     }
 }
@@ -27,25 +37,20 @@ impl ReactorOptions {
 ///
 /// All the attribute and objects will be powered by the reactor
 ///
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Reactor {
     ///
     ///
-    structure: Structure,
+    pub session: Session,
 
-    ///
-    ///
-    router: RouterHandler,
+    structure: Structure,
 }
 
 impl Reactor {
     ///
     ///
-    pub fn new(structure: Structure, router: RouterHandler) -> Self {
-        Self {
-            structure: structure,
-            router: router,
-        }
+    pub fn new(session: Session, structure: Structure) -> Self {
+        Self { session, structure }
     }
 
     ///
@@ -116,24 +121,19 @@ impl Reactor {
             .unwrap()
     }
 
-    // Register
+    // Listener
     //
-    pub fn register_listener<A: Into<String> + 'static>(
+    pub async fn register_listener<A: Into<String> + 'static>(
         &self,
         topic: A,
-        channel_size: usize,
-    ) -> impl std::future::Future<Output = Result<DataReceiver, String>> + '_ {
-        self.router.register_listener(topic, channel_size)
+    ) -> Subscriber<FifoChannelHandler<Sample>> {
+        self.session.declare_subscriber(topic.into()).await.unwrap()
     }
 
+    ///Publisher
     ///
-    ///
-    pub fn register_publisher<A: Into<String> + 'static>(
-        &self,
-        topic: A,
-        retain: bool,
-    ) -> Result<Publisher, pubsub::Error> {
-        self.router.register_publisher(topic.into(), retain)
+    pub async fn register_publisher<A: Into<String>>(&self, topic: A) -> Result<Publisher, Error> {
+        Ok(self.session.declare_publisher(topic.into()).await.unwrap())
     }
 }
 
@@ -142,20 +142,28 @@ impl Reactor {
 /// This function initializes the reactor and waits for the structure to be initialized.
 /// If the structure initialization times out after 3 seconds, it returns an error.
 pub async fn new_reactor(options: ReactorOptions) -> Result<Reactor, String> {
-    let router = new_router(options.pubsub_options).map_err(|e| e.to_string())?;
+    let session = match new_connection(options.pubsub_options).await {
+        Ok(session) => session,
+        Err(e) => return Err(format!("Connection failed: {}", e)),
+    };
 
-    let handler = router.start(None).unwrap();
+    // let subscriber = session
+    //     .declare_subscriber("pza/_/structure/att")
+    //     .await
+    //     .unwrap();
 
-    let structure_data_receiver = handler.register_listener("pza/_/structure/att", 5).await?;
+    let struct_query = session.get("pza/_/structure/att").await.unwrap();
 
-    let structure = Structure::new(structure_data_receiver);
-    let structure_initialized = structure.initialized_notifier();
+    let structure = Structure::new(struct_query).await;
 
-    let timeout_duration = std::time::Duration::from_secs(15);
-    let result = tokio::time::timeout(timeout_duration, structure_initialized.notified()).await;
+    // let structure_initialized = structure.initialized_notifier();
+    // let timeout_duration = std::time::Duration::from_secs(15);
+    // let result = tokio::time::timeout(timeout_duration, structure_initialized.notified()).await;
 
-    match result {
-        Ok(_) => Ok(Reactor::new(structure, handler)),
-        Err(_) => Err("Timeout while waiting for structure initialization".to_string()),
-    }
+    // match result {
+    //     Ok(_) => Ok(Reactor::new(session, structure)),
+    //     Err(_) => Err("Timeout while waiting for structure initialization".to_string()),
+    // }
+
+    Ok(Reactor::new(session, structure))
 }

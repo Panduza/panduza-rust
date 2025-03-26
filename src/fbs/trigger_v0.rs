@@ -9,7 +9,7 @@ use trigger_v0_generated::{Options, OptionsArgs, Range, Timestamp, Trigger, Trig
 //     option_id: u8, range: Option<(f32, f32)>, whitelist: Option<Vec<f32>>
 // }
 
-#[derive(Debug)]
+#[derive(Debug, Default, Clone)]
 ///
 ///
 pub struct TriggerBuffer {
