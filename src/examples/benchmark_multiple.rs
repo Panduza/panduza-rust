@@ -7,14 +7,14 @@ async fn main() {
     let options = ReactorOptions::new();
     let mut reactor = panduza::new_reactor(options).await.unwrap();
 
-    let number_of_classes = 30;
+    let number_of_classes = 1;
 
     // Create multiple benchmark byte attributes
     let mut benchmark_bytes_list = vec![];
     for i in 1..=number_of_classes {
         let bytes = reactor
-            .find_attribute(&format!("bytes_{}/rw", i))
-            .expect_bytes()
+            .find_attribute(&format!("bytes_{}/wo", i))
+            .expect_bytes_publisher()
             .await
             .unwrap();
         benchmark_bytes_list.push(bytes);
@@ -22,19 +22,19 @@ async fn main() {
 
     let start = Instant::now();
 
-    let total = 100;
+    let total = 1000;
 
     let kB = 1024;
-    let bytes = 1;
+    let bytes = 100;
     let size = bytes * kB;
     let mut data = vec![0; size];
 
     for i in 0..total {
-        println!("Iteration {:?}", i);
+        // println!("Iteration {:?}", i);
         // Send data to all bytes attributes concurrently
         let futures: Vec<_> = benchmark_bytes_list
             .iter_mut()
-            .map(|bytes| bytes.set(data.clone().into()))
+            .map(|bytes| bytes.shoot(data.clone().into()))
             .collect();
         futures::future::join_all(futures).await;
     }
@@ -42,7 +42,7 @@ async fn main() {
     let elapsed = start.elapsed();
 
     // Print the average time
-    println!("Average speed : {:?}", elapsed / total);
+    println!("Average speed : {:.2?}", elapsed / total);
 
     // Print the efficiency combining all atributes
     let total_bytes = size * number_of_classes;

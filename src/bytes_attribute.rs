@@ -68,7 +68,7 @@ impl Default for BytesDataPack {
 }
 
 #[derive(Clone, Debug)]
-/// Object to manage the StringAttribute
+/// Object to manage the BytesAttribute
 ///
 pub struct BytesAttribute {
     /// Object that all the attribute to publish
@@ -168,5 +168,24 @@ impl BytesAttribute {
     ///
     pub fn pop(&self) -> Option<Bytes> {
         self.pack.lock().unwrap().pop()
+    }
+}
+
+#[derive(Clone, Debug)]
+/// Object to manage bytes commands without waiting for responses
+pub struct BytesPublisher {
+    /// Object that allows the attribute to publish
+    cmd_publisher: Publisher,
+}
+
+impl BytesPublisher {
+    /// Create a new instance
+    pub fn new(cmd_publisher: Publisher) -> Self {
+        Self { cmd_publisher }
+    }
+
+    /// Send command without waiting for validation
+    pub async fn shoot(&mut self, value: Bytes) {
+        self.cmd_publisher.publish(value).await.unwrap();
     }
 }

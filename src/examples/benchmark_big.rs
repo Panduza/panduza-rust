@@ -8,8 +8,8 @@ async fn main() {
     let mut reactor = panduza::new_reactor(options).await.unwrap();
 
     let mut benchmark_bytes = reactor
-        .find_attribute("bytes_1/rw")
-        .expect_bytes()
+        .find_attribute("bytes_1/wo")
+        .expect_bytes_publisher()
         .await
         .unwrap();
 
@@ -22,18 +22,17 @@ async fn main() {
     let size = bytes * kB;
     let mut data = vec![0; size];
 
-    let mut vvv = true;
-
     for i in 0..total {
-        vvv = if vvv { true } else { false };
-        println!("POK {:?}", i);
-        benchmark_bytes.set(data.clone().into()).await;
+        // println!("Iteration {:?}", i);
+        benchmark_bytes.shoot(data.clone().into()).await;
     }
 
+    let elapsed = start.elapsed();
+
     // Print the average time
-    println!("Average speed : {:?}", start.elapsed() / total);
+    println!("Average speed : {:?}", elapsed / total);
     // Print the efficiency
-    let bytes_per_sec = size as f32 * total as f32 / start.elapsed().as_secs_f32();
+    let bytes_per_sec = size as f32 * total as f32 / elapsed.as_secs_f32();
     let (efficiency, unit) = if bytes_per_sec > 1_000_000.0 {
         (bytes_per_sec / 1_000_000.0, "MB/s")
     } else if bytes_per_sec > 1_000.0 {

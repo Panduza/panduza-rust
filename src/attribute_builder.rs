@@ -1,5 +1,6 @@
 use crate::{
     attribute_metadata::AttributeMetadata,
+    bytes_attribute::BytesPublisher,
     pubsub::{Operator, Publisher},
     BooleanAttribute, BytesAttribute, Reactor, StringAttribute,
 };
@@ -70,5 +71,15 @@ impl AttributeBuilder {
             .map_err(|e| e.to_string())?;
 
         Ok(BytesAttribute::new(cmd_publisher, att_receiver))
+    }
+
+    pub async fn expect_bytes_publisher(&self) -> Result<BytesPublisher, String> {
+        let md = self.metadata.as_ref().unwrap();
+        let cmd_topic = format!("{}/cmd", md.topic);
+
+        self.reactor
+            .register_publisher(cmd_topic, false)
+            .map(|publisher| BytesPublisher::new(publisher))
+            .map_err(|e| e.to_string())
     }
 }
