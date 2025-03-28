@@ -81,7 +81,6 @@ async fn given_the_attribute_rw(world: &mut BooleanWorld, attribute_name: String
     world.att_rw = Some(attribute);
 }
 
-
 ///
 /// 
 #[when(expr = "I set rw boolean to {boolean}")]
