@@ -9,7 +9,7 @@ async fn main() {
 
     let mut benchmark_bytes = reactor
         .find_attribute("bytes_1/wo")
-        .expect_bytes_publisher()
+        .expect_bytes()
         .await
         .unwrap();
 
@@ -17,10 +17,11 @@ async fn main() {
 
     let total = 1000;
 
+    let megaB = 1;
     let kB = 1024;
-    let bytes = 1;
-    let size = bytes * kB;
-    let mut data = vec![0; size];
+    let bytes = 500;
+    let size = bytes * kB * megaB;
+    let mut data: Vec<u8> = vec![0; size];
 
     for i in 0..total {
         // println!("Iteration {:?}", i);
@@ -29,14 +30,27 @@ async fn main() {
 
     let elapsed = start.elapsed();
 
+    // Print the number of messages sent
+    println!("Number of messages : {:?}", total);
+    // Print the size of a message
+    let (msg_size, msg_unit) = if size >= 1_048_576 {
+        (size as f32 / 1_048_576.0, "MB")
+    } else if size >= 1_024 {
+        (size as f32 / 1_024.0, "kB")
+    } else {
+        (size as f32, "B")
+    };
+    println!("Size of a message : {:.2} {}", msg_size, msg_unit);
+    // Print the time elapsed
+    println!("Time elapsed : {:.3?}", elapsed);
     // Print the average time
-    println!("Average speed : {:?}", elapsed / total);
+    println!("Average time : {:.2?}", elapsed / total);
     // Print the efficiency
     let bytes_per_sec = size as f32 * total as f32 / elapsed.as_secs_f32();
-    let (efficiency, unit) = if bytes_per_sec > 1_000_000.0 {
-        (bytes_per_sec / 1_000_000.0, "MB/s")
-    } else if bytes_per_sec > 1_000.0 {
-        (bytes_per_sec / 1_000.0, "kB/s")
+    let (efficiency, unit) = if bytes_per_sec >= 1_048_576.0 {
+        (bytes_per_sec / 1_048_576.0, "MB/s")
+    } else if bytes_per_sec >= 1_024.0 {
+        (bytes_per_sec / 1_024.0, "kB/s")
     } else {
         (bytes_per_sec, "B/s")
     };

@@ -87,7 +87,7 @@ pub struct BytesAttribute {
 impl BytesAttribute {
     /// Create a new instance
     ///
-    pub fn new(cmd_publisher: Publisher, mut att_receiver: DataReceiver) -> Self {
+    pub fn new(cmd_publisher: Publisher, mut att_receiver: Option<DataReceiver>) -> Self {
         //
         // Create data pack
         let pack = Arc::new(Mutex::new(BytesDataPack::default()));
@@ -98,25 +98,27 @@ impl BytesAttribute {
 
         //
         // Create the recv task
-        let pack_2 = pack.clone();
-        tokio::spawn(async move {
-            loop {
-                //
-                let message = att_receiver.recv().await;
+        if let Some(mut att_receiver) = att_receiver {
+            let pack_2 = pack.clone();
+            tokio::spawn(async move {
+                loop {
+                    //
+                    let message = att_receiver.recv().await;
 
-                // println!("new message {:?}", message);
+                    // println!("new message {:?}", message);
 
-                // Manage message
-                if let Some(message) = message {
-                    // Push into pack
-                    pack_2.lock().unwrap().push(message);
+                    // Manage message
+                    if let Some(message) = message {
+                        // Push into pack
+                        pack_2.lock().unwrap().push(message);
+                    }
+                    // None => no more message
+                    else {
+                        break;
+                    }
                 }
-                // None => no more message
-                else {
-                    break;
-                }
-            }
-        });
+            });
+        }
 
         //
         // Return attribute
@@ -174,16 +176,19 @@ impl BytesAttribute {
 #[derive(Clone, Debug)]
 /// Object to manage bytes commands without waiting for responses
 pub struct BytesPublisher {
+    ///
     /// Object that allows the attribute to publish
     cmd_publisher: Publisher,
 }
 
 impl BytesPublisher {
+    ///
     /// Create a new instance
     pub fn new(cmd_publisher: Publisher) -> Self {
         Self { cmd_publisher }
     }
 
+    ///
     /// Send command without waiting for validation
     pub async fn shoot(&mut self, value: Bytes) {
         self.cmd_publisher.publish(value).await.unwrap();

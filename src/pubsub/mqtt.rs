@@ -26,7 +26,7 @@ fn pubsub_options_to_mqtt_options(options: Options) -> MqttOptions {
         1883,
     );
     mqttoptions.set_keep_alive(Duration::from_secs(3));
-    mqttoptions.set_max_packet_size(1024 * 1000, 1024 * 1000);
+    mqttoptions.set_max_packet_size(1024 * 1024 * 200, 1024 * 1024 * 200);
     mqttoptions
 }
 

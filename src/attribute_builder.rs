@@ -58,12 +58,16 @@ impl AttributeBuilder {
         Ok(StringAttribute::new(cmd_publisher, att_receiver))
     }
 
-    pub async fn expect_bytes(&self) -> Result<BytesAttribute, Bytes> {
+    pub async fn expect_bytes(&self) -> Result<BytesAttribute, String> {
         let md = self.metadata.as_ref().unwrap();
         let att_topic = format!("{}/att", md.topic);
         let cmd_topic = format!("{}/cmd", md.topic);
 
-        let att_receiver = self.reactor.register_listener(att_topic, 20).await?;
+        let att_receiver = if md.mode != "WO" {
+            Some(self.reactor.register_listener(att_topic, 20).await?)
+        } else {
+            None
+        };
 
         let cmd_publisher = self
             .reactor
@@ -71,15 +75,5 @@ impl AttributeBuilder {
             .map_err(|e| e.to_string())?;
 
         Ok(BytesAttribute::new(cmd_publisher, att_receiver))
-    }
-
-    pub async fn expect_bytes_publisher(&self) -> Result<BytesPublisher, String> {
-        let md = self.metadata.as_ref().unwrap();
-        let cmd_topic = format!("{}/cmd", md.topic);
-
-        self.reactor
-            .register_publisher(cmd_topic, false)
-            .map(|publisher| BytesPublisher::new(publisher))
-            .map_err(|e| e.to_string())
     }
 }

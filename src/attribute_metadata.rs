@@ -12,6 +12,7 @@ pub struct AttributeMetadata {
     ///
     pub info: Option<String>,
     // mode
+    pub mode: String,
     // options
 }
 
@@ -35,10 +36,17 @@ impl AttributeMetadata {
             .ok_or("field 'type' not found")?
             .to_string();
 
+        let mode = value
+            .get("mode")
+            .map(|v| v.clone())
+            .ok_or("field 'mode' not found")?
+            .to_string();
+
         Ok(Self {
             topic,
             r#type: t,
             info: None,
+            mode: mode,
         })
     }
 }
