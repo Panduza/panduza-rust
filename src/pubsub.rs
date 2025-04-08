@@ -18,10 +18,31 @@ pub enum Error {
     ListenError { cause: String },
 }
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 ///
 ///
-pub struct Options {}
+pub struct Options {
+    pub ip: String,
+    pub port: u16,
+}
+
+impl Options {
+    pub fn new<T: Into<String>>(ip: T, port: u16) -> Self {
+        Self {
+            ip: ip.into(),
+            port,
+        }
+    }
+}
+
+// impl Default for Options {
+//     fn default() -> Self {
+//         Self {
+//             ip: "127.0.0.1".to_string(),
+//             port: 1883,
+//         }
+//     }
+// }
 
 #[derive(Debug)]
 ///

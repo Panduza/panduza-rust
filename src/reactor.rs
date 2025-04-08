@@ -15,9 +15,9 @@ pub struct ReactorOptions {
 }
 
 impl ReactorOptions {
-    pub fn new() -> Self {
+    pub fn new<T: Into<String>>(ip: T, port: u16) -> Self {
         Self {
-            pubsub_options: Options::default(),
+            pubsub_options: Options::new(ip, port),
         }
     }
 }
@@ -95,7 +95,7 @@ pub async fn new_reactor(options: ReactorOptions) -> Result<Reactor, String> {
     let structure = Structure::new(structure_data_receiver);
     let structure_initialized = structure.initialized_notifier();
 
+    //stop ici
     structure_initialized.notified().await;
-
     Ok(Reactor::new(structure, handler))
 }

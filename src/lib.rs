@@ -25,6 +25,9 @@ pub use string_attribute::StringAttribute;
 pub mod bytes_attribute;
 pub use bytes_attribute::BytesAttribute;
 
+pub mod number_attribute;
+pub use number_attribute::NumberAttribute;
+
 ///
 ///
 pub mod task_monitor;

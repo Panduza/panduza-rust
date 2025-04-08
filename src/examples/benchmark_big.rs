@@ -4,7 +4,10 @@ use tokio::time::sleep;
 
 #[tokio::main]
 async fn main() {
-    let options = ReactorOptions::new();
+    let ip = "127.0.0.1"; //192.168.140.15
+    let port = 1883;
+
+    let options = ReactorOptions::new(ip, port);
     let mut reactor = panduza::new_reactor(options).await.unwrap();
 
     let mut benchmark_bytes = reactor
@@ -13,15 +16,30 @@ async fn main() {
         .await
         .unwrap();
 
-    let start = Instant::now();
+    let mut counter_read = reactor
+        .find_attribute("bytes_1/counter_ro")
+        .expect_number()
+        .await
+        .unwrap();
 
-    let total = 1000;
+    let mut counter_reset = reactor
+        .find_attribute("bytes_1/counter_reset")
+        .expect_boolean()
+        .await
+        .unwrap();
+
+    let total = 100;
 
     let megaB = 1;
     let kB = 1024;
-    let bytes = 500;
+    let bytes = 1024;
     let size = bytes * kB * megaB;
     let mut data: Vec<u8> = vec![0; size];
+
+    // measure the sending time of the client
+    let start = Instant::now();
+
+    counter_reset.set(false).await;
 
     for i in 0..total {
         // println!("Iteration {:?}", i);
@@ -29,6 +47,19 @@ async fn main() {
     }
 
     let elapsed = start.elapsed();
+
+    // get the reception time of the platform
+    let mut prev_timer = 0;
+    loop {
+        if let Some(timer) = counter_read.get() {
+            if timer != prev_timer {
+                println!("Reception time: {} ms", timer);
+                prev_timer = timer;
+                break;
+            }
+        }
+        sleep(Duration::from_millis(100)).await;
+    }
 
     // Print the number of messages sent
     println!("Number of messages : {:?}", total);
@@ -56,5 +87,5 @@ async fn main() {
     };
     println!("Efficiency : {:.2} {}", efficiency, unit);
 
-    sleep(Duration::from_secs(60)).await;
+    // sleep(Duration::from_secs(60)).await;
 }

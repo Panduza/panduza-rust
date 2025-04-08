@@ -5,7 +5,10 @@ use tokio::time::sleep;
 
 #[tokio::main]
 async fn main() {
-    let options = ReactorOptions::new();
+    let ip = "192.168.140.13";
+    let port = 1883;
+
+    let options = ReactorOptions::new(ip, port);
     let mut reactor = panduza::new_reactor(options).await.unwrap();
 
     /// change mount number in plugin-vi/tester/device.rs
@@ -24,16 +27,16 @@ async fn main() {
 
     let start = Instant::now();
 
-    let total = 100;
+    let total = 10;
 
     let megaB = 1;
     let kB = 1;
-    let bytes = 1024;
+    let bytes = 1;
     let size = bytes * kB * megaB;
     let mut data = vec![0; size];
 
     for i in 0..total {
-        // println!("Iteration {:?}", i);
+        println!("Iteration {:?}", i);
         // Send data to all bytes attributes concurrently
         let futures: Vec<_> = benchmark_bytes_list
             .iter_mut()
