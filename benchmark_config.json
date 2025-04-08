@@ -1,0 +1,10 @@
+{
+    "ip": "127.0.0.1",
+    "port": 1883,
+    "tests": {
+        "bytes": 0,
+        "kilobytes": 0,
+        "megabytes": 1,
+        "total_messages": 1000
+    }
+}

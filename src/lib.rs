@@ -28,6 +28,10 @@ pub use bytes_attribute::BytesAttribute;
 pub mod number_attribute;
 pub use number_attribute::NumberAttribute;
 
+pub mod benchmark_config;
+pub use benchmark_config::BenchmarkConfig;
+pub use benchmark_config::TestConfig;
+
 ///
 ///
 pub mod task_monitor;
