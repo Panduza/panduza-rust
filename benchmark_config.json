@@ -1,10 +1,11 @@
 {
     "ip": "127.0.0.1",
     "port": 1883,
+    "number_attributes": 5,
     "tests": {
         "bytes": 0,
-        "kilobytes": 0,
-        "megabytes": 1,
-        "total_messages": 1000
+        "kilobytes": 1,
+        "megabytes": 0,
+        "total_messages": 100
     }
 }

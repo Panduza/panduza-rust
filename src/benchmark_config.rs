@@ -11,6 +11,7 @@ pub struct TestConfig {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BenchmarkConfig {
     pub tests: TestConfig,
+    pub number_attributes: u16,
     pub ip: String,
     pub port: u16,
 }
