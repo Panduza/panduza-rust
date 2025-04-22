@@ -1,0 +1,13 @@
+{
+  "mode": "client",
+  "connect": {
+    "endpoints": ["tls/192.168.140.15:7447"]
+  },
+  "transport": {
+    "link": {
+      "tls": {
+        "root_ca_certificate": "/home/pi_client/tls/minica.pem"
+      }
+    }
+  }
+}
