@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::pubsub::{Operator, Publisher};
+use crate::pubsub::Publisher;
 use crate::router::{new_router, RouterHandler};
 use crate::structure::Structure;
 use crate::{pubsub, pubsub::Options, AttributeBuilder};
@@ -15,9 +15,9 @@ pub struct ReactorOptions {
 }
 
 impl ReactorOptions {
-    pub fn new<T: Into<String>>(ip: T, port: u16) -> Self {
+    pub fn new<T: Into<String>>(ip: T, port: u16, ca_certificate: T) -> Self {
         Self {
-            pubsub_options: Options::new(ip, port),
+            pubsub_options: Options::new(ip, port, ca_certificate),
         }
     }
 }
@@ -86,13 +86,16 @@ impl Reactor {
 /// Start the reactor
 ///
 pub async fn new_reactor(options: ReactorOptions) -> Result<Reactor, String> {
-    let router = new_router(options.pubsub_options).map_err(|e| e.to_string())?;
+    let router = new_router(options.pubsub_options)
+        .await
+        .map_err(|e| e.to_string())?;
 
     let handler = router.start(None).unwrap();
 
     let structure_data_receiver = handler.register_listener("pza/_/structure/att", 5).await?;
 
     let structure = Structure::new(structure_data_receiver);
+    println!("structure : {:?}", structure);
     let structure_initialized = structure.initialized_notifier();
 
     //stop ici

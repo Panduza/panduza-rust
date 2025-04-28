@@ -1,6 +1,5 @@
 //
 pub mod pubsub;
-pub mod pubsub_zenoh;
 
 pub mod router;
 

@@ -87,7 +87,7 @@ impl RouterHandler {
 
         //
         //
-        let sub = self
+        let mut sub = self
             .operator
             .declare_subscriber()
             .map_err(|e| e.to_string())?;
@@ -199,8 +199,10 @@ impl Router {
         loop {
             tokio::select! {
                 Some(rule) = self.rules_receiver.recv() => {
-                    self.routes.insert(rule.topic, rule.sender);
+                    self.routes.insert(rule.topic.clone(), rule.sender.clone());
+                    println!("on est passé la route : {:?}{:?}", rule.topic.clone(), rule.sender.clone());
                 }
+
                 Ok(event) = self.listener.poll() => {
                     match event {
                         crate::pubsub::PubSubEvent::IncomingUpdate(incoming_update) =>
@@ -210,7 +212,14 @@ impl Router {
                                 sender.send(incoming_update.payload).await.unwrap();
                             }
                             else {
-                                println!("-------- !!! No route for {:?}", incoming_update.topic);
+                                // println!("incoming topic : {:?}", self.routes.get(&incoming_update.topic));
+                                // println!("-------- !!! No route for {:?}", incoming_update.topic);
+                                println!("Topic reçu: '{}'", incoming_update.topic);
+                                println!("Routes enregistrées:");
+                                for (topic, _) in self.routes.iter() {
+                                    println!("  - '{}'", topic);
+                                }
+                                println!("-------- !!! No route for '{}'", incoming_update.topic);
                             }
                         },
                     }
@@ -222,12 +231,14 @@ impl Router {
 
 /// Create a new MQTT Router
 ///
-pub fn new_router(options: pubsub::Options) -> Result<Router, RouterError> {
+pub async fn new_router(options: pubsub::Options) -> Result<Router, RouterError> {
     //
     // Create a new network connection
-    let (op, li) = new_connection(options).map_err(|e| RouterError::ConnectionError {
-        cause: e.to_string(),
-    })?;
+    let (op, li) = new_connection(options)
+        .await
+        .map_err(|e| RouterError::ConnectionError {
+            cause: e.to_string(),
+        })?;
 
     //
     // Return the router

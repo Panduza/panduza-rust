@@ -1,7 +1,5 @@
 use crate::{
-    attribute_metadata::AttributeMetadata,
-    fbs::trigger_v0::TriggerBuffer,
-    pubsub::{Operator, Publisher},
+    attribute_metadata::AttributeMetadata, fbs::trigger_v0::TriggerBuffer, pubsub::Publisher,
     BooleanAttribute, BytesAttribute, NumberAttribute, Reactor, StringAttribute,
 };
 use bytes::Bytes;
