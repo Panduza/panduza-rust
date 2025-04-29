@@ -41,6 +41,7 @@ pub struct BooleanWorld {
     pub r: Option<Reactor>,
 
     pub att_rw : Option<BooleanAttribute>,
+    pub att_wo : Option<BooleanAttribute>,
 
     pub topic_rw : Option<String>,
     pub topic_ro : Option<String>,
@@ -70,6 +71,19 @@ async fn given_a_connected_client(world: &mut BooleanWorld, hostname: String, po
 
 ///
 /// 
+#[given(expr = "the attribute wo {string}")]
+async fn given_the_attribute_wo(world: &mut BooleanWorld, attribute_name: String) {
+    world.topic_wo = Some(attribute_name.clone());
+
+    let attribute: panduza::BooleanAttribute = world.r.as_ref().unwrap().find_attribute(attribute_name).expect_boolean()
+    .await
+    .unwrap();
+
+    world.att_wo = Some(attribute);
+}
+
+///
+/// 
 #[given(expr = "the attribute rw {string}")]
 async fn given_the_attribute_rw(world: &mut BooleanWorld, attribute_name: String) {
     world.topic_rw = Some(attribute_name.clone());
@@ -85,7 +99,14 @@ async fn given_the_attribute_rw(world: &mut BooleanWorld, attribute_name: String
 /// 
 #[when(expr = "I set rw boolean to {boolean}")]
 async fn i_set_rw_boolean(world: &mut BooleanWorld, value: Boolean) {
-    world.att_rw.as_mut().unwrap().set(value.into_bool()).await;
+    world.att_rw.as_mut().unwrap().set(value.into_bool()).await.unwrap();
+}
+
+///
+/// 
+#[when(expr = "I set wo boolean to {boolean}")]
+async fn i_set_wo_boolean(world: &mut BooleanWorld, value: Boolean) {
+    world.att_wo.as_mut().unwrap().set(value.into_bool()).await.unwrap();
 }
 
 ///

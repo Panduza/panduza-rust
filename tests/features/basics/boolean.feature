@@ -9,3 +9,7 @@ Feature: Panduza client must be able to manage boolean attributes
     Then the rw boolean value is true
     When I set rw boolean to false
     Then the rw boolean value is false
+
+  Scenario: Client must be able to manage an error during a boolean attribute operation
+    Given the attribute wo "boolean/error"
+    When I set wo boolean to true
