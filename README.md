@@ -3,6 +3,30 @@ Panduza Rust Client
 
 
 
+
+
+## Tests
+
+
+
+```json
+{
+    "devices": [
+        {
+            "dref": "vi.tester",
+            "name": "tester"
+        }
+    ]
+}
+```
+
+
+```bash
+cargo test --test basics
+```
+
+## Flat Buffers
+
 ```bash
 ./flatc.exe --version
 # flatc version 25.2.10
@@ -14,3 +38,6 @@ Panduza Rust Client
 # 
 ./flatc.exe --rust -o src/fbs/vector_f32_v0 src/fbs/vector_f32_v0/vector_f32_v0.fbs
 ```
+
+
+

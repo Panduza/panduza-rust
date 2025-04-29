@@ -3,7 +3,7 @@ use worlds::BooleanWorld;
 
 
 
-use cucumber::{given, World};
+use cucumber::{World};
 
 
 
