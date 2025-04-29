@@ -19,6 +19,19 @@ pub use attribute_metadata::AttributeMetadata;
 pub mod boolean_attribute;
 pub use boolean_attribute::BooleanAttribute;
 
+pub mod string_attribute;
+pub use string_attribute::StringAttribute;
+
+pub mod bytes_attribute;
+pub use bytes_attribute::BytesAttribute;
+
+pub mod number_attribute;
+pub use number_attribute::NumberAttribute;
+
+pub mod benchmark_config;
+pub use benchmark_config::BenchmarkConfig;
+pub use benchmark_config::TestConfig;
+
 ///
 ///
 pub mod task_monitor;

@@ -9,10 +9,17 @@ edition = "2021"
 # path = "src/examples/test_sync.rs"
 
 
-[[bin]]
-name = "test_async"
-path = "src/examples/test_async.rs"
+#[[bin]]
+#name = "test_async"
+#path = "src/examples/test_async.rs"
 
+#[[bin]]
+#name = "benchmark_big"
+#path = "src/examples/benchmark_big.rs"
+
+[[bin]]
+name = "benchmark_multiple"
+path = "src/examples/benchmark_multiple.rs"
 
 # [[bin]]
 # name = "test_async"

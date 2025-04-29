@@ -7,9 +7,9 @@ async fn main() {
     let options = ReactorOptions::new();
     let mut reactor = panduza::new_reactor(options).await.unwrap();
 
-    let mut pp = reactor
-        .find_attribute("boolean_rw")
-        .expect_boolean()
+    let mut benchmark_string = reactor
+        .find_attribute("string/rw")
+        .expect_string()
         .await
         .unwrap();
     // println!("$$$$$$ {:?}", pp);
@@ -17,12 +17,30 @@ async fn main() {
     let start = Instant::now();
 
     let total = 1000;
+    let mut string = "Amet sunt cillum incididunt irure incididunt adipisicing. Dolore sint velit ipsum esse ea pariatur proident nisi qui proident adipisicing aliqua consectetur dolor. Quis veniam eu duis fugiat veniam dolor laborum ex ipsum. Sunt nostrud deserunt qui cillum cupidatat veniam sunt. Eu occaecat aliqua esse dolore nisi eu ea ad minim commodo irure sint anim. Nisi magna qui velit in anim sunt eu consectetur amet non. Duis incididunt reprehenderit ipsum ipsum.";
     let mut vvv = true;
     for i in 0..total {
         // println!("POK {:?}", i);
         vvv = if vvv { true } else { false };
-        pp.set(vvv).await;
+        benchmark_string.set(string.to_string()).await;
     }
+
+    // let mut benchmark_boolean = reactor
+    //     .find_attribute("boolean/rw")
+    //     .expect_boolean()
+    //     .await
+    //     .unwrap();
+    // // println!("$$$$$$ {:?}", pp);
+
+    // let start = Instant::now();
+
+    // let total = 1000;
+    // let mut vvv = true;
+    // for i in 0..total {
+    //     // println!("POK {:?}", i);
+    //     vvv = if vvv { true } else { false };
+    //     benchmark_boolean.set(vvv).await;
+    // }
 
     // let to = tokio::spawn(async move {
     //     for i in 0..2 {
