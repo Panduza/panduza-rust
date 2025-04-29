@@ -110,7 +110,15 @@ impl TaskMonitor {
                         // Save the handle
                         handles_clone_1.lock().await.push(new_handle);
                     }
-                    None => todo!(),
+                    None => {
+                        // Gestion propre de la fermeture du canal
+                        if let Err(e) = event_sender_1.send(Event::TaskMonitorError(
+                            "Handle receiver channel has been closed".to_string()
+                        )).await {
+                            println!("{:?} - TaskMonitor error ! {:?}", line!(), e.to_string());
+                        }
+                        break; // Sortir de la boucle quand le canal est fermé
+                    }
                 }
             }
         });
@@ -226,23 +234,18 @@ impl TaskMonitor {
     pub async fn cancel_all_monitored_tasks(&mut self) {
         // lock elements
         let mut hlock = self.handles.lock().await;
-
-        // abort all tasks
+        
+        // abort all tasks first
         for h in hlock.iter_mut() {
             h.1.abort();
         }
-
-        // Wait for them to stop
-        // we do not care about the status
-        let mut i = 0;
-        while i < hlock.len() {
-            let element = hlock.remove(i);
+        
+        // Then wait for them to complete
+        for element in hlock.drain(..) {
             let _ = element.1.await;
-            i += 1;
         }
-
-        // vector should be empty here but...
-        hlock.clear();
+        
+        // hlock est maintenant vide grâce à drain
     }
 
     /// Provides access to the handler sender to send new handle to monitor
@@ -258,5 +261,11 @@ impl TaskMonitor {
         self.task_monitoring.abort();
         self.task_feeding.await.unwrap();
         self.task_monitoring.await.unwrap();
+    }
+
+    /// Returns the number of tasks currently being monitored
+    ///
+    pub async fn task_count(&self) -> usize {
+        self.handles.lock().await.len()
     }
 }
