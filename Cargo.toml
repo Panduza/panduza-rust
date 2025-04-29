@@ -19,9 +19,9 @@ path = "src/examples/test_async.rs"
 # path = "src/examples/test_cb.rs"
 
 
-# [[test]]
-# name = "mqtt_connection"
-# harness = false
+[[test]]
+name = "basics"
+harness = false
 
 
 [dependencies]

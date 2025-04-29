@@ -1,7 +1,10 @@
 use crate::{pubsub::Publisher, reactor::DataReceiver};
 use bytes::Bytes;
-use std::sync::{Arc, Mutex};
-use tokio::sync::Notify;
+use std::{
+    sync::{Arc, Mutex},
+    time::Duration,
+};
+use tokio::{sync::Notify, time::timeout};
 
 #[derive(Debug)]
 struct BooleanDataPack {
@@ -153,14 +156,25 @@ impl BooleanAttribute {
 
     ///
     ///
-    pub async fn set(&mut self, value: bool) {
+    pub async fn set(&mut self, value: bool) -> Result<(), String> {
         //
         self.shoot(value).await;
 
-        // Wait for change in the data pack
-        self.update_notifier.notified().await;
+        let delay = Duration::from_secs(5);
 
-        // get last // if same as value ok else wait or error ?
+        // Wait for change in the data pack
+        timeout(delay, self.update_notifier.notified())
+            .await
+            .map_err(|e| e.to_string())?;
+
+        while value != self.get().unwrap() {
+            // append 3 retry before failling if update received but not good
+            timeout(delay, self.update_notifier.notified())
+                .await
+                .map_err(|e| e.to_string())?;
+        }
+
+        Ok(())
     }
 
     ///
