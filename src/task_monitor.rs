@@ -1,6 +1,8 @@
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::sync::mpsc::channel;
+use tokio::sync::mpsc::Receiver;
+use tokio::sync::mpsc::Sender;
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 
