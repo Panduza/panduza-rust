@@ -19,6 +19,9 @@ pub use attribute_metadata::AttributeMetadata;
 pub mod boolean_attribute;
 pub use boolean_attribute::BooleanAttribute;
 
+pub mod string_attribute;
+pub use string_attribute::StringAttribute;
+
 ///
 ///
 pub mod task_monitor;

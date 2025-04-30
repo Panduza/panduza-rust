@@ -1,4 +1,6 @@
+use colored::*;
 use panduza::{reactor::ReactorOptions, task_monitor::TaskMonitor};
+use std::io::{self, Read, Write};
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
 
@@ -8,21 +10,58 @@ async fn main() {
     let mut reactor = panduza::new_reactor(options).await.unwrap();
 
     let mut pp = reactor
-        .find_attribute("boolean_rw")
-        .expect_boolean()
+        .find_attribute("serial-stream/TX")
+        .expect_string()
         .await
         .unwrap();
     // println!("$$$$$$ {:?}", pp);
+    let mut listener = reactor
+        .find_attribute("serial-stream/RX")
+        .expect_string()
+        .await
+        .unwrap();
 
-    let start = Instant::now();
+    // Tâche de réception avec pop()
+    tokio::spawn(async move {
+        let mut last_message_received = String::new();
+        loop {
+            if let Some(received) = listener.get() {
+                if received != last_message_received {
+                    println!(
+                        "{} {}",
+                        "[message received]".green().bold(),
+                        format!("{:?}", received)
+                    );
+                }
+                last_message_received = received;
+            }
+        }
+    });
 
-    let total = 1000;
-    let mut vvv = true;
-    for i in 0..total {
-        // println!("POK {:?}", i);
-        vvv = if vvv { true } else { false };
-        pp.set(vvv).await;
+    //let start = Instant::now();
+    let stdin: io::Stdin = io::stdin();
+    let mut input: String = String::new();
+    println!("Write your command ant press enter :");
+    loop {
+        input.clear(); // important pour ne pas accumuler les lignes précédentes
+        stdin.read_line(&mut input).unwrap();
+
+        if !input.is_empty() {
+            pp.shoot(input.to_string()).await;
+            println!(
+                "{} {}",
+                "[message send]".blue().bold(),
+                format!("{:?}", input)
+            );
+        }
     }
+
+    /*
+    for i in 0..total {
+        pp.shoot(format!("message_{}", i)).await;
+        println!("{}", i);
+    }
+    */
 
     // let to = tokio::spawn(async move {
     //     for i in 0..2 {
@@ -46,7 +85,7 @@ async fn main() {
     //      this would force me to
 
     // Print the elapsed time
-    println!("Perf : {:?}", start.elapsed() / total);
+    //println!("Perf : {:?}", start.elapsed() / total);
     // let ro_bool = reactor
     //     .create_new_attribute()
     //     .with_topic("test")
