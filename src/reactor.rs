@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::pubsub::{Operator, Publisher};
 use crate::router::{new_router, RouterHandler};
 use crate::structure::Structure;
+use crate::{AttributeMetadata, AttributeMode};
 use crate::{pubsub, pubsub::Options, AttributeBuilder};
 use bytes::Bytes;
 
@@ -61,6 +62,17 @@ impl Reactor {
 
         return AttributeBuilder::new(self.clone(), meta);
     }
+
+
+    ///
+    ///
+    pub fn build_instance_status_attribute<A: Into<String>>(&self, topic: A) -> AttributeBuilder {
+        
+        let meta = Some(AttributeMetadata::from_topic(topic.into(), Some("json".to_string()) , AttributeMode::ReadOnly));
+    
+        return AttributeBuilder::new(self.clone(), meta);
+    }
+
 
     // Register
     //
