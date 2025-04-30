@@ -1,20 +1,21 @@
-use crate::{pubsub::Publisher, reactor::DataReceiver, AttributeMode, Topic};
+use crate::{pubsub::Publisher, reactor::DataReceiver};
 use bytes::Bytes;
 use std::{
     sync::{Arc, Mutex},
     time::Duration,
 };
 use tokio::{sync::Notify, time::timeout};
+use serde_json::Value as JsonValue;
 
 #[derive(Debug)]
-struct BooleanDataPack {
+struct JsonAttributePack {
     /// Last value received
     ///
-    last: Option<bool>,
+    last: Option<JsonValue>,
 
     /// Queue of value (need to be poped)
     ///
-    queue: Vec<bool>,
+    queue: Vec<JsonValue>,
 
     /// If True we are going to use the input queue
     ///
@@ -25,12 +26,12 @@ struct BooleanDataPack {
     update_notifier: Arc<Notify>,
 }
 
-impl BooleanDataPack {
+impl JsonAttributePack {
     ///
     ///
-    pub fn push(&mut self, v: bool) {
+    pub fn push(&mut self, v: JsonValue) {
         if self.use_input_queue {
-            self.queue.push(v);
+            self.queue.push(v.clone());
         }
         self.last = Some(v);
         self.update_notifier.notify_waiters();
@@ -38,13 +39,13 @@ impl BooleanDataPack {
 
     ///
     ///
-    pub fn last(&self) -> Option<bool> {
-        self.last
+    pub fn last(&self) -> Option<JsonValue> {
+        self.last.clone()
     }
 
     ///
     ///
-    pub fn pop(&mut self) -> Option<bool> {
+    pub fn pop(&mut self) -> Option<JsonValue> {
         if self.queue.is_empty() {
             None
         } else {
@@ -59,7 +60,7 @@ impl BooleanDataPack {
     }
 }
 
-impl Default for BooleanDataPack {
+impl Default for JsonAttributePack {
     fn default() -> Self {
         Self {
             last: Default::default(),
@@ -71,36 +72,29 @@ impl Default for BooleanDataPack {
 }
 
 #[derive(Clone, Debug)]
-/// Object to manage the BooleanAttribute
+/// Object to manage the JsonAttribute
 ///
-pub struct BooleanAttribute {
-    ///
-    /// TODO: maybe add this into the data pack
-    topic: String,
-
-    
-    mode : AttributeMode,
-    
+pub struct JsonAttribute {
     /// Object that all the attribute to publish
     ///
     cmd_publisher: Publisher,
 
     /// Initial data
     ///
-    pack: Arc<Mutex<BooleanDataPack>>,
+    pack: Arc<Mutex<JsonAttributePack>>,
 
     /// Update notifier
     ///
     update_notifier: Arc<Notify>,
 }
 
-impl BooleanAttribute {
+impl JsonAttribute {
     /// Create a new instance
     ///
-    pub async fn new(topic: String, mode:AttributeMode, cmd_publisher: Publisher, mut att_receiver: DataReceiver) -> Self {
+    pub async fn new(topic: String,cmd_publisher: Publisher, mut att_receiver: DataReceiver) -> Self {
         //
         // Create data pack
-        let pack = Arc::new(Mutex::new(BooleanDataPack::default()));
+        let pack = Arc::new(Mutex::new(JsonAttributePack::default()));
 
         //
         //
@@ -119,7 +113,7 @@ impl BooleanAttribute {
                 // Manage message
                 if let Some(message) = message {
                     // Deserialize
-                    let value: bool = serde_json::from_slice(&message).unwrap();
+                    let value = serde_json::from_slice(&message).unwrap();
                     // Push into pack
                     pack_2.lock().unwrap().push(value);
                 }
@@ -130,20 +124,16 @@ impl BooleanAttribute {
             }
         });
 
-        // Wait for the first message if mode is not readonly
-        if mode != AttributeMode::WriteOnly {
-            // Need a timeout here
-            update_1.notified().await;
-        }
+        // Wait for the first message
+        // Need a timeout here
+        update_1.notified().await;
 
         //
         // Return attribute
         Self {
-            topic: topic,
             cmd_publisher: cmd_publisher,
             pack: pack,
             update_notifier: update_1,
-            mode: mode,
         }
     }
 
@@ -175,21 +165,18 @@ impl BooleanAttribute {
         //
         self.shoot(value).await;
 
-        if self.mode == AttributeMode::ReadWrite {
+        let delay = Duration::from_secs(5);
 
-            let delay = Duration::from_secs(5);
+        // Wait for change in the data pack
+        timeout(delay, self.update_notifier.notified())
+            .await
+            .map_err(|e| e.to_string())?;
 
-            // Wait for change in the data pack
+        while value != self.get().unwrap() {
+            // append 3 retry before failling if update received but not good
             timeout(delay, self.update_notifier.notified())
                 .await
                 .map_err(|e| e.to_string())?;
-
-            while value != self.get().unwrap() {
-                // append 3 retry before failling if update received but not good
-                timeout(delay, self.update_notifier.notified())
-                    .await
-                    .map_err(|e| e.to_string())?;
-            }
         }
 
         Ok(())
@@ -197,18 +184,13 @@ impl BooleanAttribute {
 
     ///
     ///
-    pub fn get(&self) -> Option<bool> {
+    pub fn get(&self) -> Option<JsonValue> {
         self.pack.lock().unwrap().last()
     }
 
     ///
     ///
-    pub fn pop(&self) -> Option<bool> {
+    pub fn pop(&self) -> Option<JsonValue> {
         self.pack.lock().unwrap().pop()
     }
-
-    pub fn get_instance_status_topic(&self) -> String {
-        format!("pza/_/devices/{}", Topic::from_string(self.topic.clone(), true).instance_name())
-    }
-
 }

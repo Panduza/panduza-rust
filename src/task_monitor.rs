@@ -8,6 +8,7 @@ use tokio::task::JoinHandle;
 ///
 static DELAY_MS_BETWEEN_MONITORING: u64 = 200;
 
+#[derive(Debug)]
 /// Payload of event enums
 ///
 pub struct EventBody {
@@ -24,14 +25,32 @@ pub struct EventBody {
     pub error_message: Option<String>,
 }
 
+#[derive(Debug)]
 /// Monitoring events
 ///
 pub enum Event {
+    /// Error related to the task monitor itself
+    ///
     TaskMonitorError(String),
+
+    /// Task created
+    ///
     TaskCreated(EventBody),
+
+    /// Task finished properly
+    ///
     TaskStopProperly(EventBody),
+
+    /// Task finished with an error
+    ///
     TaskStopWithPain(EventBody),
+
+    /// Task PANIC !
+    ///
     TaskPanicOMG(EventBody),
+
+    /// No more task to monitor
+    ///
     NoMoreTask,
 }
 
@@ -50,6 +69,7 @@ pub type NamedTaskHandle = (String, TaskHandle);
 ///
 pub type TaskMonitorLink = Sender<NamedTaskHandle>;
 
+#[derive(Clone)]
 /// This object is able to monitor a group of tokio task and report status
 ///
 pub struct TaskMonitor {
@@ -63,18 +83,22 @@ pub struct TaskMonitor {
 
     /// Internal handle for the task that feed this monitor
     ///
-    task_feeding: JoinHandle<()>,
+    task_feeding: Arc<Mutex<JoinHandle<()>>>,
 
     /// Internal handle for the task that monitor other tasks
     ///
-    task_monitoring: JoinHandle<()>,
+    task_monitoring: Arc<Mutex<JoinHandle<()>>>,
 }
 
 // ----------------------------------------------------------------------------
 impl TaskMonitor {
     /// Create a new task monitor
     ///
-    pub fn new() -> (Self, Receiver<Event>) {
+    pub fn new<N: Into<String>>(name: N) -> (Self, Receiver<Event>) {
+        //
+        // Initialize the name of the task monitor
+        let name = name.into();
+
         //
         // Initialize handles
         let handles = Arc::new(Mutex::new(Vec::new()));
@@ -91,6 +115,7 @@ impl TaskMonitor {
         // TASK to register new handles
         let handles_clone_1 = handles.clone();
         let event_sender_1 = event_sender.clone();
+        let name_1 = name.clone();
         let feed_t = tokio::spawn(async move {
             loop {
                 match handle_receiver.recv().await {
@@ -104,13 +129,34 @@ impl TaskMonitor {
                             }))
                             .await
                         {
-                            println!("{:?} - TaskMonitor warning ! {:?}", line!(), e.to_string());
+                            println!(
+                                "{:?} - {:?} - TaskMonitor warning ! {:?}",
+                                &name_1,
+                                line!(),
+                                e.to_string()
+                            );
                         }
 
                         // Save the handle
                         handles_clone_1.lock().await.push(new_handle);
                     }
-                    None => todo!(),
+                    None => {
+                        // Gestion propre de la fermeture du canal
+                        if let Err(e) = event_sender_1
+                            .send(Event::TaskMonitorError(
+                                "Handle receiver channel has been closed".to_string(),
+                            ))
+                            .await
+                        {
+                            println!(
+                                "{:?} - {:?} - TaskMonitor error ! {:?}",
+                                &name_1,
+                                line!(),
+                                e.to_string()
+                            );
+                        }
+                        break; // Sortir de la boucle quand le canal est fermé
+                    }
                 }
             }
         });
@@ -119,7 +165,11 @@ impl TaskMonitor {
         // TASK to monitor other tasks
         let handles_clone_2 = handles.clone();
         let event_sender_2 = event_sender.clone();
+        let name_2 = name.clone();
         let monitor_t = tokio::spawn(async move {
+            // Track if we have already sent the NoMoreTask event
+            let mut no_more_task_sent = false;
+
             loop {
                 // Wait before next monitoring
                 tokio::time::sleep(Duration::from_millis(DELAY_MS_BETWEEN_MONITORING)).await;
@@ -129,9 +179,19 @@ impl TaskMonitor {
 
                 // No more task to check
                 if hlock.len() <= 0 {
-                    if let Err(e) = event_sender_2.send(Event::NoMoreTask).await {
-                        println!("{:?} - TaskMonitor warning ! {:?}", line!(), e.to_string());
+                    if !no_more_task_sent {
+                        if let Err(e) = event_sender_2.send(Event::NoMoreTask).await {
+                            println!(
+                                "{:?} - {:?} - TaskMonitor warning ! {:?}",
+                                &name_2,
+                                line!(),
+                                e.to_string()
+                            );
+                        }
+                        no_more_task_sent = true;
                     }
+                } else {
+                    no_more_task_sent = false;
                 }
 
                 // Monitor tasks, checking for each task if it is finished
@@ -155,7 +215,8 @@ impl TaskMonitor {
                                         .await
                                     {
                                         println!(
-                                            "{:?} - TaskMonitor warning ! {:?}",
+                                            "{:?} - {:?} - TaskMonitor warning ! {:?}",
+                                            &name_2,
                                             line!(),
                                             e.to_string()
                                         );
@@ -173,7 +234,8 @@ impl TaskMonitor {
                                         .await
                                     {
                                         println!(
-                                            "{:?} - TaskMonitor warning ! {:?}",
+                                            "{:?} - {:?} - TaskMonitor warning ! {:?}",
+                                            &name_2,
                                             line!(),
                                             e.to_string()
                                         );
@@ -192,7 +254,8 @@ impl TaskMonitor {
                                     .await
                                 {
                                     println!(
-                                        "{:?} - TaskMonitor warning ! {:?}",
+                                        "{:?} - {:?} - TaskMonitor warning ! {:?}",
+                                        &name_2,
                                         line!(),
                                         e.to_string()
                                     );
@@ -214,8 +277,8 @@ impl TaskMonitor {
             Self {
                 handles: handles,
                 handle_sender: handle_sender,
-                task_feeding: feed_t,
-                task_monitoring: monitor_t,
+                task_feeding: Arc::new(Mutex::new(feed_t)),
+                task_monitoring: Arc::new(Mutex::new(monitor_t)),
             },
             event_receiver,
         )
@@ -227,22 +290,18 @@ impl TaskMonitor {
         // lock elements
         let mut hlock = self.handles.lock().await;
 
-        // abort all tasks
+        // abort all tasks first
         for h in hlock.iter_mut() {
+            // println!("Aborting task: {:?}", h.0);
             h.1.abort();
         }
 
-        // Wait for them to stop
-        // we do not care about the status
-        let mut i = 0;
-        while i < hlock.len() {
-            let element = hlock.remove(i);
+        // Then wait for them to complete
+        for element in hlock.drain(..) {
             let _ = element.1.await;
-            i += 1;
         }
 
-        // vector should be empty here but...
-        hlock.clear();
+        // hlock est maintenant vide grâce à drain
     }
 
     /// Provides access to the handler sender to send new handle to monitor
@@ -254,9 +313,15 @@ impl TaskMonitor {
     /// Provides access to the handler sender to send new handle to monitor
     ///
     pub async fn stop(self) {
-        self.task_feeding.abort();
-        self.task_monitoring.abort();
-        self.task_feeding.await.unwrap();
-        self.task_monitoring.await.unwrap();
+        self.task_feeding.lock().await.abort();
+        self.task_monitoring.lock().await.abort();
+        // self.task_feeding.lock().await;
+        // (*self.task_monitoring).await.unwrap();
+    }
+
+    /// Returns the number of tasks currently being monitored
+    ///
+    pub async fn task_count(&self) -> usize {
+        self.handles.lock().await.len()
     }
 }
