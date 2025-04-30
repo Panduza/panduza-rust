@@ -9,6 +9,8 @@ Feature: Panduza client must be able to manage boolean attributes
     Then the rw boolean value is true
     When I set rw boolean to false
     Then the rw boolean value is false
+    # append
+  # Scenario to test if the attribute topic does not exist
 
   Scenario: Client must be able to manage an error during a boolean attribute operation
     Given the attribute wo "boolean/error"

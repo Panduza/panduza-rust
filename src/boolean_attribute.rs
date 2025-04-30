@@ -90,7 +90,7 @@ pub struct BooleanAttribute {
 impl BooleanAttribute {
     /// Create a new instance
     ///
-    pub fn new(cmd_publisher: Publisher, mut att_receiver: DataReceiver) -> Self {
+    pub async fn new(cmd_publisher: Publisher, mut att_receiver: DataReceiver) -> Self {
         //
         // Create data pack
         let pack = Arc::new(Mutex::new(BooleanDataPack::default()));
@@ -107,7 +107,7 @@ impl BooleanAttribute {
                 //
                 let message = att_receiver.recv().await;
 
-                // println!("new message {:?}", message);
+                println!("new message {:?}", message);
 
                 // Manage message
                 if let Some(message) = message {
@@ -122,6 +122,10 @@ impl BooleanAttribute {
                 }
             }
         });
+
+        // Wait for the first message
+        // Need a timeout here
+        update_1.notified().await;
 
         //
         // Return attribute

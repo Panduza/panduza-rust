@@ -206,10 +206,12 @@ impl Router {
                         crate::pubsub::PubSubEvent::IncomingUpdate(incoming_update) =>
                         {
                             if let Some(sender) = self.routes.get(&incoming_update.topic) {
-                                // println!("............ROUUUTe");
-                                sender.send(incoming_update.payload).await.unwrap();
-                            }
-                            else {
+                                if sender.send(incoming_update.payload).await.is_err() {
+                                    // Remove the route if the sender is dead
+                                    self.routes.remove(&incoming_update.topic);
+                                    println!("-------- !!! Removed dead route for {:?}", incoming_update.topic);
+                                }
+                            } else {
                                 println!("-------- !!! No route for {:?}", incoming_update.topic);
                             }
                         },

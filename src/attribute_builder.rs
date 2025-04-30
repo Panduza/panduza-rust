@@ -38,6 +38,6 @@ impl AttributeBuilder {
             .register_publisher(cmd_topic, false)
             .map_err(|e| e.to_string())?;
 
-        Ok(BooleanAttribute::new(cmd_publisher, att_receiver))
+        Ok(BooleanAttribute::new(cmd_publisher, att_receiver).await)
     }
 }

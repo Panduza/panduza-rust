@@ -292,7 +292,7 @@ impl TaskMonitor {
 
         // abort all tasks first
         for h in hlock.iter_mut() {
-            println!("Aborting task: {:?}", h.0);
+            // println!("Aborting task: {:?}", h.0);
             h.1.abort();
         }
 
