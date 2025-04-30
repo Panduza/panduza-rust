@@ -264,7 +264,7 @@ impl TaskMonitor {
     }
 }
 
-///
+/// Print a warning message for this task monitor
 /// 
 fn print_warning(name: &String, line: u32, e: tokio::sync::mpsc::error::SendError<Event>) {
     println!(
