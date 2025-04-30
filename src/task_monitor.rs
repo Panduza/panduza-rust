@@ -83,11 +83,11 @@ pub struct TaskMonitor {
 
     /// Internal handle for the task that feed this monitor
     ///
-    task_feeding: Arc<Mutex<JoinHandle<()>>>,
+    task_feeding: Arc<JoinHandle<()>>,
 
     /// Internal handle for the task that monitor other tasks
     ///
-    task_monitoring: Arc<Mutex<JoinHandle<()>>>,
+    task_monitoring: Arc<JoinHandle<()>>,
 }
 
 // ----------------------------------------------------------------------------
@@ -113,51 +113,46 @@ impl TaskMonitor {
 
         //
         // TASK to register new handles
-        let handles_clone_1 = handles.clone();
-        let event_sender_1 = event_sender.clone();
-        let name_1 = name.clone();
-        let feed_t = tokio::spawn(async move {
+        let feed_t = tokio::spawn({
+            // Local clone variables
+            let handles = handles.clone();
+            let event_sender = event_sender.clone();
+            let name = name.clone();
+
+            // Task body
+            async move {
             loop {
                 match handle_receiver.recv().await {
-                    Some(new_handle) => {
-                        // Send an event
-                        if let Err(e) = event_sender_1
-                            .send(Event::TaskCreated(EventBody {
-                                task_name: new_handle.0.clone(),
-                                task_id: new_handle.1.id().to_string(),
-                                error_message: None,
-                            }))
-                            .await
-                        {
-                            println!(
-                                "{:?} - {:?} - TaskMonitor warning ! {:?}",
-                                &name_1,
-                                line!(),
-                                e.to_string()
-                            );
-                        }
+                Some(new_handle) => {
+                    // Send an event
+                    if let Err(e) = event_sender
+                    .send(Event::TaskCreated(EventBody {
+                        task_name: new_handle.0.clone(),
+                        task_id: new_handle.1.id().to_string(),
+                        error_message: None,
+                    }))
+                    .await
+                    {
+                    print_warning(&name, line!(), e);
+                    }
 
-                        // Save the handle
-                        handles_clone_1.lock().await.push(new_handle);
-                    }
-                    None => {
-                        // Gestion propre de la fermeture du canal
-                        if let Err(e) = event_sender_1
-                            .send(Event::TaskMonitorError(
-                                "Handle receiver channel has been closed".to_string(),
-                            ))
-                            .await
-                        {
-                            println!(
-                                "{:?} - {:?} - TaskMonitor error ! {:?}",
-                                &name_1,
-                                line!(),
-                                e.to_string()
-                            );
-                        }
-                        break; // Sortir de la boucle quand le canal est fermé
-                    }
+                    // Save the handle
+                    handles.lock().await.push(new_handle);
                 }
+                None => {
+                    // Properly handle the closure of the channel
+                    if let Err(e) = event_sender
+                    .send(Event::TaskMonitorError(
+                        "Handle receiver channel has been closed".to_string(),
+                    ))
+                    .await
+                    {
+                    print_warning(&name, line!(), e);
+                    }
+                    break; // Exit the loop when the channel is closed
+                }
+                }
+            }
             }
         });
 
@@ -181,12 +176,8 @@ impl TaskMonitor {
                 if hlock.len() <= 0 {
                     if !no_more_task_sent {
                         if let Err(e) = event_sender_2.send(Event::NoMoreTask).await {
-                            println!(
-                                "{:?} - {:?} - TaskMonitor warning ! {:?}",
-                                &name_2,
-                                line!(),
-                                e.to_string()
-                            );
+                  
+                            print_warning(&name_2, line!(), e);
                         }
                         no_more_task_sent = true;
                     }
@@ -214,12 +205,7 @@ impl TaskMonitor {
                                         }))
                                         .await
                                     {
-                                        println!(
-                                            "{:?} - {:?} - TaskMonitor warning ! {:?}",
-                                            &name_2,
-                                            line!(),
-                                            e.to_string()
-                                        );
+                                        print_warning(&name_2, line!(), e);
                                     }
                                 }
                                 //
@@ -233,12 +219,7 @@ impl TaskMonitor {
                                         }))
                                         .await
                                     {
-                                        println!(
-                                            "{:?} - {:?} - TaskMonitor warning ! {:?}",
-                                            &name_2,
-                                            line!(),
-                                            e.to_string()
-                                        );
+                                        print_warning(&name_2, line!(), e);
                                     }
                                 }
                             },
@@ -253,12 +234,7 @@ impl TaskMonitor {
                                     }))
                                     .await
                                 {
-                                    println!(
-                                        "{:?} - {:?} - TaskMonitor warning ! {:?}",
-                                        &name_2,
-                                        line!(),
-                                        e.to_string()
-                                    );
+                                    print_warning(&name_2, line!(), e);
                                 }
                             }
                         }
@@ -277,8 +253,8 @@ impl TaskMonitor {
             Self {
                 handles: handles,
                 handle_sender: handle_sender,
-                task_feeding: Arc::new(Mutex::new(feed_t)),
-                task_monitoring: Arc::new(Mutex::new(monitor_t)),
+                task_feeding: Arc::new(feed_t),
+                task_monitoring: Arc::new(monitor_t),
             },
             event_receiver,
         )
@@ -313,10 +289,10 @@ impl TaskMonitor {
     /// Provides access to the handler sender to send new handle to monitor
     ///
     pub async fn stop(self) {
-        self.task_feeding.lock().await.abort();
-        self.task_monitoring.lock().await.abort();
-        // self.task_feeding.lock().await;
-        // (*self.task_monitoring).await.unwrap();
+        self.task_feeding.abort();
+        self.task_monitoring.abort();
+        // self.task_feeding.await;
+        // self.task_monitoring.await;
     }
 
     /// Returns the number of tasks currently being monitored
@@ -324,4 +300,15 @@ impl TaskMonitor {
     pub async fn task_count(&self) -> usize {
         self.handles.lock().await.len()
     }
+}
+
+///
+/// 
+fn print_warning(name: &String, line: u32, e: tokio::sync::mpsc::error::SendError<Event>) {
+    println!(
+        "{:?} - {:?} - TaskMonitor warning ! {:?}",
+        &name,
+        line,
+        e.to_string()
+    );
 }

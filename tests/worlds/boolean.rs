@@ -46,7 +46,7 @@ pub struct BooleanWorld {
     pub att_wo : Option<BooleanAttribute>,
 
     pub topic_rw : Option<String>,
-    pub topic_ro : Option<String>,
+    // pub topic_ro : Option<String>,
     pub topic_wo : Option<String>
 }
 
@@ -65,7 +65,7 @@ async fn given_a_connected_client(world: &mut BooleanWorld, hostname: String, po
 
     
     let options = ReactorOptions::new();
-    let mut reactor = panduza::new_reactor(options).await.unwrap();
+    let reactor = panduza::new_reactor(options).await.unwrap();
 
 
     world.r = Some(reactor);
@@ -132,8 +132,8 @@ async fn the_rw_boolean_value_is(world: &mut BooleanWorld, expected_value: Boole
     assert_eq!(read_value, expected_value.into_bool(), "read '{:?}' != expected '{:?}'", read_value, expected_value.into_bool() );
 }
 
-
-
+///
+///
 #[then(expr = "the instance status attribute must be {string}")]
 async fn the_instance_status_attribute_must_be(world: &mut BooleanWorld, s: String) {
     

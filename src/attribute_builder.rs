@@ -1,5 +1,5 @@
 use crate::{
-    attribute_metadata::AttributeMetadata, pubsub::{Operator, Publisher}, BooleanAttribute, JsonAttribute, Reactor
+    attribute_metadata::AttributeMetadata, BooleanAttribute, JsonAttribute, Reactor
 };
 
 #[derive(Clone)]

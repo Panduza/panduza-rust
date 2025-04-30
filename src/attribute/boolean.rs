@@ -1,21 +1,23 @@
-use crate::{pubsub::Publisher, reactor::DataReceiver};
+use crate::pubsub::Publisher;
+use crate::reactor::DataReceiver;
+use crate::AttributeMode;
+use crate::Topic;
 use bytes::Bytes;
-use std::{
-    sync::{Arc, Mutex},
-    time::Duration,
-};
-use tokio::{sync::Notify, time::timeout};
-use serde_json::Value as JsonValue;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::time::Duration;
+use tokio::sync::Notify;
+use tokio::time::timeout;
 
 #[derive(Debug)]
-struct JsonAttributePack {
+struct BooleanDataPack {
     /// Last value received
     ///
-    last: Option<JsonValue>,
+    last: Option<bool>,
 
     /// Queue of value (need to be poped)
     ///
-    queue: Vec<JsonValue>,
+    queue: Vec<bool>,
 
     /// If True we are going to use the input queue
     ///
@@ -26,12 +28,12 @@ struct JsonAttributePack {
     update_notifier: Arc<Notify>,
 }
 
-impl JsonAttributePack {
+impl BooleanDataPack {
     ///
     ///
-    pub fn push(&mut self, v: JsonValue) {
+    pub fn push(&mut self, v: bool) {
         if self.use_input_queue {
-            self.queue.push(v.clone());
+            self.queue.push(v);
         }
         self.last = Some(v);
         self.update_notifier.notify_waiters();
@@ -39,13 +41,13 @@ impl JsonAttributePack {
 
     ///
     ///
-    pub fn last(&self) -> Option<JsonValue> {
-        self.last.clone()
+    pub fn last(&self) -> Option<bool> {
+        self.last
     }
 
     ///
     ///
-    pub fn pop(&mut self) -> Option<JsonValue> {
+    pub fn pop(&mut self) -> Option<bool> {
         if self.queue.is_empty() {
             None
         } else {
@@ -60,7 +62,7 @@ impl JsonAttributePack {
     }
 }
 
-impl Default for JsonAttributePack {
+impl Default for BooleanDataPack {
     fn default() -> Self {
         Self {
             last: Default::default(),
@@ -72,29 +74,36 @@ impl Default for JsonAttributePack {
 }
 
 #[derive(Clone, Debug)]
-/// Object to manage the JsonAttribute
+/// Object to manage the BooleanAttribute
 ///
-pub struct JsonAttribute {
+pub struct BooleanAttribute {
+    ///
+    /// TODO: maybe add this into the data pack
+    topic: String,
+
+    
+    mode : AttributeMode,
+    
     /// Object that all the attribute to publish
     ///
     cmd_publisher: Publisher,
 
     /// Initial data
     ///
-    pack: Arc<Mutex<JsonAttributePack>>,
+    pack: Arc<Mutex<BooleanDataPack>>,
 
     /// Update notifier
     ///
     update_notifier: Arc<Notify>,
 }
 
-impl JsonAttribute {
+impl BooleanAttribute {
     /// Create a new instance
     ///
-    pub async fn new(topic: String,cmd_publisher: Publisher, mut att_receiver: DataReceiver) -> Self {
+    pub async fn new(topic: String, mode:AttributeMode, cmd_publisher: Publisher, mut att_receiver: DataReceiver) -> Self {
         //
         // Create data pack
-        let pack = Arc::new(Mutex::new(JsonAttributePack::default()));
+        let pack = Arc::new(Mutex::new(BooleanDataPack::default()));
 
         //
         //
@@ -113,7 +122,7 @@ impl JsonAttribute {
                 // Manage message
                 if let Some(message) = message {
                     // Deserialize
-                    let value = serde_json::from_slice(&message).unwrap();
+                    let value: bool = serde_json::from_slice(&message).unwrap();
                     // Push into pack
                     pack_2.lock().unwrap().push(value);
                 }
@@ -124,16 +133,20 @@ impl JsonAttribute {
             }
         });
 
-        // Wait for the first message
-        // Need a timeout here
-        update_1.notified().await;
+        // Wait for the first message if mode is not readonly
+        if mode != AttributeMode::WriteOnly {
+            // Need a timeout here
+            update_1.notified().await;
+        }
 
         //
         // Return attribute
         Self {
+            topic: topic,
             cmd_publisher: cmd_publisher,
             pack: pack,
             update_notifier: update_1,
+            mode: mode,
         }
     }
 
@@ -165,18 +178,21 @@ impl JsonAttribute {
         //
         self.shoot(value).await;
 
-        let delay = Duration::from_secs(5);
+        if self.mode == AttributeMode::ReadWrite {
 
-        // Wait for change in the data pack
-        timeout(delay, self.update_notifier.notified())
-            .await
-            .map_err(|e| e.to_string())?;
+            let delay = Duration::from_secs(5);
 
-        while value != self.get().unwrap() {
-            // append 3 retry before failling if update received but not good
+            // Wait for change in the data pack
             timeout(delay, self.update_notifier.notified())
                 .await
                 .map_err(|e| e.to_string())?;
+
+            while value != self.get().unwrap() {
+                // append 3 retry before failling if update received but not good
+                timeout(delay, self.update_notifier.notified())
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
         }
 
         Ok(())
@@ -184,13 +200,18 @@ impl JsonAttribute {
 
     ///
     ///
-    pub fn get(&self) -> Option<JsonValue> {
+    pub fn get(&self) -> Option<bool> {
         self.pack.lock().unwrap().last()
     }
 
     ///
     ///
-    pub fn pop(&self) -> Option<JsonValue> {
+    pub fn pop(&self) -> Option<bool> {
         self.pack.lock().unwrap().pop()
     }
+
+    pub fn get_instance_status_topic(&self) -> String {
+        format!("pza/_/devices/{}", Topic::from_string(self.topic.clone(), true).instance_name())
+    }
+
 }

@@ -4,7 +4,6 @@ use rand::distributions::Alphanumeric;
 use rand::Rng;
 use rumqttc::{AsyncClient, EventLoop, Publish};
 use rumqttc::{MqttOptions, QoS};
-use std::sync::Arc;
 use std::time::Duration;
 
 /// Generate a random string for connections IDs

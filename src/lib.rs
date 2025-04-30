@@ -16,11 +16,11 @@ pub use attribute_builder::AttributeBuilder;
 pub mod attribute_metadata;
 pub use attribute_metadata::AttributeMetadata;
 
-pub mod boolean_attribute;
-pub use boolean_attribute::BooleanAttribute;
-
-pub mod json_attribute;
-pub use json_attribute::JsonAttribute;
+/// This module provides attribute objects
+/// 
+pub mod attribute;
+pub use attribute::boolean::BooleanAttribute;
+pub use attribute::json::JsonAttribute;
 
 ///
 ///
