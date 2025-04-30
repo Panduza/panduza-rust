@@ -3,6 +3,10 @@ name = "panduza"
 version = "0.0.1"
 edition = "2021"
 
+[[bin]]
+name = "test_async"
+path = "src/examples/test_async.rs"
+
 [[test]]
 name = "basics"
 harness = false
@@ -10,6 +14,11 @@ harness = false
 [[test]]
 name = "basics_focus"
 harness = false
+
+[[test]]
+name = "driver_tcp"
+harness = false
+path = "src/tests/driver_tcp.rs"
 
 
 [dependencies]
@@ -36,7 +45,8 @@ async-trait = "0.1.81"
 rand = "0.8.5"
 #
 flatbuffers = "25.2.10"
-
+#
+colored = "2.0"
 
 yash-fnmatch = "1.1.2"
 

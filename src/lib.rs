@@ -32,6 +32,9 @@ pub use attribute::si::SiAttribute;
 pub use attribute::status::StatusAttribute;
 pub use attribute::string::StringAttribute;
 
+pub mod string_attribute;
+pub use string_attribute::StringAttribute;
+
 ///
 ///
 pub mod task_monitor;
