@@ -11,7 +11,7 @@ use tokio::task::JoinHandle;
 const DELAY_MS_BETWEEN_MONITORING: u64 = 200;
 
 /// Default capacity for event and handle channels
-const DEFAULT_CHANNEL_CAPACITY: usize = 10;
+const DEFAULT_CHANNEL_CAPACITY: usize = 512;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// Payload of event enums
@@ -114,7 +114,8 @@ impl TaskMonitor {
 
         //
         // Initialize handles channel to allow other object to send task handles to monitor
-        let (handle_sender, mut handle_receiver) = channel::<NamedTaskHandle>(DEFAULT_CHANNEL_CAPACITY);
+        let (handle_sender, mut handle_receiver) =
+            channel::<NamedTaskHandle>(DEFAULT_CHANNEL_CAPACITY);
 
         //
         // TASK to register new handles
@@ -126,38 +127,36 @@ impl TaskMonitor {
 
             // Task body
             async move {
-            loop {
-                match handle_receiver.recv().await {
-                Some(new_handle) => {
-                    // Send an event
-                    if let Err(e) = event_sender
-                    .send(Event::TaskCreated(EventBody {
-                        task_name: new_handle.0.clone(),
-                        task_id: new_handle.1.id().to_string(),
-                        error_message: None,
-                    }))
-                    .await
-                    {
-                    print_warning(&name, line!(), e);
-                    }
+                loop {
+                    match handle_receiver.recv().await {
+                        Some(new_handle) => {
+                            // Send an event
+                            if let Err(e) = event_sender
+                                .send(Event::TaskCreated(EventBody {
+                                    task_name: new_handle.0.clone(),
+                                    task_id: new_handle.1.id().to_string(),
+                                    error_message: None,
+                                }))
+                                .await
+                            {
+                                print_warning(&name, line!(), e);
+                            }
 
-                    // Save the handle
-                    handles.lock().await.push(new_handle);
-                }
-                None => {
-                    // Properly handle the closure of the channel
-                    if let Err(e) = event_sender
-                    .send(Event::TaskMonitorError(
-                        "Handle receiver channel has been closed".to_string(),
-                    ))
-                    .await
-                    {
-                    print_warning(&name, line!(), e);
+                            // Save the handle
+                            handles.lock().await.push(new_handle);
+                        }
+                        None => {
+                            // Properly handle the closure of the channel
+                            if let Err(e) = event_sender
+                                .send(Event::TaskMonitorError(format!("Channel has been closed")))
+                                .await
+                            {
+                                print_warning(&name, line!(), e);
+                            }
+                            break; // Exit the loop when the channel is closed
+                        }
                     }
-                    break; // Exit the loop when the channel is closed
                 }
-                }
-            }
             }
         });
 
@@ -168,7 +167,7 @@ impl TaskMonitor {
             let handles = handles.clone();
             let event_sender = event_sender.clone();
             let name = name.clone();
-            
+
             async move {
                 // Track if we have already sent the NoMoreTask event
                 let mut no_more_task_sent = false;
@@ -265,7 +264,7 @@ impl TaskMonitor {
 }
 
 /// Print a warning message for this task monitor
-/// 
+///
 fn print_warning(name: &String, line: u32, e: tokio::sync::mpsc::error::SendError<Event>) {
     println!(
         "{:?} - {:?} - TaskMonitor warning ! {:?}",
@@ -276,12 +275,8 @@ fn print_warning(name: &String, line: u32, e: tokio::sync::mpsc::error::SendErro
 }
 
 /// Process a finished task
-/// 
-async fn process_finished_task(
-    event_sender: &Sender<Event>,
-    name: &str,
-    element: NamedTaskHandle,
-) {
+///
+async fn process_finished_task(event_sender: &Sender<Event>, name: &str, element: NamedTaskHandle) {
     let task_id = element.1.id().to_string();
     match element.1.await {
         Ok(result) => match result {
