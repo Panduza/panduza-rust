@@ -1,6 +1,4 @@
-use std::sync::Arc;
-
-use crate::pubsub::{Operator, Publisher};
+use crate::pubsub::Publisher;
 use crate::router::{new_router, RouterHandler};
 use crate::structure::Structure;
 use crate::{AttributeMetadata, AttributeMode};
