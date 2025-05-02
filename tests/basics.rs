@@ -1,15 +1,10 @@
 mod worlds;
-use worlds::BooleanWorld;
-
-
-
-use cucumber::{World};
-
-
+use worlds::BasicsWorld;
+use cucumber::World;
 
 #[tokio::main]
 async fn main() {
-    BooleanWorld::run(
+    BasicsWorld::run(
         "tests/features/basics/boolean.feature",
     ).await;
 }
