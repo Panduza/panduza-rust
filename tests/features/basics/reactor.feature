@@ -3,6 +3,7 @@ Feature: Reactor Object
   This object will be used to manage all operations related to Panduza connection.
   - It must allow to connect to the platform
   - It must allow to find an attribute from its name
+  - It must allow to declare an attribute from its topic
 
   Background:
     Given a client connected on a test platform

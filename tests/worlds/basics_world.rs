@@ -68,26 +68,12 @@ impl Debug for BasicsWorld {
     }
 }
 
-
-
+///
+/// 
 #[given(expr = "a client connected on a test platform")]
 async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
     let options = ReactorOptions::new();
     let reactor = panduza::new_reactor(options).await.unwrap();
-
-    world.r = Some(reactor);
-}
-
-
-///
-/// 
-#[given(expr = "a client connected to {string} on port {int}")]
-async fn given_a_connected_client(world: &mut BasicsWorld, _hostname: String, _port: u16) {
-
-    
-    let options = ReactorOptions::new();
-    let reactor = panduza::new_reactor(options).await.unwrap();
-
 
     world.r = Some(reactor);
 }
