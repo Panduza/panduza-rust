@@ -2,7 +2,7 @@ Feature: Boolean Attributes
   Panduza client must be able to manage boolean attributes
 
   Background:
-    Given a client connected on a test platform
+    Given a reactor connected on a test platform
 
   Scenario: Manage RW boolean attribute
     Given the boolean attribute rw "boolean/rw"

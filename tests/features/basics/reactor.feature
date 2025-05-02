@@ -5,15 +5,22 @@ Feature: Reactor Object
   - It must allow to find an attribute from its name
   - It must allow to declare an attribute from its topic
 
-  Background:
-    Given a client connected on a test platform
+  Scenario: Connect to a platform
+    Given a reactor connected on a test platform
+    Then the reactor is successfully connected to the platform
+
+  Scenario: Fail connecting to a platform
+    Given a reactor trying to connect to an invalid platform
+    Then the reactor returned an error
 
   Scenario: Find an existing attribute from its name
+    Given a reactor connected on a test platform
     Given an attribute name "boolean/rw"
     When the reactor find function is called with the previously given attribute name
     Then the reactor must return a success
 
   Scenario: Try to find an non existing attribute from its name
+    Given a reactor connected on a test platform
     Given an attribute name "boolean/doesnotexist"
     When the reactor find function is called with the previously given attribute name
     Then the reactor must return an error
