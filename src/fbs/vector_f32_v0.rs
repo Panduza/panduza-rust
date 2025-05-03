@@ -1,3 +1,4 @@
+#[allow(warnings)]
 pub mod vector_f32_v0_generated;
 
 use bytes::Bytes;
@@ -13,7 +14,7 @@ pub struct VectorF32Buffer {
     raw_data: Bytes,
 }
 
-impl<'O> VectorF32Buffer {
+impl VectorF32Buffer {
     ///
     ///
     pub fn from_raw_data(raw_data: Bytes) -> Self {

@@ -112,12 +112,14 @@ impl BooleanAttribute {
         //
         // Create the recv task
         let pack_2 = pack.clone();
-        tokio::spawn(async move {
+        tokio::spawn({
+            let topic = topic.clone();
+            async move {
             loop {
                 //
                 let message = att_receiver.recv().await;
 
-                println!("new message {:?}", message);
+                println!("new message on topic {:?}: {:?}", &topic, message);
 
                 // Manage message
                 if let Some(message) = message {
@@ -131,7 +133,7 @@ impl BooleanAttribute {
                     break;
                 }
             }
-        });
+        }});
 
         // Wait for the first message if mode is not readonly
         if mode != AttributeMode::WriteOnly {

@@ -1,3 +1,4 @@
+#[allow(warnings)]
 pub mod trigger_v0_generated;
 
 use bytes::Bytes;

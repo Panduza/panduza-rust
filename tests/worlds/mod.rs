@@ -1,3 +1,3 @@
-pub mod boolean;
+pub mod basics_world;
 
-pub use boolean::BooleanWorld;
+pub use basics_world::BasicsWorld;

@@ -21,11 +21,14 @@ pub fn generate_random_string(length: usize) -> String {
 fn pubsub_options_to_mqtt_options(options: Options) -> MqttOptions {
     let mut mqttoptions = MqttOptions::new(
         format!("panduza-{}", generate_random_string(10)),
-        "127.0.0.1",
-        1883,
+        options.ip,
+        options.port,
     );
+
     mqttoptions.set_keep_alive(Duration::from_secs(3));
     mqttoptions.set_max_packet_size(1024 * 1000, 1024 * 1000);
+ 
+
     mqttoptions
 }
 
