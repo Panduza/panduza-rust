@@ -10,7 +10,7 @@ use tokio::sync::Notify;
 use tokio::time::timeout;
 
 #[derive(Debug)]
-struct BooleanDataPack {
+struct StringDataPack {
     /// Last value received
     ///
     last: Option<String>,
@@ -28,7 +28,7 @@ struct BooleanDataPack {
     update_notifier: Arc<Notify>,
 }
 
-impl BooleanDataPack {
+impl StringDataPack {
     ///
     ///
     pub fn push(&mut self, v: String) {
@@ -62,7 +62,7 @@ impl BooleanDataPack {
     }
 }
 
-impl Default for BooleanDataPack {
+impl Default for StringDataPack {
     fn default() -> Self {
         Self {
             last: Default::default(),
@@ -74,9 +74,9 @@ impl Default for BooleanDataPack {
 }
 
 #[derive(Clone, Debug)]
-/// Object to manage the BooleanAttribute
+/// Object to manage the StringAttribute
 ///
-pub struct BooleanAttribute {
+pub struct StringAttribute {
     ///
     /// TODO: maybe add this into the data pack
     topic: String,
@@ -90,20 +90,20 @@ pub struct BooleanAttribute {
 
     /// Initial data
     ///
-    pack: Arc<Mutex<BooleanDataPack>>,
+    pack: Arc<Mutex<StringDataPack>>,
 
     /// Update notifier
     ///
     update_notifier: Arc<Notify>,
 }
 
-impl BooleanAttribute {
+impl StringAttribute {
     /// Create a new instance
     ///
     pub async fn new(topic: String, mode:AttributeMode, cmd_publisher: Publisher, mut att_receiver: DataReceiver) -> Self {
         //
         // Create data pack
-        let pack = Arc::new(Mutex::new(BooleanDataPack::default()));
+        let pack = Arc::new(Mutex::new(StringDataPack::default()));
 
         //
         //

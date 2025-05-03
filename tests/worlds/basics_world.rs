@@ -4,7 +4,7 @@ mod reactor;
 mod boolean;
 
 use cucumber::{given, then,  World};
-use panduza::{reactor::ReactorOptions, AttributeBuilder, BooleanAttribute, JsonAttribute, Reactor};
+use panduza::{attribute::si::SiAttribute, reactor::ReactorOptions, AttributeBuilder, BooleanAttribute, JsonAttribute, Reactor, StringAttribute};
 use std::{fmt::Debug, str::FromStr};
 use cucumber::Parameter;
 
@@ -73,9 +73,9 @@ pub struct BooleanSubWorld {
 
 #[derive(Default)]
 pub struct SiSubWorld {
-    pub att_rw: Option<BooleanAttribute>,
-    pub att_wo: Option<BooleanAttribute>,
-    pub att_ro: Option<BooleanAttribute>,
+    pub att_rw: Option<SiAttribute>,
+    pub att_wo: Option<SiAttribute>,
+    pub att_ro: Option<SiAttribute>,
     pub topic_rw: Option<String>,
     pub topic_wo: Option<String>,
     pub topic_ro: Option<String>,
@@ -84,9 +84,9 @@ pub struct SiSubWorld {
 
 #[derive(Default)]
 pub struct StringSubWorld {
-    pub att_rw: Option<BooleanAttribute>,
-    pub att_wo: Option<BooleanAttribute>,
-    pub att_ro: Option<BooleanAttribute>,
+    pub att_rw: Option<StringAttribute>,
+    pub att_wo: Option<StringAttribute>,
+    pub att_ro: Option<StringAttribute>,
     pub topic_rw: Option<String>,
     pub topic_wo: Option<String>,
     pub topic_ro: Option<String>,
