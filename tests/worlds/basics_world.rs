@@ -1,3 +1,5 @@
+mod si;
+mod string;
 mod reactor;
 mod boolean;
 
