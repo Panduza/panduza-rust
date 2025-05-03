@@ -48,7 +48,7 @@ impl Reactor {
 
     ///
     ///
-    pub fn find_attribute<A: Into<String>>(&self, name: A) -> AttributeBuilder {
+    pub fn find_attribute<A: Into<String>>(&self, name: A) -> Option<AttributeBuilder> {
         let meta = self.structure.find_attribute(name);
 
         if meta.is_none() {
@@ -56,9 +56,10 @@ impl Reactor {
                 "not found attribute {:?}",
                 self.structure.list_of_registered_topics()
             );
+            return None;
         }
 
-        return AttributeBuilder::new(self.clone(), meta);
+        Some(AttributeBuilder::new(self.clone(), meta))
     }
 
 

@@ -23,4 +23,4 @@ Feature: Reactor Object
     Given a reactor connected on a test platform
     Given an attribute name "boolean/doesnotexist"
     When the reactor find function is called with the previously given attribute name
-    Then the reactor must return an error
+    Then the reactor must return a null value

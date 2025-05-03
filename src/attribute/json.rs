@@ -1,5 +1,6 @@
 use crate::pubsub::Publisher;
 use crate::reactor::DataReceiver;
+use crate::Topic;
 use bytes::Bytes;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -76,6 +77,11 @@ impl Default for JsonAttributePack {
 /// Object to manage the JsonAttribute
 ///
 pub struct JsonAttribute {
+        ///
+    /// TODO: maybe add this into the data pack
+    topic: String,
+
+    
     /// Object that all the attribute to publish
     ///
     cmd_publisher: Publisher,
@@ -132,6 +138,7 @@ impl JsonAttribute {
         //
         // Return attribute
         Self {
+            topic: topic,
             cmd_publisher: cmd_publisher,
             pack: pack,
             update_notifier: update_1,
@@ -193,5 +200,9 @@ impl JsonAttribute {
     ///
     pub fn pop(&self) -> Option<JsonValue> {
         self.pack.lock().unwrap().pop()
+    }
+
+    pub fn get_instance_status_topic(&self) -> String {
+        format!("pza/_/devices/{}", Topic::from_string(self.topic.clone(), true).instance_name())
     }
 }

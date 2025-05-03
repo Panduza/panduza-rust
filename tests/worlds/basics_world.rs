@@ -1,7 +1,7 @@
 mod reactor;
 
 use cucumber::{given, then, when, World};
-use panduza::{reactor::ReactorOptions, BooleanAttribute, JsonAttribute, Reactor};
+use panduza::{reactor::ReactorOptions, AttributeBuilder, BooleanAttribute, JsonAttribute, Reactor};
 use std::{fmt::Debug, str::FromStr};
 use cucumber::Parameter;
 
@@ -44,7 +44,17 @@ impl FromStr for Boolean {
 
 #[derive(Default)]
 pub struct ReactorSubWorld {
+    ///
+    ///     
     pub connection_failed: bool,
+
+    /// Attribute name to be used in the test
+    /// 
+    pub att_name: Option<String>,
+
+    /// Attribute builder result
+    /// 
+    pub find_result: Option<AttributeBuilder>,
 }
 
 #[derive(Default)]
@@ -97,9 +107,8 @@ async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
 async fn given_the_attribute_rw(world: &mut BasicsWorld, attribute_name: String) {
     world.boolean.topic_rw = Some(attribute_name.clone());
 
-    let attribute: panduza::BooleanAttribute = world.r.as_ref().unwrap().find_attribute(attribute_name).expect_boolean()
-    .await
-    .unwrap();
+    let attribute_builder = world.r.as_ref().unwrap().find_attribute(attribute_name).expect("Attribute not found");
+    let attribute: panduza::BooleanAttribute = attribute_builder.expect_boolean().await.unwrap();
 
     world.boolean.att_rw = Some(attribute);
 }
@@ -110,9 +119,8 @@ async fn given_the_attribute_rw(world: &mut BasicsWorld, attribute_name: String)
 async fn given_the_attribute_wo(world: &mut BasicsWorld, attribute_name: String) {
     world.boolean.topic_wo = Some(attribute_name.clone());
 
-    let attribute: panduza::BooleanAttribute = world.r.as_ref().unwrap().find_attribute(attribute_name).expect_boolean()
-    .await
-    .unwrap();
+    let attribute_builder = world.r.as_ref().unwrap().find_attribute(attribute_name).expect("Attribute not found");
+    let attribute: panduza::BooleanAttribute = attribute_builder.expect_boolean().await.unwrap();
 
     world.boolean.att_wo = Some(attribute);
 }

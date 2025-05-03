@@ -14,7 +14,7 @@ pub struct VectorF32Buffer {
     raw_data: Bytes,
 }
 
-impl<'O> VectorF32Buffer {
+impl VectorF32Buffer {
     ///
     ///
     pub fn from_raw_data(raw_data: Bytes) -> Self {
