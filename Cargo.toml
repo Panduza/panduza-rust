@@ -7,6 +7,10 @@ edition = "2021"
 name = "basics"
 harness = false
 
+[[test]]
+name = "basics_focus"
+harness = false
+
 
 [dependencies]
 

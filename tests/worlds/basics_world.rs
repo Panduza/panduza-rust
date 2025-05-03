@@ -1,6 +1,7 @@
 mod reactor;
+mod boolean;
 
-use cucumber::{given, then, when, World};
+use cucumber::{given, then,  World};
 use panduza::{reactor::ReactorOptions, AttributeBuilder, BooleanAttribute, JsonAttribute, Reactor};
 use std::{fmt::Debug, str::FromStr};
 use cucumber::Parameter;
@@ -61,8 +62,10 @@ pub struct ReactorSubWorld {
 pub struct BooleanSubWorld {
     pub att_rw: Option<BooleanAttribute>,
     pub att_wo: Option<BooleanAttribute>,
+    pub att_ro: Option<BooleanAttribute>,
     pub topic_rw: Option<String>,
     pub topic_wo: Option<String>,
+    pub topic_ro: Option<String>,
 }
 
 #[derive(Default, World)]
@@ -101,29 +104,6 @@ async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
     world.r = Some(reactor);
 }
 
-///
-/// 
-#[given(expr = "the boolean attribute rw {string}")]
-async fn given_the_attribute_rw(world: &mut BasicsWorld, attribute_name: String) {
-    world.boolean.topic_rw = Some(attribute_name.clone());
-
-    let attribute_builder = world.r.as_ref().unwrap().find_attribute(attribute_name).expect("Attribute not found");
-    let attribute: panduza::BooleanAttribute = attribute_builder.expect_boolean().await.unwrap();
-
-    world.boolean.att_rw = Some(attribute);
-}
-
-///
-/// 
-#[given(expr = "the boolean attribute wo {string}")]
-async fn given_the_attribute_wo(world: &mut BasicsWorld, attribute_name: String) {
-    world.boolean.topic_wo = Some(attribute_name.clone());
-
-    let attribute_builder = world.r.as_ref().unwrap().find_attribute(attribute_name).expect("Attribute not found");
-    let attribute: panduza::BooleanAttribute = attribute_builder.expect_boolean().await.unwrap();
-
-    world.boolean.att_wo = Some(attribute);
-}
 
 ///
 /// 
@@ -138,27 +118,7 @@ async fn given_the_status_attribute(world: &mut BasicsWorld) {
     world.att_instance_status = Some(attribute);
 }
 
-///
-/// 
-#[when(expr = "I set rw boolean to {boolean}")]
-async fn i_set_rw_boolean(world: &mut BasicsWorld, value: Boolean) {
-    world.boolean.att_rw.as_mut().unwrap().set(value.into_bool()).await.unwrap();
-}
 
-///
-/// 
-#[when(expr = "I set wo boolean to {boolean}")]
-async fn i_set_wo_boolean(world: &mut BasicsWorld, value: Boolean) {
-    world.boolean.att_wo.as_mut().unwrap().set(value.into_bool()).await.unwrap();
-}
-
-///
-/// 
-#[then(expr = "the rw boolean value is {boolean}")]
-async fn the_rw_boolean_value_is(world: &mut BasicsWorld, expected_value: Boolean) {
-    let read_value = world.boolean.att_rw.as_mut().unwrap().get().unwrap();
-    assert_eq!(read_value, expected_value.into_bool(), "read '{:?}' != expected '{:?}'", read_value, expected_value.into_bool() );
-}
 
 ///
 ///
