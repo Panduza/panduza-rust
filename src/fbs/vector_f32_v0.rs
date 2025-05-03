@@ -1,3 +1,4 @@
+#[allow(warnings)]
 pub mod vector_f32_v0_generated;
 
 use bytes::Bytes;
