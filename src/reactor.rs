@@ -14,9 +14,9 @@ pub struct ReactorOptions {
 }
 
 impl ReactorOptions {
-    pub fn new() -> Self {
+    pub fn new<T: Into<String>>(ip: T, port: u16) -> Self {
         Self {
-            pubsub_options: Options::default(),
+            pubsub_options: Options::new(ip, port)
         }
     }
 }
@@ -95,6 +95,8 @@ impl Reactor {
 
 /// Start the reactor
 ///
+/// This function initializes the reactor and waits for the structure to be initialized.
+/// If the structure initialization times out after 3 seconds, it returns an error.
 pub async fn new_reactor(options: ReactorOptions) -> Result<Reactor, String> {
     let router = new_router(options.pubsub_options).map_err(|e| e.to_string())?;
 
@@ -105,7 +107,11 @@ pub async fn new_reactor(options: ReactorOptions) -> Result<Reactor, String> {
     let structure = Structure::new(structure_data_receiver);
     let structure_initialized = structure.initialized_notifier();
 
-    structure_initialized.notified().await;
+    let timeout_duration = std::time::Duration::from_secs(3);
+    let result = tokio::time::timeout(timeout_duration, structure_initialized.notified()).await;
 
-    Ok(Reactor::new(structure, handler))
+    match result {
+        Ok(_) => Ok(Reactor::new(structure, handler)),
+        Err(_) => Err("Timeout while waiting for structure initialization".to_string()),
+    }
 }

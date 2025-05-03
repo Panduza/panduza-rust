@@ -1,3 +1,5 @@
+mod reactor;
+
 use cucumber::{given, then, when, World};
 use panduza::{reactor::ReactorOptions, BooleanAttribute, JsonAttribute, Reactor};
 use std::{fmt::Debug, str::FromStr};
@@ -39,6 +41,12 @@ impl FromStr for Boolean {
 }
 
 
+
+#[derive(Default)]
+pub struct ReactorSubWorld {
+    pub connection_failed: bool,
+}
+
 #[derive(Default)]
 pub struct BooleanSubWorld {
     pub att_rw: Option<BooleanAttribute>,
@@ -54,6 +62,11 @@ pub struct BasicsWorld {
     pub r: Option<Reactor>,
 
     pub att_instance_status: Option<JsonAttribute>,
+
+
+    /// Reactor sub world data
+    /// 
+    pub reactor: ReactorSubWorld,
 
     /// Boolean sub world data
     /// 
@@ -72,7 +85,7 @@ impl Debug for BasicsWorld {
 /// 
 #[given(expr = "a reactor connected on a test platform")]
 async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
-    let options = ReactorOptions::new();
+    let options = ReactorOptions::new(PLAFORM_LOCALHOST, PLAFORM_PORT);
     let reactor = panduza::new_reactor(options).await.unwrap();
 
     world.r = Some(reactor);
@@ -157,3 +170,4 @@ async fn the_instance_status_attribute_must_be(world: &mut BasicsWorld, s: Strin
     }
 
 }
+

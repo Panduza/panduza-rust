@@ -5,13 +5,13 @@ Feature: Reactor Object
   - It must allow to find an attribute from its name
   - It must allow to declare an attribute from its topic
 
-  Scenario: Connect to a platform
-    Given a reactor connected on a test platform
-    Then the reactor is successfully connected to the platform
-
   Scenario: Fail connecting to a platform
     Given a reactor trying to connect to an invalid platform
     Then the reactor returned an error
+
+  Scenario: Connect to a platform
+    Given a reactor connected on a test platform
+    Then the reactor is successfully connected to the platform
 
   Scenario: Find an existing attribute from its name
     Given a reactor connected on a test platform
