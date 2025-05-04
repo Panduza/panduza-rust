@@ -189,8 +189,11 @@ impl SiAttribute {
                 .await
                 .map_err(|e| e.to_string())?;
 
-            while value.clone() != self.get().unwrap() {
-                // append 3 retry before failling if update received but not good
+            while let Some(current_value) = self.get() {
+                if value.clone() == current_value {
+                    break;
+                }
+                // append 3 retry before failing if update received but not good
                 timeout(delay, self.update_notifier.notified())
                     .await
                     .map_err(|e| e.to_string())?;

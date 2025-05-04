@@ -38,6 +38,22 @@ async fn given_the_attribute_ro(world: &mut BasicsWorld, attribute_name: String)
     world.boolean.att_ro = Some(attribute);
 }
 
+
+///
+/// 
+#[when(expr = "I set rw boolean to {boolean}")]
+async fn i_set_rw_boolean(world: &mut BasicsWorld, value: Boolean) {
+    world.boolean.att_rw.as_mut().unwrap().set(value.into_bool()).await.unwrap();
+}
+
+///
+/// 
+#[when(expr = "I set wo boolean to {boolean}")]
+async fn i_set_wo_boolean(world: &mut BasicsWorld, value: Boolean) {
+    world.boolean.att_wo.as_mut().unwrap().set(value.into_bool()).await.unwrap();
+}
+
+
 ///
 /// 
 #[then(expr = "the rw boolean value is {boolean}")]
@@ -69,18 +85,4 @@ async fn the_ro_boolean_value_is(world: &mut BasicsWorld, expected_value: Boolea
     }
     let read_value = world.boolean.att_ro.as_ref().unwrap().get().unwrap();
     assert_eq!(read_value, expected_value.into_bool(), "read '{:?}' != expected '{:?}'", read_value, expected_value.into_bool());
-}
-
-///
-/// 
-#[when(expr = "I set rw boolean to {boolean}")]
-async fn i_set_rw_boolean(world: &mut BasicsWorld, value: Boolean) {
-    world.boolean.att_rw.as_mut().unwrap().set(value.into_bool()).await.unwrap();
-}
-
-///
-/// 
-#[when(expr = "I set wo boolean to {boolean}")]
-async fn i_set_wo_boolean(world: &mut BasicsWorld, value: Boolean) {
-    world.boolean.att_wo.as_mut().unwrap().set(value.into_bool()).await.unwrap();
 }
