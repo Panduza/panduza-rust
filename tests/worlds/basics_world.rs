@@ -77,9 +77,9 @@ pub struct SiSubWorld {
     pub att_rw: Option<SiAttribute>,
     pub att_wo: Option<SiAttribute>,
     pub att_ro: Option<SiAttribute>,
-    pub topic_rw: Option<String>,
-    pub topic_wo: Option<String>,
-    pub topic_ro: Option<String>,
+    // pub topic_rw: Option<String>,
+    // pub topic_wo: Option<String>,
+    // pub topic_ro: Option<String>,
 }
 
 
@@ -88,9 +88,9 @@ pub struct StringSubWorld {
     pub att_rw: Option<StringAttribute>,
     pub att_wo: Option<StringAttribute>,
     pub att_ro: Option<StringAttribute>,
-    pub topic_rw: Option<String>,
-    pub topic_wo: Option<String>,
-    pub topic_ro: Option<String>,
+    // pub topic_rw: Option<String>,
+    // pub topic_wo: Option<String>,
+    // pub topic_ro: Option<String>,
 }
 
 
@@ -99,9 +99,9 @@ pub struct EnumSubWorld {
     pub att_rw: Option<StringAttribute>,
     pub att_wo: Option<StringAttribute>,
     pub att_ro: Option<StringAttribute>,
-    pub topic_rw: Option<String>,
-    pub topic_wo: Option<String>,
-    pub topic_ro: Option<String>,
+    // pub topic_rw: Option<String>,
+    // pub topic_wo: Option<String>,
+    // pub topic_ro: Option<String>,
 }
 
 

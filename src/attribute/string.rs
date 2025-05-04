@@ -117,7 +117,7 @@ impl StringAttribute {
         // Create the recv task
         let pack_2 = pack.clone();
         tokio::spawn({
-            let topic = topic.clone();
+            // let topic = topic.clone();
             async move {
                 loop {
                     //
