@@ -2,6 +2,7 @@ mod si;
 mod string;
 mod reactor;
 mod boolean;
+mod r#enum;
 
 use cucumber::{given, then,  World};
 use panduza::{attribute::si::SiAttribute, reactor::ReactorOptions, AttributeBuilder, BooleanAttribute, JsonAttribute, Reactor, StringAttribute};
@@ -93,6 +94,17 @@ pub struct StringSubWorld {
 }
 
 
+#[derive(Default)]
+pub struct EnumSubWorld {
+    pub att_rw: Option<StringAttribute>,
+    pub att_wo: Option<StringAttribute>,
+    pub att_ro: Option<StringAttribute>,
+    pub topic_rw: Option<String>,
+    pub topic_wo: Option<String>,
+    pub topic_ro: Option<String>,
+}
+
+
 
 #[derive(Default, World)]
 pub struct BasicsWorld {
@@ -119,6 +131,11 @@ pub struct BasicsWorld {
     /// Si sub world data
     /// 
     pub si: SiSubWorld,
+
+    /// Enum sub world data
+    /// 
+    pub r#enum: EnumSubWorld,
+    
 }
 
 impl Debug for BasicsWorld {
