@@ -81,9 +81,8 @@ pub struct StringAttribute {
     /// TODO: maybe add this into the data pack
     topic: String,
 
-    
-    mode : AttributeMode,
-    
+    mode: AttributeMode,
+
     /// Object that all the attribute to publish
     ///
     cmd_publisher: Publisher,
@@ -100,7 +99,12 @@ pub struct StringAttribute {
 impl StringAttribute {
     /// Create a new instance
     ///
-    pub async fn new(topic: String, mode:AttributeMode, cmd_publisher: Publisher, mut att_receiver: DataReceiver) -> Self {
+    pub async fn new(
+        topic: String,
+        mode: AttributeMode,
+        cmd_publisher: Publisher,
+        mut att_receiver: DataReceiver,
+    ) -> Self {
         //
         // Create data pack
         let pack = Arc::new(Mutex::new(StringDataPack::default()));
@@ -115,25 +119,26 @@ impl StringAttribute {
         tokio::spawn({
             let topic = topic.clone();
             async move {
-            loop {
-                //
-                let message = att_receiver.recv().await;
+                loop {
+                    //
+                    let message = att_receiver.recv().await;
 
-                println!("new message on topic {:?}: {:?}", &topic, message);
+                    // println!("new message on topic {:?}: {:?}", &topic, message);
 
-                // Manage message
-                if let Some(message) = message {
-                    // Deserialize
-                    let value: String = serde_json::from_slice(&message).unwrap();
-                    // Push into pack
-                    pack_2.lock().unwrap().push(value);
-                }
-                // None => no more message
-                else {
-                    break;
+                    // Manage message
+                    if let Some(message) = message {
+                        // Deserialize
+                        let value: String = serde_json::from_slice(&message).unwrap();
+                        // Push into pack
+                        pack_2.lock().unwrap().push(value);
+                    }
+                    // None => no more message
+                    else {
+                        break;
+                    }
                 }
             }
-        }});
+        });
 
         // Wait for the first message if mode is not readonly
         if mode != AttributeMode::WriteOnly {
@@ -181,7 +186,6 @@ impl StringAttribute {
         self.shoot(value.clone()).await;
 
         if self.mode == AttributeMode::ReadWrite {
-
             let delay = Duration::from_secs(5);
 
             // Wait for change in the data pack
@@ -213,7 +217,9 @@ impl StringAttribute {
     }
 
     pub fn get_instance_status_topic(&self) -> String {
-        format!("pza/_/devices/{}", Topic::from_string(self.topic.clone(), true).instance_name())
+        format!(
+            "pza/_/devices/{}",
+            Topic::from_string(self.topic.clone(), true).instance_name()
+        )
     }
-
 }
