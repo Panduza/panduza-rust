@@ -1,8 +1,11 @@
+mod si;
+mod string;
 mod reactor;
 mod boolean;
+mod r#enum;
 
 use cucumber::{given, then,  World};
-use panduza::{reactor::ReactorOptions, AttributeBuilder, BooleanAttribute, JsonAttribute, Reactor};
+use panduza::{attribute::si::SiAttribute, reactor::ReactorOptions, AttributeBuilder, BooleanAttribute, JsonAttribute, Reactor, StringAttribute};
 use std::{fmt::Debug, str::FromStr};
 use cucumber::Parameter;
 
@@ -68,14 +71,50 @@ pub struct BooleanSubWorld {
     pub topic_ro: Option<String>,
 }
 
+
+#[derive(Default)]
+pub struct SiSubWorld {
+    pub att_rw: Option<SiAttribute>,
+    pub att_wo: Option<SiAttribute>,
+    pub att_ro: Option<SiAttribute>,
+    // pub topic_rw: Option<String>,
+    // pub topic_wo: Option<String>,
+    // pub topic_ro: Option<String>,
+}
+
+
+#[derive(Default)]
+pub struct StringSubWorld {
+    pub att_rw: Option<StringAttribute>,
+    pub att_wo: Option<StringAttribute>,
+    pub att_ro: Option<StringAttribute>,
+    // pub topic_rw: Option<String>,
+    // pub topic_wo: Option<String>,
+    // pub topic_ro: Option<String>,
+}
+
+
+#[derive(Default)]
+pub struct EnumSubWorld {
+    pub att_rw: Option<StringAttribute>,
+    pub att_wo: Option<StringAttribute>,
+    pub att_ro: Option<StringAttribute>,
+    // pub topic_rw: Option<String>,
+    // pub topic_wo: Option<String>,
+    // pub topic_ro: Option<String>,
+}
+
+
+
 #[derive(Default, World)]
 pub struct BasicsWorld {
     /// Reactor object
     /// 
     pub r: Option<Reactor>,
 
+    ///
+    /// 
     pub att_instance_status: Option<JsonAttribute>,
-
 
     /// Reactor sub world data
     /// 
@@ -84,6 +123,19 @@ pub struct BasicsWorld {
     /// Boolean sub world data
     /// 
     pub boolean: BooleanSubWorld,
+
+    /// String sub world data
+    /// 
+    pub string: StringSubWorld,
+
+    /// Si sub world data
+    /// 
+    pub si: SiSubWorld,
+
+    /// Enum sub world data
+    /// 
+    pub r#enum: EnumSubWorld,
+    
 }
 
 impl Debug for BasicsWorld {
@@ -104,7 +156,6 @@ async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
     world.r = Some(reactor);
 }
 
-
 ///
 /// 
 #[given(expr = "the status attribute for the instance managing the wo attribute")]
@@ -117,8 +168,6 @@ async fn given_the_status_attribute(world: &mut BasicsWorld) {
 
     world.att_instance_status = Some(attribute);
 }
-
-
 
 ///
 ///

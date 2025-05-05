@@ -207,7 +207,7 @@ impl Router {
                                 if sender.send(incoming_update.payload).await.is_err() {
                                     // Remove the route if the sender is dead
                                     self.routes.remove(&incoming_update.topic);
-                                    println!("-------- !!! Removed dead route for {:?}", incoming_update.topic);
+                                    // println!("-------- !!! Removed dead route for {:?}", incoming_update.topic);
                                 }
                             } else {
                                 println!("-------- !!! No route for {:?}", incoming_update.topic);

@@ -29,6 +29,8 @@ pub use attribute_metadata::AttributeMetadata;
 pub mod attribute;
 pub use attribute::boolean::BooleanAttribute;
 pub use attribute::json::JsonAttribute;
+pub use attribute::si::SiAttribute;
+pub use attribute::string::StringAttribute;
 
 ///
 ///
