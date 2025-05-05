@@ -1,8 +1,8 @@
 #[allow(warnings)]
-pub mod notification_v0_generated;
+pub mod status_v0_generated;
 
 use bytes::Bytes;
-use notification_v0_generated::{Notification, NotificationArgs, Timestamp};
+use status_v0_generated::{Notification, NotificationArgs, Timestamp};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub enum NotificationType {
