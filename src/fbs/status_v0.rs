@@ -2,58 +2,27 @@
 pub mod status_v0_generated;
 
 use bytes::Bytes;
-use status_v0_generated::{Notification, NotificationArgs, Timestamp};
+use status_v0_generated::{Status, StatusArgs, Timestamp};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub enum NotificationType {
-    ///
-    /// An action triggered an alert.
-    ///
-    /// An alert is a internal warning that has been managed by the system but
-    /// require user attention because it may be the result of a misusage.
-    ///
-    Alert,
+pub enum InstanceState {}
 
+pub struct InstanceStatus {
     ///
-    /// An action triggered an error.
     ///
-    /// An error is a critical failure of an instance driver.
-    /// The given driver is not able to process any more data and will try to reboot.
-    ///
-    Error,
-}
-
-impl From<NotificationType> for u16 {
-    fn from(notification_type: NotificationType) -> Self {
-        match notification_type {
-            NotificationType::Alert => 1,
-            NotificationType::Error => 2,
-        }
-    }
-}
-
-impl TryFrom<u16> for NotificationType {
-    type Error = String;
-
-    fn try_from(value: u16) -> Result<Self, <Self as TryFrom<u16>>::Error> {
-        match value {
-            1 => Ok(NotificationType::Alert),
-            2 => Ok(NotificationType::Error),
-            _ => Err(format!("Invalid NotificationType value: {}", value)),
-        }
-    }
+    pub state: InstanceState,
 }
 
 #[derive(Debug)]
 ///
 ///
-pub struct NotificationBuffer {
+pub struct StatusBuffer {
     /// Internal Raw Data
     ///
     raw_data: Bytes,
 }
 
-impl NotificationBuffer {
+impl StatusBuffer {
     ///
     ///
     pub fn from_raw_data(raw_data: Bytes) -> Self {
@@ -84,7 +53,7 @@ impl NotificationBuffer {
 
     ///
     ///
-    pub fn from_args(r#type: NotificationType, source: String, message: String) -> Self {
+    pub fn from_args(r#type: StatusType, source: String, message: String) -> Self {
         let mut builder = flatbuffers::FlatBufferBuilder::new();
 
         let source = builder.create_string(&source);
@@ -92,9 +61,9 @@ impl NotificationBuffer {
 
         let timestamp = Self::generate_timestamp();
 
-        let object = Notification::create(
+        let object = Status::create(
             &mut builder,
-            &NotificationArgs {
+            &StatusArgs {
                 type_: r#type.into(),
                 source: Some(source),
                 message: Some(message),
@@ -112,7 +81,7 @@ impl NotificationBuffer {
 
     ///
     ///
-    pub fn object(&self) -> Notification {
-        flatbuffers::root::<Notification>(&self.raw_data).unwrap()
+    pub fn object(&self) -> Status {
+        flatbuffers::root::<Status>(&self.raw_data).unwrap()
     }
 }
