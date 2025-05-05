@@ -1,0 +1,28 @@
+struct Timestamp {
+    secs: uint64;
+    nanos: uint32;
+}
+
+
+
+
+
+
+table InstanceStatus {
+    instance: string;
+    state: uint16;
+    error_string: string;
+}
+
+table BenchStatus {
+    values:[InstanceStatus];
+    timestamp: Timestamp;
+}
+
+table Notification {
+    timestamp: Timestamp;
+    type: uint16;
+    source: string;
+    message: string;
+}
+
