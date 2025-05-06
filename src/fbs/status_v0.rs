@@ -5,7 +5,7 @@ use bytes::Bytes;
 use status_v0_generated::{InstanceStatus, InstanceStatusArgs, Status, StatusArgs, Timestamp};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub enum InstanceState {}
+use crate::InstanceState;
 
 #[derive(Debug)]
 pub struct InstanceStatusBuffer {
@@ -45,11 +45,11 @@ impl InstanceStatusBuffer {
 
     ///
     ///
-    pub fn from_args(name: String, state: InstanceState, error_string: String) -> Self {
+    pub fn from_args(name: String, state: InstanceState, error_string: Option<String>) -> Self {
         let mut builder = flatbuffers::FlatBufferBuilder::new();
 
         let instance_name = builder.create_string(&name);
-        let error_string = builder.create_string(&error_string);
+        let error_string = error_string.map(|e| builder.create_string(&e));
 
         // Create the instance object - actual implementation depends on the generated code
         let object = InstanceStatus::create(
@@ -57,7 +57,7 @@ impl InstanceStatusBuffer {
             &InstanceStatusArgs {
                 instance: Some(instance_name),
                 state: state as u16, // Assuming state is an enum or similar
-                error_string: Some(error_string),
+                error_string,
             },
         );
 
