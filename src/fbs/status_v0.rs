@@ -2,15 +2,78 @@
 pub mod status_v0_generated;
 
 use bytes::Bytes;
-use status_v0_generated::{Status, StatusArgs, Timestamp};
+use status_v0_generated::{InstanceStatus, InstanceStatusArgs, Status, StatusArgs, Timestamp};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub enum InstanceState {}
 
-pub struct InstanceStatus {
+#[derive(Debug)]
+pub struct InstanceStatusBuffer {
+    /// Internal Raw Data
+    ///
+    raw_data: Bytes,
+}
+
+impl InstanceStatusBuffer {
     ///
     ///
-    pub state: InstanceState,
+    pub fn from_raw_data(raw_data: Bytes) -> Self {
+        Self { raw_data: raw_data }
+    }
+
+    ///
+    ///
+    pub fn raw_data(&self) -> &Bytes {
+        &self.raw_data
+    }
+
+    ///
+    ///
+    pub fn take_data(self) -> Bytes {
+        self.raw_data
+    }
+
+    // ///
+    // ///
+    // fn generate_timestamp() -> Timestamp {
+    //     let now = SystemTime::now();
+    //     let since_the_epoch = now.duration_since(UNIX_EPOCH).expect("Time went backwards");
+    //     let seconds = since_the_epoch.as_secs();
+    //     let nanoseconds = since_the_epoch.subsec_nanos();
+    //     Timestamp::new(seconds, nanoseconds)
+    // }
+
+    ///
+    ///
+    pub fn from_args(name: String, state: InstanceState, error_string: String) -> Self {
+        let mut builder = flatbuffers::FlatBufferBuilder::new();
+
+        let instance_name = builder.create_string(&name);
+        let error_string = builder.create_string(&error_string);
+
+        // Create the instance object - actual implementation depends on the generated code
+        let object = InstanceStatus::create(
+            &mut builder,
+            &InstanceStatusArgs {
+                instance: Some(instance_name),
+                state: state as u16, // Assuming state is an enum or similar
+                error_string: Some(error_string),
+            },
+        );
+
+        builder.finish(object, None);
+
+        let raw_data = Bytes::from(builder.finished_data().to_vec());
+
+        // Here we copy into the buffer
+        Self { raw_data }
+    }
+
+    ///
+    ///
+    pub fn object(&self) -> InstanceStatus {
+        flatbuffers::root::<InstanceStatus>(&self.raw_data).unwrap()
+    }
 }
 
 #[derive(Debug)]
@@ -53,20 +116,50 @@ impl StatusBuffer {
 
     ///
     ///
-    pub fn from_args(r#type: StatusType, source: String, message: String) -> Self {
+    pub fn from_args(instances: Vec<InstanceStatusBuffer>) -> Self {
         let mut builder = flatbuffers::FlatBufferBuilder::new();
 
-        let source = builder.create_string(&source);
-        let message = builder.create_string(&message);
+        // Create a vector of instance offsets
+        let mut instance_offsets = Vec::new();
+        for instance_buffer in &instances {
+            // Extract data from each instance buffer
+            let instance_status = instance_buffer.object();
+
+            // Copy data to new builder
+            let instance_name = if let Some(name) = instance_status.instance() {
+                Some(builder.create_string(name))
+            } else {
+                None
+            };
+
+            let error_string = if let Some(err) = instance_status.error_string() {
+                Some(builder.create_string(err))
+            } else {
+                None
+            };
+
+            let offset = InstanceStatus::create(
+                &mut builder,
+                &InstanceStatusArgs {
+                    instance: instance_name,
+                    state: instance_status.state(),
+                    error_string,
+                },
+            );
+
+            instance_offsets.push(offset);
+        }
+
+        // Create vector of offsets
+        let instances_vector = builder.create_vector(&instance_offsets);
 
         let timestamp = Self::generate_timestamp();
 
+        // Create the Status object with the vector of instances
         let object = Status::create(
             &mut builder,
             &StatusArgs {
-                type_: r#type.into(),
-                source: Some(source),
-                message: Some(message),
+                instances: Some(instances_vector),
                 timestamp: Some(&timestamp),
             },
         );
@@ -75,8 +168,7 @@ impl StatusBuffer {
 
         let raw_data = Bytes::from(builder.finished_data().to_vec());
 
-        // Here we copy into the buffer
-        Self { raw_data: raw_data }
+        Self { raw_data }
     }
 
     ///
