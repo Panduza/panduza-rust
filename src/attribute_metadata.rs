@@ -13,19 +13,21 @@ pub struct AttributeMetadata {
     ///
     ///
     pub info: Option<String>,
-    
-    pub  mode : AttributeMode,
+
+    pub mode: AttributeMode,
     // options
 }
 
 impl AttributeMetadata {
-    
-
     /// Create a new attribute metadata from a topic only
-    /// 
+    ///
     /// This creates a minimal metadata instance with default values
     /// for the type and without any info.
-    pub fn from_topic<T: Into<String>>(topic: T, r#type: Option<String>, mode: AttributeMode) -> Self {
+    pub fn from_topic<T: Into<String>>(
+        topic: T,
+        r#type: Option<String>,
+        mode: AttributeMode,
+    ) -> Self {
         Self {
             topic: topic.into(),
             r#type: r#type.unwrap_or_else(|| "unknown".to_string()),

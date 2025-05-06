@@ -1,8 +1,7 @@
 use colored::*;
-use panduza::{reactor::ReactorOptions, task_monitor::TaskMonitor};
-use std::io::{self, Read, Write};
-use std::time::{Duration, Instant};
-use tokio::time::sleep;
+use panduza::reactor::ReactorOptions;
+use std::io;
+use bytes::Bytes;
 
 #[tokio::main]
 async fn main() {
@@ -11,26 +10,26 @@ async fn main() {
 
     let mut pp = reactor
         .find_attribute("serial-stream/TX")
-        .expect_string()
+        .expect_bytes()
         .await
         .unwrap();
     // println!("$$$$$$ {:?}", pp);
     let mut listener = reactor
         .find_attribute("serial-stream/RX")
-        .expect_string()
+        .expect_bytes()
         .await
         .unwrap();
 
     // Tâche de réception avec pop()
     tokio::spawn(async move {
-        let mut last_message_received = String::new();
+        let mut last_message_received = Bytes::new();
         loop {
             if let Some(received) = listener.get() {
                 if received != last_message_received {
                     println!(
                         "{} {}",
                         "[message received]".green().bold(),
-                        format!("{:?}", received)
+                        format!("{:?}", String::from_utf8_lossy(&received))
                     );
                 }
                 last_message_received = received;
@@ -47,12 +46,14 @@ async fn main() {
         stdin.read_line(&mut input).unwrap();
 
         if !input.is_empty() {
-            pp.shoot(input.to_string()).await;
+            let bytes = bytes::Bytes::from(input.as_bytes().to_vec());
+            pp.shoot(bytes).await;
             println!(
                 "{} {}",
                 "[message send]".blue().bold(),
                 format!("{:?}", input)
             );
+            
         }
     }
 
@@ -137,5 +138,5 @@ async fn main() {
     //     }
     // });
 
-    sleep(Duration::from_secs(60)).await;
+    //sleep(Duration::from_secs(60)).await;
 }
