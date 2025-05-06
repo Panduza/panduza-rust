@@ -22,6 +22,9 @@ pub use boolean_attribute::BooleanAttribute;
 pub mod string_attribute;
 pub use string_attribute::StringAttribute;
 
+pub mod bytes_attribute;
+pub use bytes_attribute::BytesAttribute;
+
 ///
 ///
 pub mod task_monitor;

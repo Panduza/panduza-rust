@@ -1,7 +1,7 @@
 use crate::{
     attribute_metadata::AttributeMetadata,
     pubsub::{Operator, Publisher},
-    BooleanAttribute, Reactor, StringAttribute,
+    BooleanAttribute, Reactor, StringAttribute,BytesAttribute,
 };
 
 #[derive(Clone)]
@@ -54,6 +54,28 @@ impl AttributeBuilder {
             .map_err(|e| e.to_string())?;
 
         Ok(StringAttribute::new(cmd_publisher, att_receiver))
+    }
+
+    pub async fn expect_bytes(&self) -> Result<BytesAttribute, String> {
+        let md = self
+            .metadata
+            .as_ref()
+            .expect("Metadata is required but was not provided.");
+        let att_topic = format!("{}/att", md.topic);
+        let cmd_topic = format!("{}/cmd", md.topic);
+
+        let att_receiver = if md.mode != "WO" {
+            Some(self.reactor.register_listener(att_topic, 20).await?)
+        } else {
+            None
+        };
+
+        let cmd_publisher = self
+            .reactor
+            .register_publisher(cmd_topic, false)
+            .map_err(|e| e.to_string())?;
+
+        Ok(BytesAttribute::new(cmd_publisher, att_receiver))
     }
 
 
