@@ -9,70 +9,7 @@ use std::time::Duration;
 use tokio::sync::Notify;
 use tokio::time::timeout;
 
-/// Object that represent the data pack for the boolean attribute
-/// 
-/// This object stores incoming data in its internal data queue.
-/// The queue has a limited capacity, and when it is full, the oldest data is removed to make room for new data.
-/// 
-#[derive(Debug)]
-struct BooleanDataPack {
-    /// Queue of value
-    ///
-    queue: Vec<bool>,
-
-    /// Last value received
-    /// 
-    last: Option<bool>,
-
-    /// Update notifier
-    ///
-    update_notifier: Arc<Notify>,
-}
-
-impl BooleanDataPack {
-    ///
-    ///
-    pub fn push(&mut self, v: bool) {
-        self.queue.push(v);
-        self.update_notifier.notify_waiters();
-    }
-
-    ///
-    ///
-    pub fn last(&mut self) -> Option<bool> {
-        while self.pop().is_some() {
-            // pop all values
-        }
-        self.last.clone()
-    }
-
-    ///
-    ///
-    pub fn pop(&mut self) -> Option<bool> {
-        if self.queue.is_empty() {
-            None
-        } else {
-            self.last = Some(self.queue.remove(0));
-            self.last.clone()
-        }
-    }
-
-    ///
-    ///
-    pub fn update_notifier(&self) -> Arc<Notify> {
-        self.update_notifier.clone()
-    }
-}
-
-impl Default for BooleanDataPack {
-    fn default() -> Self {
-        Self {
-            queue: Default::default(),
-            last: Default::default(),
-            update_notifier: Default::default(),
-        }
-    }
-}
+use super::data_pack::AttributeDataPack;
 
 #[derive(Clone, Debug)]
 /// Object to manage the BooleanAttribute
@@ -91,7 +28,7 @@ pub struct BooleanAttribute {
 
     /// Initial data
     ///
-    pack: Arc<Mutex<BooleanDataPack>>,
+    pack: Arc<Mutex<AttributeDataPack<bool>>>,
 
     /// Update notifier
     ///
@@ -104,7 +41,9 @@ impl BooleanAttribute {
     pub async fn new(topic: String, mode:AttributeMode, cmd_publisher: Publisher, mut att_receiver: DataReceiver) -> Self {
         //
         // Create data pack
-        let pack = Arc::new(Mutex::new(BooleanDataPack::default()));
+        let pack = Arc::new(Mutex::new(
+            AttributeDataPack::<bool>::default()
+        ));
 
         //
         //
@@ -214,7 +153,7 @@ impl BooleanAttribute {
 
 
     
-    pub async fn wait_for_value(&self, value: bool, delay: Duration) -> Result<(), String> {
+    pub async fn wait_for_value(&self, value: bool) -> Result<(), String> {
         while let Some(last_value) = self.get() {
             if last_value == value {
                 return Ok(());

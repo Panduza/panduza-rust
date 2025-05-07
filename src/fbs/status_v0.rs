@@ -76,7 +76,7 @@ impl InstanceStatusBuffer {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 ///
 ///
 pub struct StatusBuffer {

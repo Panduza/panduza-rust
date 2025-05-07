@@ -1,77 +1,13 @@
 use crate::fbs::status_v0::StatusBuffer;
-use crate::pubsub::Publisher;
 use crate::reactor::DataReceiver;
-use crate::AttributeMode;
-use crate::Topic;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 use tokio::sync::Notify;
 use tokio::time::timeout;
 
-#[derive(Debug)]
-struct StatusDataPack {
-    /// Last value received
-    ///
-    last: Option<StatusBuffer>,
+use super::data_pack::AttributeDataPack;
 
-    /// Queue of value (need to be poped)
-    ///
-    queue: Vec<StatusBuffer>,
-
-    /// If True we are going to use the input queue
-    ///
-    pub use_input_queue: bool,
-
-    /// Update notifier
-    ///
-    update_notifier: Arc<Notify>,
-}
-
-impl StatusDataPack {
-    ///
-    ///
-    pub fn push(&mut self, v: StatusBuffer) {
-        if self.use_input_queue {
-            self.queue.push(v.clone());
-        }
-        self.last = Some(v);
-        self.update_notifier.notify_waiters();
-    }
-
-    ///
-    ///
-    pub fn last(&self) -> Option<StatusBuffer> {
-        self.last.clone()
-    }
-
-    ///
-    ///
-    pub fn pop(&mut self) -> Option<StatusBuffer> {
-        if self.queue.is_empty() {
-            None
-        } else {
-            Some(self.queue.remove(0))
-        }
-    }
-
-    ///
-    ///
-    pub fn update_notifier(&self) -> Arc<Notify> {
-        self.update_notifier.clone()
-    }
-}
-
-impl Default for StatusDataPack {
-    fn default() -> Self {
-        Self {
-            last: Default::default(),
-            queue: Default::default(),
-            use_input_queue: false,
-            update_notifier: Default::default(),
-        }
-    }
-}
 
 #[derive(Clone, Debug)]
 /// Object to manage the StatusAttribute
@@ -83,7 +19,7 @@ pub struct StatusAttribute {
 
     /// Initial data
     ///
-    pack: Arc<Mutex<StatusDataPack>>,
+    pack: Arc<Mutex<AttributeDataPack<StatusBuffer>>>,
 
     /// Update notifier
     ///
@@ -96,7 +32,9 @@ impl StatusAttribute {
     pub async fn new(topic: String, mut att_receiver: DataReceiver) -> Self {
         //
         // Create data pack
-        let pack = Arc::new(Mutex::new(StatusDataPack::default()));
+        let pack = Arc::new(Mutex::new(
+            AttributeDataPack::<StatusBuffer>::default()
+        ));
 
         //
         //
@@ -141,11 +79,6 @@ impl StatusAttribute {
         }
     }
 
-    /// Enable the input queue buffer (to use pop feature)
-    ///
-    pub fn enable_input_queue(&mut self, enable: bool) {
-        self.pack.lock().unwrap().use_input_queue = enable;
-    }
 
     // /// Send command and do not wait for validation
     // ///
