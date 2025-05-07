@@ -162,6 +162,16 @@ async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
     world.platform_status = Some(world.r.as_ref().unwrap().new_status_attribute().await);
 
     world
+        .platform_notifications = Some(
+            world
+                .r
+                .as_ref()
+                .unwrap()
+                .new_notification_attribute()
+                .await,
+        );
+
+    world
         .platform_status
         .as_mut()
         .unwrap()

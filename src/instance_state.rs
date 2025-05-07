@@ -3,7 +3,7 @@ use std::fmt::Display;
 
 /// States of the main Interface FSM
 ///
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub enum InstanceState {
     Booting,
     Connecting,
