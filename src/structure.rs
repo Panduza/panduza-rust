@@ -1,14 +1,15 @@
+use crate::attribute_metadata::AttributeMetadata;
+use bytes::Bytes;
+use serde_json::{Map, Value as JsonValue};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
 };
-
-use crate::{attribute_metadata::AttributeMetadata, reactor::DataReceiver};
-use bytes::Bytes;
-use serde_json::{Map, Value as JsonValue};
-use yash_fnmatch::{without_escape, Pattern};
-
 use tokio::sync::Notify;
+use yash_fnmatch::{without_escape, Pattern};
+use zenoh::handlers::FifoChannelHandler;
+use zenoh::pubsub::Subscriber;
+use zenoh::sample::Sample;
 
 #[derive(Debug)]
 struct StructureData {
@@ -138,9 +139,15 @@ impl StructureData {
     pub fn find_attribute<A: Into<String>>(&self, pattern: A) -> Option<AttributeMetadata> {
         let a: String = pattern.into();
 
+        println!("La string de base de l'attribut : {:?}", a);
+
         //
         let p = Pattern::parse(without_escape(a.as_str())).unwrap();
         // assert_eq!(p.find("string"), Some(2..6));
+
+        println!("Le pattern de l'attribut : {:?}", p);
+
+        println!("Le flat : {:?}", self.flat);
 
         for (topic, metadata) in self.flat.iter() {
             if p.find(&topic).is_some() {
@@ -174,25 +181,46 @@ pub struct Structure {
 }
 
 impl Structure {
-    pub fn new(mut data_receiver: DataReceiver) -> Self {
+    pub fn new(mut data_receiver: Subscriber<FifoChannelHandler<Sample>>) -> Self {
+        // println!(
+        //     "deededededededededeeddedededededededeeddededede : {:?}",
+        //     data_receiver.clone()
+        // );
+
         let json_value = Arc::new(Mutex::new(StructureData::new()));
 
         let json_value_2 = json_value.clone();
         tokio::spawn(async move {
             loop {
-                let message = data_receiver.recv().await;
-                // println!("!!!!!!!!!!! ssss ttt Notification = {:?}", message);
-
-                if let Some(message) = message {
+                while let Ok(sample) = data_receiver.recv_async().await {
+                    println!("LE SAMPLE : {:?}", sample.clone());
                     match json_value_2.lock() {
                         Ok(mut deref_value) => {
-                            deref_value.update(message).unwrap();
+                            deref_value
+                                .update(Bytes::copy_from_slice(&sample.payload().to_bytes()))
+                                .unwrap();
                         }
                         Err(e) => {
                             println!("Error = {:?}", e);
                         }
                     }
                 }
+
+                // let message = data_receiver.recv_async().await;
+                // println!("!!!!!!!!!!! ssss ttt Notification = {:?}", message);
+
+                // if let Ok(message) = message {
+                //     match json_value_2.lock() {
+                //         Ok(mut deref_value) => {
+                //             deref_value
+                //                 .update(Bytes::copy_from_slice(&message.payload().to_bytes()))
+                //                 .unwrap();
+                //         }
+                //         Err(e) => {
+                //             println!("Error = {:?}", e);
+                //         }
+                //     }
+                // }
             }
         });
 
@@ -203,7 +231,10 @@ impl Structure {
     ///
     pub fn find_attribute<A: Into<String>>(&self, name: A) -> Option<AttributeMetadata> {
         match self.value.lock() {
-            Ok(v) => v.find_attribute(name),
+            Ok(v) => {
+                println!("on ets la dedans");
+                v.find_attribute(name)
+            }
             Err(_) => None,
         }
     }

@@ -1,7 +1,7 @@
 {
   "mode": "client",
   "connect": {
-    "endpoints": ["tls/192.168.140.15:7447"]
+    "endpoints": ["quic/192.168.140.15:7447"]
   },
   "transport": {
     "link": {

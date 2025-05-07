@@ -14,6 +14,7 @@ pub struct BenchmarkConfig {
     pub number_attributes: u16,
     pub ip: String,
     pub port: u16,
+    pub ca_certificate: String,
 }
 
 impl TestConfig {

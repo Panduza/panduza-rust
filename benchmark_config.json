@@ -1,7 +1,8 @@
 {
-    "ip": "127.0.0.1",
-    "port": 1883,
+    "ip": "192.168.140.15",
+    "port": 7447,
     "number_attributes": 5,
+    "ca_certificate": "/home/pi_client/tls/minica.pem",
     "tests": {
         "bytes": 0,
         "kilobytes": 1,

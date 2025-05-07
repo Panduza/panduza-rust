@@ -1,8 +1,11 @@
-use crate::{pubsub::Publisher, reactor::DataReceiver};
 use bytes::Bytes;
+use rumqttc::tokio_rustls::rustls::internal::msgs::message;
 use std::sync::{Arc, Mutex};
 use tokio::sync::Notify;
-
+use zenoh::handlers::FifoChannelHandler;
+use zenoh::pubsub::Subscriber;
+use zenoh::sample::Sample;
+use zenoh::{pubsub::Publisher, session, Session};
 #[derive(Debug)]
 struct StringDataPack {
     /// Last value received
@@ -67,13 +70,13 @@ impl Default for StringDataPack {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 /// Object to manage the StringAttribute
 ///
 pub struct StringAttribute {
     /// Object that all the attribute to publish
     ///
-    cmd_publisher: Publisher,
+    session: Session,
 
     /// Initial data
     ///
@@ -82,12 +85,20 @@ pub struct StringAttribute {
     /// Update notifier
     ///
     update_notifier: Arc<Notify>,
+
+    /// topic
+    ///
+    topic: String,
 }
 
 impl StringAttribute {
     /// Create a new instance
     ///
-    pub fn new(cmd_publisher: Publisher, mut att_receiver: DataReceiver) -> Self {
+    pub fn new(
+        session: Session,
+        mut att_receiver: Subscriber<FifoChannelHandler<Sample>>,
+        topic: String,
+    ) -> Self {
         //
         // Create data pack
         let pack = Arc::new(Mutex::new(StringDataPack::default()));
@@ -102,30 +113,34 @@ impl StringAttribute {
         tokio::spawn(async move {
             loop {
                 //
-                let message = att_receiver.recv().await;
+                let message = att_receiver.recv().unwrap();
+                let value = message.payload().try_to_string().unwrap().to_string();
+                // Push into pack
+                pack_2.lock().unwrap().push(value);
 
                 // println!("new message {:?}", message);
 
-                // Manage message
-                if let Some(message) = message {
-                    // Deserialize
-                    let value: String = serde_json::from_slice(&message).unwrap();
-                    // Push into pack
-                    pack_2.lock().unwrap().push(value);
-                }
-                // None => no more message
-                else {
-                    break;
-                }
+                // // Manage message
+                // if let Some(message) = message {
+                //     // Deserialize
+                //     let value: String = serde_json::from_slice(&message).unwrap();
+                //     // Push into pack
+                //     pack_2.lock().unwrap().push(value);
+                // }
+                // // None => no more message
+                // else {
+                //     break;
+                // }
             }
         });
 
         //
         // Return attribute
         Self {
-            cmd_publisher: cmd_publisher,
+            session,
             pack: pack,
             update_notifier: update_1,
+            topic,
         }
     }
 
@@ -142,7 +157,7 @@ impl StringAttribute {
         let pyl = Bytes::from(serde_json::to_string(&value).unwrap());
 
         // Send the command
-        self.cmd_publisher.publish(pyl).await.unwrap();
+        self.session.put(self.topic.clone(), pyl).await.unwrap();
     }
 
     /// Notify when new data have been received

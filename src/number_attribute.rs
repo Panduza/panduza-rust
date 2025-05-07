@@ -1,7 +1,14 @@
-use crate::{pubsub::Publisher, reactor::DataReceiver};
+// use crate::{pubsub::Publisher, reactor::DataReceiver};
 use bytes::Bytes;
-use std::sync::{Arc, Mutex};
+use std::{
+    char::ToUppercase,
+    sync::{Arc, Mutex},
+};
 use tokio::sync::Notify;
+use zenoh::handlers::FifoChannelHandler;
+use zenoh::pubsub::Subscriber;
+use zenoh::sample::Sample;
+use zenoh::{pubsub::Publisher, Session};
 
 #[derive(Debug)]
 struct NumberDataPack {
@@ -67,13 +74,13 @@ impl Default for NumberDataPack {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 /// Object to manage the BytesAttribute
 ///
 pub struct NumberAttribute {
     /// Object that all the attribute to publish
     ///
-    cmd_publisher: Publisher,
+    session: Session,
 
     /// Initial data
     ///
@@ -82,12 +89,18 @@ pub struct NumberAttribute {
     /// Update notifier
     ///
     update_notifier: Arc<Notify>,
+
+    topic: String,
 }
 
 impl NumberAttribute {
     /// Create a new instance
     ///
-    pub fn new(cmd_publisher: Publisher, mut att_receiver: DataReceiver) -> Self {
+    pub fn new(
+        session: Session,
+        mut att_receiver: Subscriber<FifoChannelHandler<Sample>>,
+        topic: String,
+    ) -> Self {
         //
         // Create data pack
         let pack = Arc::new(Mutex::new(NumberDataPack::default()));
@@ -102,30 +115,34 @@ impl NumberAttribute {
         tokio::spawn(async move {
             loop {
                 //
-                let message = att_receiver.recv().await;
+                let message = att_receiver.recv().unwrap();
+                let value: u32 = message.payload().try_to_string().unwrap().parse().unwrap();
+                // Push into pack
+                pack_2.lock().unwrap().push(value);
 
                 // println!("new message {:?}", message);
 
-                // Manage message
-                if let Some(message) = message {
-                    // Deserialize
-                    let value: u32 = serde_json::from_slice(&message).unwrap();
-                    // Push into pack
-                    pack_2.lock().unwrap().push(value);
-                }
-                // None => no more message
-                else {
-                    break;
-                }
+                // // Manage message
+                // if let Some(message) = message {
+                //     // Deserialize
+                //     let value: u32 = serde_json::from_slice(&message).unwrap();
+                //     // Push into pack
+                //     pack_2.lock().unwrap().push(value);
+                // }
+                // // None => no more message
+                // else {
+                //     break;
+                // }
             }
         });
 
         //
         // Return attribute
         Self {
-            cmd_publisher: cmd_publisher,
+            session,
             pack: pack,
             update_notifier: update_1,
+            topic,
         }
     }
 
@@ -142,7 +159,7 @@ impl NumberAttribute {
         let pyl = Bytes::from(serde_json::to_string(&value).unwrap());
 
         // Send the command
-        self.cmd_publisher.publish(pyl).await.unwrap();
+        self.session.put(self.topic.clone(), pyl).await.unwrap();
     }
 
     /// Notify when new data have been received

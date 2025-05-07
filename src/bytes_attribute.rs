@@ -1,7 +1,11 @@
-use crate::{pubsub::Publisher, reactor::DataReceiver};
+// use crate::{pubsub::Publisher, reactor::DataReceiver};
 use bytes::Bytes;
 use std::sync::{Arc, Mutex};
 use tokio::sync::Notify;
+use zenoh::handlers::FifoChannelHandler;
+use zenoh::pubsub::Subscriber;
+use zenoh::sample::Sample;
+use zenoh::Session;
 
 #[derive(Debug)]
 struct BytesDataPack {
@@ -67,13 +71,13 @@ impl Default for BytesDataPack {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 /// Object to manage the BytesAttribute
 ///
 pub struct BytesAttribute {
     /// Object that all the attribute to publish
     ///
-    cmd_publisher: Publisher,
+    session: Session,
 
     /// Initial data
     ///
@@ -82,12 +86,18 @@ pub struct BytesAttribute {
     /// Update notifier
     ///
     update_notifier: Arc<Notify>,
+
+    topic: String,
 }
 
 impl BytesAttribute {
     /// Create a new instance
     ///
-    pub fn new(cmd_publisher: Publisher, mut att_receiver: Option<DataReceiver>) -> Self {
+    pub fn new(
+        session: Session,
+        mut att_receiver: Subscriber<FifoChannelHandler<Sample>>,
+        topic: String,
+    ) -> Self {
         //
         // Create data pack
         let pack = Arc::new(Mutex::new(BytesDataPack::default()));
@@ -98,34 +108,39 @@ impl BytesAttribute {
 
         //
         // Create the recv task
-        if let Some(mut att_receiver) = att_receiver {
-            let pack_2 = pack.clone();
-            tokio::spawn(async move {
-                loop {
-                    //
-                    let message = att_receiver.recv().await;
+        let pack_2 = pack.clone();
+        tokio::spawn(async move {
+            loop {
+                //
+                let message = att_receiver.recv().unwrap();
+                let value = Bytes::copy_from_slice(&message.payload().to_bytes());
+                // Push into pack
+                pack_2.lock().unwrap().push(value);
 
-                    // println!("new message {:?}", message);
+                // println!("new message {:?}", message);
 
-                    // Manage message
-                    if let Some(message) = message {
-                        // Push into pack
-                        pack_2.lock().unwrap().push(message);
-                    }
-                    // None => no more message
-                    else {
-                        break;
-                    }
-                }
-            });
-        }
+                // // Manage message
+                // if let Ok(message) = message {
+                //     // Push into pack
+                //     pack_2
+                //         .lock()
+                //         .unwrap()
+                //         .push(Bytes::copy_from_slice(&message.payload().to_bytes()));
+                // }
+                // // None => no more message
+                // else {
+                //     break;
+                // }
+            }
+        });
 
         //
         // Return attribute
         Self {
-            cmd_publisher: cmd_publisher,
+            session,
             pack: pack,
             update_notifier: update_1,
+            topic,
         }
     }
 
@@ -139,7 +154,7 @@ impl BytesAttribute {
     ///
     pub async fn shoot(&mut self, value: Bytes) {
         // Send the command
-        self.cmd_publisher.publish(value).await.unwrap();
+        self.session.put(self.topic.clone(), value).await.unwrap();
     }
 
     /// Notify when new data have been received
