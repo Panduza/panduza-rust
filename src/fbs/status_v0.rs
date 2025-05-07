@@ -76,7 +76,7 @@ impl InstanceStatusBuffer {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 ///
 ///
 pub struct StatusBuffer {
@@ -175,5 +175,55 @@ impl StatusBuffer {
     ///
     pub fn object(&self) -> Status {
         flatbuffers::root::<Status>(&self.raw_data).unwrap()
+    }
+
+    ///
+    ///
+    pub fn all_instances_are_running(&self) -> Result<bool, &'static str> {
+        // Get the last value
+        let value = self.object();
+
+        // Check if we have a value
+        if let Some(instances) = value.instances() {
+            if instances.is_empty() {
+                return Err("No instances found");
+            }
+
+            // Check if all instances are running
+            for instance in instances {
+                if instance.state() != InstanceState::Running as u16 {
+                    return Ok(false);
+                }
+            }
+            return Ok(true);
+        }
+
+        // No instances found
+        Err("No instances found")
+    }
+
+    pub fn at_least_one_instance_is_not_running(
+        &self,
+    ) -> Result<bool, &'static str> {
+        // Get the last value
+        let value = self.object();
+
+        // Check if we have a value
+        if let Some(instances) = value.instances() {
+            if instances.is_empty() {
+                return Err("No instances found");
+            }
+
+            // Check if at least one instance is not running
+            for instance in instances {
+                if instance.state() != InstanceState::Running as u16 {
+                    return Ok(true);
+                }
+            }
+            return Ok(false);
+        }
+
+        // No instances found
+        Err("No instances found")
     }
 }

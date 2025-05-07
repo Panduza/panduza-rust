@@ -21,7 +21,6 @@ Feature: Boolean Attributes
 
   Scenario: Manage an instance error during a boolean attribute operation
     Given the boolean attribute wo "boolean/error"
-    Given the status attribute for the instance managing the wo attribute
-    Then the instance status attribute must be "Running"
+    Then the status attribute must indicate running for all instances
     When I set wo boolean to true
-    Then the instance status attribute must be "Error"
+    Then the status attribute must indicate an error for one instance

@@ -1,13 +1,18 @@
-mod si;
-mod string;
-mod reactor;
 mod boolean;
 mod r#enum;
+mod reactor;
+mod si;
+mod string;
 
-use cucumber::{given, then,  World};
-use panduza::{attribute::si::SiAttribute, reactor::ReactorOptions, AttributeBuilder, BooleanAttribute, JsonAttribute, Reactor, StringAttribute};
-use std::{fmt::Debug, str::FromStr};
 use cucumber::Parameter;
+use cucumber::{given, then, World};
+use panduza::StatusAttribute;
+use panduza::{
+    attribute::si::SiAttribute, reactor::ReactorOptions, AttributeBuilder, BooleanAttribute,
+    JsonAttribute, Reactor, StringAttribute,
+};
+use std::time::Duration;
+use std::{fmt::Debug, str::FromStr};
 
 // --- TEST PARAMETERS ---
 const PLAFORM_LOCALHOST: &str = "localhost";
@@ -24,7 +29,7 @@ enum Boolean {
 }
 
 impl Boolean {
-    fn into_bool(&self) -> bool  {
+    fn into_bool(&self) -> bool {
         match self {
             Boolean::True => true,
             Boolean::False => false,
@@ -44,8 +49,6 @@ impl FromStr for Boolean {
     }
 }
 
-
-
 #[derive(Default)]
 pub struct ReactorSubWorld {
     ///
@@ -53,11 +56,11 @@ pub struct ReactorSubWorld {
     pub connection_failed: bool,
 
     /// Attribute name to be used in the test
-    /// 
+    ///
     pub att_name: Option<String>,
 
     /// Attribute builder result
-    /// 
+    ///
     pub find_result: Option<AttributeBuilder>,
 }
 
@@ -71,7 +74,6 @@ pub struct BooleanSubWorld {
     pub topic_ro: Option<String>,
 }
 
-
 #[derive(Default)]
 pub struct SiSubWorld {
     pub att_rw: Option<SiAttribute>,
@@ -81,7 +83,6 @@ pub struct SiSubWorld {
     // pub topic_wo: Option<String>,
     // pub topic_ro: Option<String>,
 }
-
 
 #[derive(Default)]
 pub struct StringSubWorld {
@@ -93,7 +94,6 @@ pub struct StringSubWorld {
     // pub topic_ro: Option<String>,
 }
 
-
 #[derive(Default)]
 pub struct EnumSubWorld {
     pub att_rw: Option<StringAttribute>,
@@ -104,87 +104,96 @@ pub struct EnumSubWorld {
     // pub topic_ro: Option<String>,
 }
 
-
-
 #[derive(Default, World)]
 pub struct BasicsWorld {
     /// Reactor object
-    /// 
+    ///
     pub r: Option<Reactor>,
 
     ///
-    /// 
+    ///
+    pub platform_status: Option<StatusAttribute>,
+
+    ///
+    ///
     pub att_instance_status: Option<JsonAttribute>,
 
     /// Reactor sub world data
-    /// 
+    ///
     pub reactor: ReactorSubWorld,
 
     /// Boolean sub world data
-    /// 
+    ///
     pub boolean: BooleanSubWorld,
 
     /// String sub world data
-    /// 
+    ///
     pub string: StringSubWorld,
 
     /// Si sub world data
-    /// 
+    ///
     pub si: SiSubWorld,
 
     /// Enum sub world data
-    /// 
+    ///
     pub r#enum: EnumSubWorld,
-    
 }
 
 impl Debug for BasicsWorld {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BooleanWorld")
-        // .field("r", &self.r)
-        .finish()
+            // .field("r", &self.r)
+            .finish()
     }
 }
 
 ///
-/// 
+///
 #[given(expr = "a reactor connected on a test platform")]
 async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
     let options = ReactorOptions::new(PLAFORM_LOCALHOST, PLAFORM_PORT);
     let reactor = panduza::new_reactor(options).await.unwrap();
 
     world.r = Some(reactor);
-}
+    world.platform_status = Some(world.r.as_ref().unwrap().new_status_attribute().await);
 
-///
-/// 
-#[given(expr = "the status attribute for the instance managing the wo attribute")]
-async fn given_the_status_attribute(world: &mut BasicsWorld) {
-    
-    let instance_status_topic = world.boolean.att_wo.as_ref().unwrap().get_instance_status_topic();
-
-    let attribute = world.r.as_ref().unwrap().build_instance_status_attribute(instance_status_topic).expect_json()
-    .await.unwrap();
-
-    world.att_instance_status = Some(attribute);
+    world
+        .platform_status
+        .as_mut()
+        .unwrap()
+        .wait_for_all_instances_to_be_running(Duration::from_secs(15))
+        .await
+        .expect("Error while waiting for instance to be in running state");
 }
 
 ///
 ///
-#[then(expr = "the instance status attribute must be {string}")]
-async fn the_instance_status_attribute_must_be(world: &mut BasicsWorld, s: String) {
-    
-    let status = world.att_instance_status.as_mut().unwrap();
-
-    let data = status.get().unwrap();
-    let state = data.get("state").and_then(|v| v.as_str());
-    if state != Some(s.as_str())  {
-        status.update_notifier().notified().await;
-
-        let data = status.get().unwrap();
-        let state = data.get("state").and_then(|v| v.as_str());
-        assert_eq!(state, Some(s.as_str()), "Expected 'state' to be '{:?}', but got '{:?}'", s, state);
-    }
-
+#[then(expr = "the status attribute must indicate running for all instances")]
+async fn the_status_attribute_must_be(world: &mut BasicsWorld) {
+    world
+    .platform_status
+    .as_mut()
+    .unwrap()
+    .wait_for_all_instances_to_be_running(Duration::from_secs(15))
+    .await
+    .expect("Error while waiting for instance to be in running state");
 }
 
+#[then(expr = "the status attribute must indicate an error for one instance")]
+async fn the_status_attribute_must_indicate_for_one_instance(world: &mut BasicsWorld) {
+    world
+    .platform_status
+    .as_mut()
+    .unwrap()
+    .wait_for_at_least_one_instance_to_be_not_running(Duration::from_secs(15))
+    .await
+    .expect("Error while waiting for instance to be in error state");
+
+    world
+    .platform_status
+    .as_mut()
+    .unwrap()
+    .wait_for_all_instances_to_be_running(Duration::from_secs(15))
+    .await
+    .expect("Error while waiting for instance to be in running state");
+}

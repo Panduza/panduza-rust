@@ -9,19 +9,20 @@ use std::time::Duration;
 use tokio::sync::Notify;
 use tokio::time::timeout;
 
+/// Object that represent the data pack for the boolean attribute
+/// 
+/// This object stores incoming data in its internal data queue.
+/// The queue has a limited capacity, and when it is full, the oldest data is removed to make room for new data.
+/// 
 #[derive(Debug)]
 struct BooleanDataPack {
-    /// Last value received
-    ///
-    last: Option<bool>,
-
-    /// Queue of value (need to be poped)
+    /// Queue of value
     ///
     queue: Vec<bool>,
 
-    /// If True we are going to use the input queue
-    ///
-    pub use_input_queue: bool,
+    /// Last value received
+    /// 
+    last: Option<bool>,
 
     /// Update notifier
     ///
@@ -32,17 +33,17 @@ impl BooleanDataPack {
     ///
     ///
     pub fn push(&mut self, v: bool) {
-        if self.use_input_queue {
-            self.queue.push(v);
-        }
-        self.last = Some(v);
+        self.queue.push(v);
         self.update_notifier.notify_waiters();
     }
 
     ///
     ///
-    pub fn last(&self) -> Option<bool> {
-        self.last
+    pub fn last(&mut self) -> Option<bool> {
+        while self.pop().is_some() {
+            // pop all values
+        }
+        self.last.clone()
     }
 
     ///
@@ -51,7 +52,8 @@ impl BooleanDataPack {
         if self.queue.is_empty() {
             None
         } else {
-            Some(self.queue.remove(0))
+            self.last = Some(self.queue.remove(0));
+            self.last.clone()
         }
     }
 
@@ -65,9 +67,8 @@ impl BooleanDataPack {
 impl Default for BooleanDataPack {
     fn default() -> Self {
         Self {
-            last: Default::default(),
             queue: Default::default(),
-            use_input_queue: false,
+            last: Default::default(),
             update_notifier: Default::default(),
         }
     }
@@ -152,12 +153,6 @@ impl BooleanAttribute {
         }
     }
 
-    /// Enable the input queue buffer (to use pop feature)
-    ///
-    pub fn enable_input_queue(&mut self, enable: bool) {
-        self.pack.lock().unwrap().use_input_queue = enable;
-    }
-
     /// Send command and do not wait for validation
     ///
     pub async fn shoot(&mut self, value: bool) {
@@ -214,6 +209,19 @@ impl BooleanAttribute {
 
     pub fn get_instance_status_topic(&self) -> String {
         format!("pza/_/devices/{}", Topic::from_string(self.topic.clone(), true).instance_name())
+    }
+
+
+
+    
+    pub async fn wait_for_value(&self, value: bool, delay: Duration) -> Result<(), String> {
+        while let Some(last_value) = self.get() {
+            if last_value == value {
+                return Ok(());
+            }
+            self.update_notifier.notified().await;
+        }
+        Ok(())
     }
 
 }
