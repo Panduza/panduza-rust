@@ -1,6 +1,6 @@
 use bytes::Bytes;
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Default)]
 /// Number with a stable representation
 ///
 /// This number is meant for calculations, but for communication.

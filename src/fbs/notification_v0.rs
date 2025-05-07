@@ -44,7 +44,7 @@ impl TryFrom<u16> for NotificationType {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 ///
 ///
 pub struct NotificationBuffer {
