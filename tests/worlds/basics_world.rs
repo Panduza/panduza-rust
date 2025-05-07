@@ -6,7 +6,7 @@ mod string;
 
 use cucumber::Parameter;
 use cucumber::{given, then, World};
-use panduza::StatusAttribute;
+use panduza::{NotificationAttribute, StatusAttribute};
 use panduza::{
     attribute::si::SiAttribute, reactor::ReactorOptions, AttributeBuilder, BooleanAttribute,
     JsonAttribute, Reactor, StringAttribute,
@@ -116,6 +116,10 @@ pub struct BasicsWorld {
 
     ///
     ///
+    pub platform_notifications: Option<NotificationAttribute>,
+
+    ///
+    ///
     pub att_instance_status: Option<JsonAttribute>,
 
     /// Reactor sub world data
@@ -196,4 +200,20 @@ async fn the_status_attribute_must_indicate_for_one_instance(world: &mut BasicsW
     .wait_for_all_instances_to_be_running(Duration::from_secs(15))
     .await
     .expect("Error while waiting for instance to be in running state");
+}
+
+#[then(expr = "the notification attribute must indicate no alert")]
+fn the_notification_attribute_must_indicate_no_alert(world: &mut BasicsWorld) {
+    // clear all notifications
+    world
+        .platform_notifications
+        .as_mut()
+        .unwrap()
+        .pop_all();
+}
+
+#[then(expr = "the notification attribute must indicate an alert for this instance")]
+fn the_notification_attribute_must_indicate_an_alert_for_this_instance(world: &mut BasicsWorld) {
+    // check that the notification attribute is not empty
+    assert!(!world.platform_notifications.as_mut().unwrap().pop_all().has_alert());
 }

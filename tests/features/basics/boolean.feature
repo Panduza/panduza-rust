@@ -19,6 +19,12 @@ Feature: Boolean Attributes
     When I set wo boolean to false
     Then the ro boolean value is false
 
+  Scenario: Manage an instance alert during a boolean attribute operation
+    Given the boolean attribute wo "boolean/alert"
+    Then the notification attribute must indicate no alert
+    When I set wo boolean to true
+    Then the notification attribute must indicate an alert for this instance
+
   Scenario: Manage an instance error during a boolean attribute operation
     Given the boolean attribute wo "boolean/error"
     Then the status attribute must indicate running for all instances

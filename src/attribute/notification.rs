@@ -1,15 +1,44 @@
 use crate::fbs::notification_v0::NotificationBuffer;
+use crate::fbs::notification_v0::NotificationType;
 use crate::pubsub::Publisher;
 use crate::reactor::DataReceiver;
 use crate::AttributeMode;
-use crate::Topic;
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::time::Duration;
 use tokio::sync::Notify;
-use tokio::time::timeout;
 
 use super::data_pack::AttributeDataPack;
+
+
+pub struct NotificationPack {
+    pub notifications: Vec<NotificationBuffer>,
+}
+
+
+impl NotificationPack {
+    /// Create a new instance
+    ///
+    pub fn new(notifications: Vec<NotificationBuffer>) -> Self {
+        Self {
+            notifications,
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.notifications.is_empty()
+    }
+
+    pub fn has_alert(&self) -> bool {
+        for notification in &self.notifications {
+            if notification.object().type_() == NotificationType::Alert as u16 {
+                return true;
+            }
+        }
+        false
+    }
+    
+}
+
 
 
 #[derive(Clone, Debug)]
@@ -64,7 +93,7 @@ impl NotificationAttribute {
                     //
                     let message = att_receiver.recv().await;
 
-                    println!("new message on topic {:?}: {:?}", &topic, message);
+                    // println!("new message on topic {:?}: {:?}", &topic, message);
 
                     // Manage message
                     if let Some(message) = message {
@@ -81,11 +110,6 @@ impl NotificationAttribute {
             }
         });
 
-        // Wait for the first message if mode is not readonly
-        if mode != AttributeMode::WriteOnly {
-            // Need a timeout here
-            update_1.notified().await;
-        }
 
         //
         // Return attribute
@@ -99,15 +123,6 @@ impl NotificationAttribute {
     }
 
 
-    /// Send command and do not wait for validation
-    ///
-    pub async fn shoot(&mut self, value: NotificationBuffer) {
-        // Wrap value into payload
-        let pyl = value.raw_data().clone();
-
-        // Send the command
-        self.cmd_publisher.publish(pyl).await.unwrap();
-    }
 
     /// Notify when new data have been received
     ///
@@ -125,5 +140,16 @@ impl NotificationAttribute {
     ///
     pub fn pop(&self) -> Option<NotificationBuffer> {
         self.pack.lock().unwrap().pop()
+    }
+
+    ///
+    /// 
+    pub fn pop_all(&self) -> NotificationPack {
+        let mut pack = self.pack.lock().unwrap();
+        let mut notifications = Vec::new();
+        while let Some(value) = pack.pop() {
+            notifications.push(value);
+        }
+        NotificationPack::new(notifications)
     }
 }
