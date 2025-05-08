@@ -9,69 +9,7 @@ use std::time::Duration;
 use tokio::sync::Notify;
 use tokio::time::timeout;
 
-#[derive(Debug)]
-struct BooleanDataPack {
-    /// Last value received
-    ///
-    last: Option<bool>,
-
-    /// Queue of value (need to be poped)
-    ///
-    queue: Vec<bool>,
-
-    /// If True we are going to use the input queue
-    ///
-    pub use_input_queue: bool,
-
-    /// Update notifier
-    ///
-    update_notifier: Arc<Notify>,
-}
-
-impl BooleanDataPack {
-    ///
-    ///
-    pub fn push(&mut self, v: bool) {
-        if self.use_input_queue {
-            self.queue.push(v);
-        }
-        self.last = Some(v);
-        self.update_notifier.notify_waiters();
-    }
-
-    ///
-    ///
-    pub fn last(&self) -> Option<bool> {
-        self.last
-    }
-
-    ///
-    ///
-    pub fn pop(&mut self) -> Option<bool> {
-        if self.queue.is_empty() {
-            None
-        } else {
-            Some(self.queue.remove(0))
-        }
-    }
-
-    ///
-    ///
-    pub fn update_notifier(&self) -> Arc<Notify> {
-        self.update_notifier.clone()
-    }
-}
-
-impl Default for BooleanDataPack {
-    fn default() -> Self {
-        Self {
-            last: Default::default(),
-            queue: Default::default(),
-            use_input_queue: false,
-            update_notifier: Default::default(),
-        }
-    }
-}
+use super::data_pack::AttributeDataPack;
 
 #[derive(Clone, Debug)]
 /// Object to manage the BooleanAttribute
@@ -90,7 +28,7 @@ pub struct BooleanAttribute {
 
     /// Initial data
     ///
-    pack: Arc<Mutex<BooleanDataPack>>,
+    pack: Arc<Mutex<AttributeDataPack<bool>>>,
 
     /// Update notifier
     ///
@@ -103,7 +41,9 @@ impl BooleanAttribute {
     pub async fn new(topic: String, mode:AttributeMode, cmd_publisher: Publisher, mut att_receiver: DataReceiver) -> Self {
         //
         // Create data pack
-        let pack = Arc::new(Mutex::new(BooleanDataPack::default()));
+        let pack = Arc::new(Mutex::new(
+            AttributeDataPack::<bool>::default()
+        ));
 
         //
         //
@@ -150,12 +90,6 @@ impl BooleanAttribute {
             update_notifier: update_1,
             mode: mode,
         }
-    }
-
-    /// Enable the input queue buffer (to use pop feature)
-    ///
-    pub fn enable_input_queue(&mut self, enable: bool) {
-        self.pack.lock().unwrap().use_input_queue = enable;
     }
 
     /// Send command and do not wait for validation
@@ -214,6 +148,19 @@ impl BooleanAttribute {
 
     pub fn get_instance_status_topic(&self) -> String {
         format!("pza/_/devices/{}", Topic::from_string(self.topic.clone(), true).instance_name())
+    }
+
+
+
+    
+    pub async fn wait_for_value(&self, value: bool) -> Result<(), String> {
+        while let Some(last_value) = self.get() {
+            if last_value == value {
+                return Ok(());
+            }
+            self.update_notifier.notified().await;
+        }
+        Ok(())
     }
 
 }

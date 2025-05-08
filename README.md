@@ -34,6 +34,10 @@ cargo test --test basics
 
 ```bash
 # 
+./flatc.exe --rust -o src/fbs/notification_v0/ src/fbs/notification_v0/notification_v0.fbs
+# 
+./flatc.exe --rust -o src/fbs/status_v0/ src/fbs/status_v0/status_v0.fbs
+# 
 ./flatc.exe --rust -o src/fbs/trigger_v0 src/fbs/trigger_v0/trigger_v0.fbs
 # 
 ./flatc.exe --rust -o src/fbs/vector_f32_v0 src/fbs/vector_f32_v0/vector_f32_v0.fbs

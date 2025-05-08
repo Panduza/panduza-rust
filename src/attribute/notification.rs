@@ -1,20 +1,50 @@
+use crate::fbs::notification_v0::NotificationBuffer;
+use crate::fbs::notification_v0::NotificationType;
 use crate::pubsub::Publisher;
 use crate::reactor::DataReceiver;
 use crate::AttributeMode;
-use crate::Topic;
-use bytes::Bytes;
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::time::Duration;
 use tokio::sync::Notify;
-use tokio::time::timeout;
 
 use super::data_pack::AttributeDataPack;
 
+
+pub struct NotificationPack {
+    pub notifications: Vec<NotificationBuffer>,
+}
+
+
+impl NotificationPack {
+    /// Create a new instance
+    ///
+    pub fn new(notifications: Vec<NotificationBuffer>) -> Self {
+        Self {
+            notifications,
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.notifications.is_empty()
+    }
+
+    pub fn has_alert(&self) -> bool {
+        for notification in &self.notifications {
+            if notification.object().type_() == NotificationType::Alert as u16 {
+                return true;
+            }
+        }
+        false
+    }
+    
+}
+
+
+
 #[derive(Clone, Debug)]
-/// Object to manage the StringAttribute
+/// Object to manage the NotificationAttribute
 ///
-pub struct StringAttribute {
+pub struct NotificationAttribute {
     ///
     /// TODO: maybe add this into the data pack
     topic: String,
@@ -27,14 +57,14 @@ pub struct StringAttribute {
 
     /// Initial data
     ///
-    pack: Arc<Mutex<AttributeDataPack<String>>>,
+    pack: Arc<Mutex<AttributeDataPack<NotificationBuffer>>>,
 
     /// Update notifier
     ///
     update_notifier: Arc<Notify>,
 }
 
-impl StringAttribute {
+impl NotificationAttribute {
     /// Create a new instance
     ///
     pub async fn new(
@@ -46,7 +76,7 @@ impl StringAttribute {
         //
         // Create data pack
         let pack = Arc::new(Mutex::new(
-            AttributeDataPack::<String>::default()
+            AttributeDataPack::<NotificationBuffer>::default()
         ));
 
         //
@@ -57,7 +87,7 @@ impl StringAttribute {
         // Create the recv task
         let pack_2 = pack.clone();
         tokio::spawn({
-            // let topic = topic.clone();
+            let topic = topic.clone();
             async move {
                 loop {
                     //
@@ -68,7 +98,7 @@ impl StringAttribute {
                     // Manage message
                     if let Some(message) = message {
                         // Deserialize
-                        let value: String = serde_json::from_slice(&message).unwrap();
+                        let value = NotificationBuffer::from_raw_data(message.clone());
                         // Push into pack
                         pack_2.lock().unwrap().push(value);
                     }
@@ -80,11 +110,6 @@ impl StringAttribute {
             }
         });
 
-        // Wait for the first message if mode is not readonly
-        if mode != AttributeMode::WriteOnly {
-            // Need a timeout here
-            update_1.notified().await;
-        }
 
         //
         // Return attribute
@@ -97,15 +122,7 @@ impl StringAttribute {
         }
     }
 
-    /// Send command and do not wait for validation
-    ///
-    pub async fn shoot(&mut self, value: String) {
-        // Wrap value into payload
-        let pyl = Bytes::from(serde_json::to_string(&value).unwrap());
 
-        // Send the command
-        self.cmd_publisher.publish(pyl).await.unwrap();
-    }
 
     /// Notify when new data have been received
     ///
@@ -115,45 +132,24 @@ impl StringAttribute {
 
     ///
     ///
-    pub async fn set(&mut self, value: String) -> Result<(), String> {
-        //
-        self.shoot(value.clone()).await;
-
-        if self.mode == AttributeMode::ReadWrite {
-            let delay = Duration::from_secs(5);
-
-            // Wait for change in the data pack
-            timeout(delay, self.update_notifier.notified())
-                .await
-                .map_err(|e| e.to_string())?;
-
-            while value != self.get().unwrap() {
-                // append 3 retry before failling if update received but not good
-                timeout(delay, self.update_notifier.notified())
-                    .await
-                    .map_err(|e| e.to_string())?;
-            }
-        }
-
-        Ok(())
-    }
-
-    ///
-    ///
-    pub fn get(&self) -> Option<String> {
+    pub fn get(&self) -> Option<NotificationBuffer> {
         self.pack.lock().unwrap().last()
     }
 
     ///
     ///
-    pub fn pop(&self) -> Option<String> {
+    pub fn pop(&self) -> Option<NotificationBuffer> {
         self.pack.lock().unwrap().pop()
     }
 
-    pub fn get_instance_status_topic(&self) -> String {
-        format!(
-            "pza/_/devices/{}",
-            Topic::from_string(self.topic.clone(), true).instance_name()
-        )
+    ///
+    /// 
+    pub fn pop_all(&self) -> NotificationPack {
+        let mut pack = self.pack.lock().unwrap();
+        let mut notifications = Vec::new();
+        while let Some(value) = pack.pop() {
+            notifications.push(value);
+        }
+        NotificationPack::new(notifications)
     }
 }

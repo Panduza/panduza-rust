@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use cucumber::{given, then, when};
 
 use super::{BasicsWorld, Boolean};
@@ -65,24 +67,8 @@ async fn the_rw_boolean_value_is(world: &mut BasicsWorld, expected_value: Boolea
 ///
 /// 
 #[then(expr = "the ro boolean value is {boolean}")]
-async fn the_ro_boolean_value_is(world: &mut BasicsWorld, expected_value: Boolean) {
-    let timeout = std::time::Duration::from_secs(3);
-    let start_time = std::time::Instant::now();
-
-    loop {
-        let read_value = world.boolean.att_ro.as_ref().unwrap().get().unwrap();
-        if read_value == expected_value.into_bool() {
-            break;
-        }
-        if start_time.elapsed() >= timeout {
-            panic!(
-                "Timeout reached: read '{:?}' != expected '{:?}'",
-                read_value,
-                expected_value.into_bool()
-            );
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-    }
-    let read_value = world.boolean.att_ro.as_ref().unwrap().get().unwrap();
+async fn the_ro_boolean_value_is(world: &mut BasicsWorld, expected_value: Boolean) {    
+    world.boolean.att_ro.as_mut().unwrap().wait_for_value(expected_value.into_bool()).await.unwrap();
+    let read_value = world.boolean.att_ro.as_mut().unwrap().get().unwrap();
     assert_eq!(read_value, expected_value.into_bool(), "read '{:?}' != expected '{:?}'", read_value, expected_value.into_bool());
 }
