@@ -8,7 +8,6 @@ use tokio::time::timeout;
 
 use super::data_pack::AttributeDataPack;
 
-
 #[derive(Clone, Debug)]
 /// Object to manage the StatusAttribute
 ///
@@ -32,9 +31,7 @@ impl StatusAttribute {
     pub async fn new(topic: String, mut att_receiver: DataReceiver) -> Self {
         //
         // Create data pack
-        let pack = Arc::new(Mutex::new(
-            AttributeDataPack::<StatusBuffer>::default()
-        ));
+        let pack = Arc::new(Mutex::new(AttributeDataPack::<StatusBuffer>::default()));
 
         //
         //
@@ -78,7 +75,6 @@ impl StatusAttribute {
             update_notifier: update_1,
         }
     }
-
 
     // /// Send command and do not wait for validation
     // ///
@@ -125,9 +121,7 @@ impl StatusAttribute {
 
     ///
     ///
-    pub fn at_least_one_instance_is_not_running(
-        &self,
-    ) -> Result<bool, &'static str> {
+    pub fn at_least_one_instance_is_not_running(&self) -> Result<bool, &'static str> {
         // Get the last value
         let value = self.get();
 
@@ -148,8 +142,10 @@ impl StatusAttribute {
     ) -> Result<(), &'static str> {
         loop {
             // Check if all instances are running
-            if let Ok(true) = self.all_instances_are_running() {
-                return Ok(());
+            if let Ok(flag) = self.all_instances_are_running() {
+                if flag {
+                    return Ok(());
+                }
             }
 
             // Wait for a notification or timeout
@@ -163,7 +159,7 @@ impl StatusAttribute {
     }
 
     /// Wait for at least one instance to be not running
-    /// 
+    ///
     pub async fn wait_for_at_least_one_instance_to_be_not_running(
         &self,
         timeout_duration: Duration,

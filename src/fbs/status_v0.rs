@@ -191,7 +191,9 @@ impl StatusBuffer {
 
             // Check if all instances are running
             for instance in instances {
+                // println!("Instance state: {}", instance.state());
                 if instance.state() != InstanceState::Running as u16 {
+                    // println!("Instance is not running");
                     return Ok(false);
                 }
             }
@@ -202,9 +204,7 @@ impl StatusBuffer {
         Err("No instances found")
     }
 
-    pub fn at_least_one_instance_is_not_running(
-        &self,
-    ) -> Result<bool, &'static str> {
+    pub fn at_least_one_instance_is_not_running(&self) -> Result<bool, &'static str> {
         // Get the last value
         let value = self.object();
 

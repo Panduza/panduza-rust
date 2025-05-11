@@ -5,6 +5,8 @@ use std::fmt::Display;
 ///
 #[derive(Default, Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub enum InstanceState {
+    #[default]
+    Undefined,
     Booting,
     Connecting,
     Initializating,
@@ -13,8 +15,6 @@ pub enum InstanceState {
     Error,
     Cleaning,
     Stopping,
-    #[default]
-    Undefined,
 }
 
 impl Display for InstanceState {
@@ -33,18 +33,18 @@ impl Display for InstanceState {
     }
 }
 
-impl From<InstanceState> for u16 {
-    fn from(state: InstanceState) -> Self {
-        match state {
-            InstanceState::Undefined => 0,
-            InstanceState::Booting => 1,
-            InstanceState::Connecting => 2,
-            InstanceState::Initializating => 3,
-            InstanceState::Running => 4,
-            InstanceState::Warning => 5,
-            InstanceState::Error => 6,
-            InstanceState::Cleaning => 7,
-            InstanceState::Stopping => 8,
-        }
-    }
-}
+// impl From<InstanceState> for u16 {
+//     fn from(state: InstanceState) -> Self {
+//         match state {
+//             InstanceState::Undefined => 0,
+//             InstanceState::Booting => 1,
+//             InstanceState::Connecting => 2,
+//             InstanceState::Initializating => 3,
+//             InstanceState::Running => 4,
+//             InstanceState::Warning => 5,
+//             InstanceState::Error => 6,
+//             InstanceState::Cleaning => 7,
+//             InstanceState::Stopping => 8,
+//         }
+//     }
+// }
