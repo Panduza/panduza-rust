@@ -7,7 +7,7 @@ Panduza Rust Client
 
 ## Tests
 
-
+First start a platform with this configuration
 
 ```json
 {
@@ -20,9 +20,14 @@ Panduza Rust Client
 }
 ```
 
+Then run
 
 ```bash
+# Run all basics tests
 cargo test --test basics
+
+# Run scenario with @focus tag
+cargo test --test basics_focus
 ```
 
 ## Flat Buffers
