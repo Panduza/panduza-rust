@@ -171,4 +171,49 @@ impl BytesAttribute {
     pub fn pop(&self) -> Option<Bytes> {
         self.pack.lock().unwrap().pop()
     }
+    
+    ///
+    ///
+    pub fn wait_for(&self, expected_message:&str) -> Result<(),()> {
+        loop {
+            match self.get() {
+                Some(msg) => {
+                    if  String::from_utf8_lossy(&msg) == expected_message {
+                        return Ok(());
+                    }
+                },
+                None => {
+                    println!("Error : no bytes received from get() ");
+                    continue;
+                },
+            }
+        }
+    }
+
+    ///
+    /// 
+    pub fn multiple_wait_for(&self, expected_messages:&[&str]) -> Result<(),()> {
+        loop {
+            match self.get() {
+                Some(received) => {
+                    let received_string = String::from_utf8_lossy(&received);
+                    for &expected in expected_messages {
+                        if  received_string == expected {
+                            return Ok(());
+                        }
+                    }
+                    continue;
+                },
+                None => {
+                    println!("Error : no bytes received from get() ");
+                    continue;
+                },
+            }
+        }
+    }
+
+
+
+
+
 }
