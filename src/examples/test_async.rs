@@ -1,30 +1,37 @@
-use colored::*;
-use panduza::reactor::ReactorOptions;
-use std::io;
 use bytes::Bytes;
+use colored::*;
+use panduza::{reactor::ReactorOptions, NotificationAttribute, StatusAttribute};
+use std::io;
+
+// --- TEST PARAMETERS ---
+const PLAFORM_LOCALHOST: &str = "localhost";
+const PLAFORM_PORT: u16 = 1883;
+// -----------------------
 
 #[tokio::main]
 async fn main() {
-    let options = ReactorOptions::new();
-    let mut reactor = panduza::new_reactor(options).await.unwrap();
+    let options = ReactorOptions::new(PLAFORM_LOCALHOST, PLAFORM_PORT);
+    let reactor = panduza::new_reactor(options).await.unwrap();
 
-    let mut pp = reactor
+    let mut platform_status = Some(reactor.new_status_attribute().await);
+
+    let mut platform_notifications = Some(reactor.new_notification_attribute().await);
+
+    let attribute_builder_tx: panduza::AttributeBuilder = reactor
         .find_attribute("serial-stream/TX")
-        .expect_bytes()
-        .await
-        .unwrap();
-    // println!("$$$$$$ {:?}", pp);
-    let mut listener = reactor
+        .expect("Attribute not found");
+    let mut serial_stream_tx = attribute_builder_tx.expect_bytes().await.unwrap();
+
+    let attribute_builder_rx: panduza::AttributeBuilder = reactor
         .find_attribute("serial-stream/RX")
-        .expect_bytes()
-        .await
-        .unwrap();
+        .expect("Attribute not found");
+    let serial_stream_rx = attribute_builder_rx.expect_bytes().await.unwrap();
 
     // Tâche de réception avec pop()
     tokio::spawn(async move {
         let mut last_message_received = Bytes::new();
         loop {
-            if let Some(received) = listener.get() {
+            if let Some(received) = serial_stream_rx.get() {
                 if received != last_message_received {
                     println!(
                         "{} {}",
@@ -33,6 +40,44 @@ async fn main() {
                     );
                 }
                 last_message_received = received;
+            }
+        }
+    });
+
+    // Tâche de réception des alertes
+    tokio::spawn(async move {
+        loop {
+            if platform_notifications
+                .as_mut()
+                .unwrap()
+                .pop_all()
+                .has_alert()
+                == true
+            {
+                println!(
+                    "{} {}",
+                    "[notification alert]".yellow().bold(),
+                    " a notification alert has been detected"
+                );
+            }
+        }
+    });
+
+    // Tâche de réception des erreurs
+    tokio::spawn(async move {
+        loop {
+            if platform_status
+                .as_mut()
+                .unwrap()
+                .at_least_one_instance_is_not_running()
+                .expect("Error while checking if at least one instance is not running")
+                == true
+            {
+                println!(
+                    "{} {}",
+                    "[status error]".red().bold(),
+                    " at least one instance is not running"
+                );
             }
         }
     });
@@ -47,13 +92,12 @@ async fn main() {
 
         if !input.is_empty() {
             let bytes = bytes::Bytes::from(input.as_bytes().to_vec());
-            pp.shoot(bytes).await;
+            serial_stream_tx.set(bytes).await.unwrap();
             println!(
                 "{} {}",
                 "[message send]".blue().bold(),
                 format!("{:?}", input)
             );
-            
         }
     }
 

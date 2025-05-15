@@ -21,12 +21,6 @@ harness = false
 name = "basics_focus"
 harness = false
 
-[[test]]
-name = "driver_tcp"
-harness = false
-path = "src/tests/driver_tcp.rs"
-
-
 [dependencies]
 
 # Main async framework for the platform

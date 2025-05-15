@@ -26,17 +26,12 @@ pub use attribute_metadata::AttributeMetadata;
 ///
 pub mod attribute;
 pub use attribute::boolean::BooleanAttribute;
+pub use attribute::bytes::BytesAttribute;
 pub use attribute::json::JsonAttribute;
 pub use attribute::notification::NotificationAttribute;
 pub use attribute::si::SiAttribute;
 pub use attribute::status::StatusAttribute;
 pub use attribute::string::StringAttribute;
-
-pub mod string_attribute;
-pub use string_attribute::StringAttribute;
-
-pub mod bytes_attribute;
-pub use bytes_attribute::BytesAttribute;
 
 ///
 ///

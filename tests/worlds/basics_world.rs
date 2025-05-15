@@ -1,4 +1,5 @@
 mod boolean;
+mod bytes;
 mod r#enum;
 mod reactor;
 mod si;
@@ -6,11 +7,11 @@ mod string;
 
 use cucumber::Parameter;
 use cucumber::{given, then, World};
-use panduza::{NotificationAttribute, StatusAttribute};
 use panduza::{
     attribute::si::SiAttribute, reactor::ReactorOptions, AttributeBuilder, BooleanAttribute,
-    JsonAttribute, Reactor, StringAttribute,
+    BytesAttribute, JsonAttribute, Reactor, StringAttribute,
 };
+use panduza::{NotificationAttribute, StatusAttribute};
 use std::time::Duration;
 use std::{fmt::Debug, str::FromStr};
 
@@ -104,6 +105,16 @@ pub struct EnumSubWorld {
     // pub topic_ro: Option<String>,
 }
 
+#[derive(Default)]
+pub struct BytesSubWorld {
+    pub att_rw: Option<BytesAttribute>,
+    pub att_wo: Option<BytesAttribute>,
+    pub att_ro: Option<BytesAttribute>,
+    // pub topic_rw: Option<String>,
+    // pub topic_wo: Option<String>,
+    // pub topic_ro: Option<String>,
+}
+
 #[derive(Default, World)]
 pub struct BasicsWorld {
     /// Reactor object
@@ -141,6 +152,10 @@ pub struct BasicsWorld {
     /// Enum sub world data
     ///
     pub r#enum: EnumSubWorld,
+
+    /// Bytes sub world data
+    ///
+    pub bytes: BytesSubWorld,
 }
 
 impl Debug for BasicsWorld {
@@ -161,15 +176,8 @@ async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
     world.r = Some(reactor);
     world.platform_status = Some(world.r.as_ref().unwrap().new_status_attribute().await);
 
-    world
-        .platform_notifications = Some(
-            world
-                .r
-                .as_ref()
-                .unwrap()
-                .new_notification_attribute()
-                .await,
-        );
+    world.platform_notifications =
+        Some(world.r.as_ref().unwrap().new_notification_attribute().await);
 
     world
         .platform_status
@@ -185,45 +193,46 @@ async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
 #[then(expr = "the status attribute must indicate running for all instances")]
 async fn the_status_attribute_must_be(world: &mut BasicsWorld) {
     world
-    .platform_status
-    .as_mut()
-    .unwrap()
-    .wait_for_all_instances_to_be_running(Duration::from_secs(15))
-    .await
-    .expect("Error while waiting for instance to be in running state");
+        .platform_status
+        .as_mut()
+        .unwrap()
+        .wait_for_all_instances_to_be_running(Duration::from_secs(15))
+        .await
+        .expect("Error while waiting for instance to be in running state");
 }
 
 #[then(expr = "the status attribute must indicate an error for one instance")]
 async fn the_status_attribute_must_indicate_for_one_instance(world: &mut BasicsWorld) {
     world
-    .platform_status
-    .as_mut()
-    .unwrap()
-    .wait_for_at_least_one_instance_to_be_not_running(Duration::from_secs(15))
-    .await
-    .expect("Error while waiting for instance to be in error state");
+        .platform_status
+        .as_mut()
+        .unwrap()
+        .wait_for_at_least_one_instance_to_be_not_running(Duration::from_secs(15))
+        .await
+        .expect("Error while waiting for instance to be in error state");
 
     world
-    .platform_status
-    .as_mut()
-    .unwrap()
-    .wait_for_all_instances_to_be_running(Duration::from_secs(15))
-    .await
-    .expect("Error while waiting for instance to be in running state");
+        .platform_status
+        .as_mut()
+        .unwrap()
+        .wait_for_all_instances_to_be_running(Duration::from_secs(15))
+        .await
+        .expect("Error while waiting for instance to be in running state");
 }
 
 #[then(expr = "the notification attribute must indicate no alert")]
 fn the_notification_attribute_must_indicate_no_alert(world: &mut BasicsWorld) {
     // clear all notifications
-    world
-        .platform_notifications
-        .as_mut()
-        .unwrap()
-        .pop_all();
+    world.platform_notifications.as_mut().unwrap().pop_all();
 }
 
 #[then(expr = "the notification attribute must indicate an alert for this instance")]
 fn the_notification_attribute_must_indicate_an_alert_for_this_instance(world: &mut BasicsWorld) {
     // check that the notification attribute is not empty
-    assert!(!world.platform_notifications.as_mut().unwrap().pop_all().has_alert());
+    assert!(!world
+        .platform_notifications
+        .as_mut()
+        .unwrap()
+        .pop_all()
+        .has_alert());
 }
