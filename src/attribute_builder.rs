@@ -134,12 +134,10 @@ impl AttributeBuilder {
         let cmd_topic = format!("{}/cmd", md.topic);
 
         let att_receiver = self.reactor.register_listener(att_topic, 20).await?;
-
         let cmd_publisher = self
             .reactor
             .register_publisher(cmd_topic, false)
             .map_err(|e| e.to_string())?;
-
         Ok(BytesAttribute::new(
             md.topic.clone(),
             md.mode.clone(),
