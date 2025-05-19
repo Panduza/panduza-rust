@@ -28,7 +28,7 @@ impl AttributeBuilder {
 
     pub async fn expect_boolean(&self) -> Result<BooleanAttribute, String> {
         let md = self.metadata.as_ref().unwrap();
-        let att_topic: String = format!("{}/att", md.topic);
+        let att_topic = format!("{}/att", md.topic);
         let cmd_topic = format!("{}/cmd", md.topic);
 
         let att_receiver = self.reactor.register_listener(att_topic, 20).await?;

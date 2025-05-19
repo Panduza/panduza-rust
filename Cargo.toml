@@ -35,8 +35,7 @@ async-trait = "0.1.81"
 rand = "0.8.5"
 #
 flatbuffers = "25.2.10"
-#
-colored = "2.0"
+
 
 yash-fnmatch = "1.1.2"
 
