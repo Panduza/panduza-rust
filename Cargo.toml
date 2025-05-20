@@ -11,7 +11,6 @@ harness = false
 name = "basics_focus"
 harness = false
 
-
 [dependencies]
 
 # Main async framework for the platform

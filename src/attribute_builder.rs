@@ -1,7 +1,7 @@
 use crate::{
     attribute::{notification::NotificationAttribute, status::StatusAttribute},
     attribute_metadata::AttributeMetadata,
-    BooleanAttribute, JsonAttribute, Reactor, SiAttribute, StringAttribute,
+    BooleanAttribute, BytesAttribute, JsonAttribute, Reactor, SiAttribute, StringAttribute,
 };
 
 #[derive(Clone)]
@@ -117,6 +117,28 @@ impl AttributeBuilder {
             .map_err(|e| e.to_string())?;
 
         Ok(StringAttribute::new(
+            md.topic.clone(),
+            md.mode.clone(),
+            cmd_publisher,
+            att_receiver,
+        )
+        .await)
+    }
+
+    pub async fn expect_bytes(&self) -> Result<BytesAttribute, String> {
+        let md = self
+            .metadata
+            .as_ref()
+            .expect("Metadata is required but was not provided.");
+        let att_topic = format!("{}/att", md.topic);
+        let cmd_topic = format!("{}/cmd", md.topic);
+
+        let att_receiver = self.reactor.register_listener(att_topic, 20).await?;
+        let cmd_publisher = self
+            .reactor
+            .register_publisher(cmd_topic, false)
+            .map_err(|e| e.to_string())?;
+        Ok(BytesAttribute::new(
             md.topic.clone(),
             md.mode.clone(),
             cmd_publisher,
