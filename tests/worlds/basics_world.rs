@@ -16,7 +16,8 @@ use std::time::Duration;
 use std::{fmt::Debug, str::FromStr};
 
 // --- TEST PARAMETERS ---
-const PLAFORM_LOCALHOST: &str = "localhost";
+// const PLAFORM_LOCALHOST: &str = "localhost";
+const PLAFORM_LOCALHOST: &str = "127.0.0.1";
 const PLAFORM_PORT: u16 = 1883;
 // -----------------------
 
@@ -171,13 +172,22 @@ impl Debug for BasicsWorld {
 #[given(expr = "a reactor connected on a test platform")]
 async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
     let options = ReactorOptions::new(PLAFORM_LOCALHOST, PLAFORM_PORT);
-    let reactor = panduza::new_reactor(options).await.unwrap();
 
+    // No additional setup required before connecting to the test platform
+    println!("Connecting to {}:{}...", PLAFORM_LOCALHOST, PLAFORM_PORT);
+    let reactor = panduza::new_reactor(options).await.unwrap();
+    println!("ok");
+
+    println!("Getting status attribute...");
     world.r = Some(reactor);
     world.platform_status = Some(world.r.as_ref().unwrap().new_status_attribute().await);
+    println!("ok");
 
+    // Get the notification attribute from the reactor and store it in the world
+    println!("Getting notification attribute...");
     world.platform_notifications =
         Some(world.r.as_ref().unwrap().new_notification_attribute().await);
+    println!("ok");
 
     world
         .platform_status
@@ -186,6 +196,8 @@ async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
         .wait_for_all_instances_to_be_running(Duration::from_secs(15))
         .await
         .expect("Error while waiting for instance to be in running state");
+
+    println!("reactor ready");
 }
 
 ///
