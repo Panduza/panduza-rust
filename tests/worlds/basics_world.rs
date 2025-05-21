@@ -16,7 +16,8 @@ use std::time::Duration;
 use std::{fmt::Debug, str::FromStr};
 
 // --- TEST PARAMETERS ---
-const PLAFORM_LOCALHOST: &str = "localhost";
+// const PLAFORM_LOCALHOST: &str = "localhost";
+const PLAFORM_LOCALHOST: &str = "127.0.0.1";
 const PLAFORM_PORT: u16 = 1883;
 // -----------------------
 
