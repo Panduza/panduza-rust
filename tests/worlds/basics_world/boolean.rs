@@ -72,3 +72,62 @@ async fn the_ro_boolean_value_is(world: &mut BasicsWorld, expected_value: Boolea
     let read_value = world.boolean.att_ro.as_mut().unwrap().get().unwrap();
     assert_eq!(read_value, expected_value.into_bool(), "read '{:?}' != expected '{:?}'", read_value, expected_value.into_bool());
 }
+
+#[given(expr = "the boolean attribute wo_counter {string}")]
+async fn the_boolean_attribute_wo_counter(world: &mut BasicsWorld, s: String) {
+    
+    let attribute_builder = world.r.as_ref().unwrap().find_attribute(s).expect("Attribute not found");
+    let attribute: panduza::SiAttribute = attribute_builder.expect_si().await.unwrap();
+
+    world.boolean.att_wo_counter = Some(attribute);
+}
+
+#[given(expr = "the boolean attribute wo_counter_reset {string}")]
+async fn the_boolean_attribute_wo_counter_reset(world: &mut BasicsWorld, s: String) {
+
+    let attribute_builder = world.r.as_ref().unwrap().find_attribute(s).expect("Attribute not found");
+    let attribute = attribute_builder.expect_boolean().await.unwrap();
+
+    world.boolean.att_wo_counter_reset = Some(attribute);
+}
+
+#[given(expr = "the counter is reseted")]
+async fn the_counter_is_reseted(world: &mut BasicsWorld, ) {
+    world.boolean.att_wo_counter_reset.as_mut().unwrap().set(true).await.unwrap();
+}
+
+
+#[then(expr = "the counter attribute must indicate {int}")]
+async fn the_counter_attribute_must_indicate(world: &mut BasicsWorld, expected_count: i32) {
+
+    // Sleep for 1 second to allow the counter to update
+    tokio::time::sleep(Duration::from_secs(1)).await;
+
+    // Get the counter value
+    let counter_value = world.boolean.att_wo_counter.as_ref().unwrap().get().unwrap();
+    
+    // Convert to i32 for comparison
+    let counter_value_i32 = counter_value.try_into_f32().unwrap() as i32;
+    
+    // Verify the counter value
+    assert_eq!(
+        counter_value_i32,
+        expected_count,
+        "Counter value '{}' doesn't match expected '{}'",
+        counter_value_i32,
+        expected_count
+    );
+}
+
+#[when(expr = "wo boolean is toggled {int} times")]
+async fn wo_boolean_is_toggled_times(world: &mut BasicsWorld, times: i32) {
+    // Initialize to false
+    world.boolean.att_wo.as_mut().unwrap().set(false).await.unwrap();
+
+    // Toggle the boolean attribute the specified number of times
+    let mut value = false;
+    for _ in 0..times {
+        value = !value;
+        world.boolean.att_wo.as_mut().unwrap().set(value).await.unwrap();
+    }
+}

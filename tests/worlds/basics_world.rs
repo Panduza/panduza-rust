@@ -71,6 +71,10 @@ pub struct BooleanSubWorld {
     pub att_rw: Option<BooleanAttribute>,
     pub att_wo: Option<BooleanAttribute>,
     pub att_ro: Option<BooleanAttribute>,
+    
+    pub att_wo_counter: Option<SiAttribute>,
+    pub att_wo_counter_reset: Option<BooleanAttribute>,
+
     pub topic_rw: Option<String>,
     pub topic_wo: Option<String>,
     pub topic_ro: Option<String>,
