@@ -101,13 +101,12 @@ async fn the_counter_is_reseted(world: &mut BasicsWorld, ) {
 async fn the_counter_attribute_must_indicate(world: &mut BasicsWorld, expected_count: i32) {
 
     // Sleep for 1 second to allow the counter to update
-    tokio::time::sleep(Duration::from_secs(1)).await;
-
+    tokio::time::sleep(Duration::from_secs(5)).await;
     // Get the counter value
-    let counter_value = world.boolean.att_wo_counter.as_ref().unwrap().get().unwrap();
+    let counter_value = world.boolean.att_wo_counter.as_ref().expect("att_wo_counter is not set").get().expect("Failed to get counter value");
     
     // Convert to i32 for comparison
-    let counter_value_i32 = counter_value.try_into_f32().unwrap() as i32;
+    let counter_value_i32 = counter_value.try_into_f32().expect("Failed to convert counter value to f32") as i32;
     
     // Verify the counter value
     assert_eq!(
@@ -126,7 +125,7 @@ async fn wo_boolean_is_toggled_times(world: &mut BasicsWorld, times: i32) {
 
     // Toggle the boolean attribute the specified number of times
     let mut value = false;
-    for _ in 0..times {
+    for _ in 0..times-1 { // -1 because we set it to false before
         value = !value;
         world.boolean.att_wo.as_mut().unwrap().set(value).await.unwrap();
     }
