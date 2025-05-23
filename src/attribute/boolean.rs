@@ -49,34 +49,34 @@ impl BooleanAttribute {
         //
         let update_1 = pack.lock().unwrap().update_notifier();
 
-        //
-        // Create the recv task
-        let pack_2 = pack.clone();
-        tokio::spawn({
-            let topic = topic.clone();
-            async move {
-            loop {
-                //
-                let message = att_receiver.recv().await;
-
-                println!("new message on topic {:?}: {:?}", &topic, message);
-
-                // Manage message
-                if let Some(message) = message {
-                    // Deserialize
-                    let value: bool = serde_json::from_slice(&message).unwrap();
-                    // Push into pack
-                    pack_2.lock().unwrap().push(value);
-                }
-                // None => no more message
-                else {
-                    break;
-                }
-            }
-        }});
-
         // Wait for the first message if mode is not readonly
         if mode != AttributeMode::WriteOnly {
+            //
+            // Create the recv task
+            let pack_2 = pack.clone();
+            tokio::spawn({
+                let topic = topic.clone();
+                async move {
+                loop {
+                    //
+                    let message = att_receiver.recv().await;
+
+                    println!("new message on topic {:?}: {:?}", &topic, message);
+
+                    // Manage message
+                    if let Some(message) = message {
+                        // Deserialize
+                        let value: bool = serde_json::from_slice(&message).unwrap();
+                        // Push into pack
+                        pack_2.lock().unwrap().push(value);
+                    }
+                    // None => no more message
+                    else {
+                        break;
+                    }
+                }
+            }});
+
             // Need a timeout here
             update_1.notified().await;
         }
@@ -154,6 +154,11 @@ impl BooleanAttribute {
 
     
     pub async fn wait_for_value(&self, value: bool) -> Result<(), String> {
+
+        if self.mode == AttributeMode::WriteOnly {
+            return Err("Cannot wait for value in WriteOnly mode".to_string());
+        }
+
         while let Some(last_value) = self.get() {
             if last_value == value {
                 return Ok(());

@@ -63,6 +63,8 @@ impl Reactor {
             return None;
         }
 
+        println!("found attribute: name = {}, meta topic = {:?}", n, meta.as_ref().map(|m| m.topic.clone()));
+
         Some(AttributeBuilder::new(self.clone(), meta))
     }
 
