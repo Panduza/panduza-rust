@@ -22,7 +22,7 @@ Feature: Boolean Attributes
   @focus
   Scenario: Manage WO attribute is overload
     Given the boolean attribute wo "boolean/wo"
-    Given the boolean attribute wo_counter "boolean/wo_counter"
+    Given the number attribute wo_counter "boolean/wo_counter"
     Given the boolean attribute wo_counter_reset "boolean/wo_counter_reset"
     Given the counter is reseted
     When wo boolean is toggled 1000 times

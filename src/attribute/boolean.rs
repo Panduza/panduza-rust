@@ -154,6 +154,11 @@ impl BooleanAttribute {
 
     
     pub async fn wait_for_value(&self, value: bool) -> Result<(), String> {
+
+        if self.mode == AttributeMode::WriteOnly {
+            return Err("Cannot wait for value in WriteOnly mode".to_string());
+        }
+
         while let Some(last_value) = self.get() {
             if last_value == value {
                 return Ok(());

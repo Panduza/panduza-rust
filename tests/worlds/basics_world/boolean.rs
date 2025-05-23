@@ -23,7 +23,10 @@ async fn given_the_attribute_wo(world: &mut BasicsWorld, attribute_name: String)
     world.boolean.topic_wo = Some(attribute_name.clone());
 
     let attribute_builder = world.r.as_ref().unwrap().find_attribute(attribute_name).expect("Attribute not found");
-    let attribute: panduza::BooleanAttribute = attribute_builder.expect_boolean().await.unwrap();
+    let attribute = tokio::time::timeout(
+        Duration::from_secs(5),
+        attribute_builder.expect_boolean()
+    ).await.unwrap().unwrap();
 
     world.boolean.att_wo = Some(attribute);
 }
@@ -73,7 +76,7 @@ async fn the_ro_boolean_value_is(world: &mut BasicsWorld, expected_value: Boolea
     assert_eq!(read_value, expected_value.into_bool(), "read '{:?}' != expected '{:?}'", read_value, expected_value.into_bool());
 }
 
-#[given(expr = "the boolean attribute wo_counter {string}")]
+#[given(expr = "the number attribute wo_counter {string}")]
 async fn the_boolean_attribute_wo_counter(world: &mut BasicsWorld, s: String) {
     
     let attribute_builder = world.r.as_ref().unwrap().find_attribute(s).expect("Attribute not found");
@@ -101,7 +104,7 @@ async fn the_counter_is_reseted(world: &mut BasicsWorld, ) {
 async fn the_counter_attribute_must_indicate(world: &mut BasicsWorld, expected_count: i32) {
 
     // Sleep for 1 second to allow the counter to update
-    tokio::time::sleep(Duration::from_secs(5)).await;
+    tokio::time::sleep(Duration::from_secs(2)).await;
     // Get the counter value
     let counter_value = world.boolean.att_wo_counter.as_ref().expect("att_wo_counter is not set").get().expect("Failed to get counter value");
     

@@ -6,7 +6,7 @@ use std::{
 use crate::{attribute_metadata::AttributeMetadata, reactor::DataReceiver};
 use bytes::Bytes;
 use serde_json::{Map, Value as JsonValue};
-use yash_fnmatch::{without_escape, Pattern};
+use yash_fnmatch::{without_escape, Pattern, PatternChar};
 
 use tokio::sync::Notify;
 
@@ -133,21 +133,34 @@ impl StructureData {
         Ok(())
         // .ok_or(format!("cannot insert entry {:?}", &level))
         // .map(|_| ())
-    }
+    }    
+    
 
+    /// TODO REWORK THIS SERIOUSLY
+    /// 
     pub fn find_attribute<A: Into<String>>(&self, pattern: A) -> Option<AttributeMetadata> {
-        let a: String = pattern.into();
+        let pattern_str: String = pattern.into();
 
-        //
-        let p = Pattern::parse(without_escape(a.as_str())).unwrap();
-        // assert_eq!(p.find("string"), Some(2..6));
+        // Si le pattern ne commence pas par "pza", on préfixe par "*/"
+        let pattern_str = if !pattern_str.starts_with("pza") {
+            format!("*/{}", pattern_str)
+        } else {
+            pattern_str
+        };
 
-        for (topic, metadata) in self.flat.iter() {
-            if p.find(&topic).is_some() {
-                return Some(metadata.clone());
+        println!("Looking for pattern: {:?}", pattern_str);
+
+        // Utilisation de yash_fnmatch pour le matching wildcard
+        if let Ok(pattern) = Pattern::parse(without_escape( &pattern_str)) {
+            for (topic, metadata) in self.flat.iter() {
+                if pattern.is_match(topic) && topic.chars().rev().take(3).collect::<String>() == pattern_str.chars().rev().take(3).collect::<String>() {
+                    println!("Found match: {:?}", topic);
+                    return Some(metadata.clone());
+                }
             }
+        } else {
+            println!("Invalid pattern: {:?}", pattern_str);
         }
-
         None
     }
 
