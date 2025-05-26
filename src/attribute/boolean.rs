@@ -1,3 +1,4 @@
+use crate::fbs::BooleanBuffer;
 use crate::pubsub::Publisher;
 use crate::reactor::DataReceiver;
 use crate::AttributeMode;
@@ -28,7 +29,7 @@ pub struct BooleanAttribute {
 
     /// Initial data
     ///
-    pack: Arc<Mutex<AttributeDataPack<bool>>>,
+    pack: Arc<Mutex<AttributeDataPack<BooleanBuffer>>>,
 
     /// Update notifier
     ///
@@ -42,7 +43,7 @@ impl BooleanAttribute {
         //
         // Create data pack
         let pack = Arc::new(Mutex::new(
-            AttributeDataPack::<bool>::default()
+            AttributeDataPack::<BooleanBuffer>::default()
         ));
 
         //

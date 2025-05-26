@@ -4,7 +4,7 @@ use super::panduza_generated::panduza::{
 };
 use bytes::Bytes;
 
-#[derive(Debug)]
+#[derive(Default, Clone, Debug)]
 /// BooleanBuffer is a wrapper around a flatbuffer serialized Message with a Boolean payload.
 /// It provides methods to create, access, and manipulate boolean data.
 pub struct BooleanBuffer {
