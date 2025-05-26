@@ -36,15 +36,16 @@ impl BooleanBuffer {
     pub fn take_data(self) -> Bytes {
         self.raw_data
     }
-
     /// Creates a new BooleanBuffer from a boolean value
     ///
     /// # Arguments
     /// * `value` - The boolean value to serialize
+    /// * `source` - Optional source identifier, defaults to 0 if not specified
+    /// * `sequence` - Optional sequence number, defaults to 0 if not specified
     ///
     /// # Returns
     /// A new BooleanBuffer containing the serialized value wrapped in a Message
-    pub fn from_value(value: bool) -> Self {
+    pub fn from_value(value: bool, source: u16, sequence: u16) -> Self {
         let mut builder = flatbuffers::FlatBufferBuilder::new(); // Create the boolean payload
         let boolean_args = BooleanArgs { value: value };
         let boolean = Boolean::create(&mut builder, &boolean_args);
@@ -53,8 +54,8 @@ impl BooleanBuffer {
         let timestamp = generate_timestamp();
         let header_args = HeaderArgs {
             timestamp: Some(&timestamp),
-            source: 0, // Default values for source and sequence
-            sequence: 0,
+            source: source,
+            sequence: sequence,
         };
         let header = Header::create(&mut builder, &header_args);
 
@@ -88,13 +89,23 @@ impl BooleanBuffer {
     pub fn boolean(&self) -> Option<Boolean> {
         self.message().payload_as_boolean()
     }
-
     /// Gets the boolean value from the payload
     ///
     /// # Returns
     /// The boolean value, or false if the payload is not a valid Boolean
     pub fn value(&self) -> bool {
         self.boolean().map_or(false, |b| b.value())
+    }
+
+    /// Creates a new BooleanBuffer from a boolean value with default source and sequence values
+    ///
+    /// # Arguments
+    /// * `value` - The boolean value to serialize
+    ///
+    /// # Returns
+    /// A new BooleanBuffer containing the serialized value wrapped in a Message
+    pub fn with_default_args(value: bool) -> Self {
+        Self::from_value(value, 0, 0)
     }
 }
 
@@ -130,6 +141,6 @@ impl From<bool> for BooleanBuffer {
     /// # Returns
     /// A new BooleanBuffer containing the serialized value
     fn from(value: bool) -> Self {
-        BooleanBuffer::from_value(value)
+        BooleanBuffer::from_value(value, 0, 0)
     }
 }
