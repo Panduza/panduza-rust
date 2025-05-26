@@ -163,21 +163,37 @@ async fn the_counter_is_reseted(world: &mut BasicsWorld) {
 
 #[then(expr = "the counter attribute must indicate {int}")]
 async fn the_counter_attribute_must_indicate(world: &mut BasicsWorld, expected_count: i32) {
-    // Sleep for 1 second to allow the counter to update
-    tokio::time::sleep(Duration::from_secs(2)).await;
-    // Get the counter value
-    let counter_value = world
-        .boolean
-        .att_wo_counter
-        .as_ref()
-        .expect("att_wo_counter is not set")
-        .get()
-        .expect("Failed to get counter value");
+    // Wait until counter value matches expected count
+    let mut counter_value_i32 = 0;
+    while counter_value_i32 != expected_count {
+        // Get the counter value
+        let counter_value = world
+            .boolean
+            .att_wo_counter
+            .as_ref()
+            .expect("att_wo_counter is not set")
+            .get()
+            .expect("Failed to get counter value");
 
-    // Convert to i32 for comparison
-    let counter_value_i32 = counter_value
-        .try_into_f32()
-        .expect("Failed to convert counter value to f32") as i32;
+        // Convert to i32 for comparison
+        counter_value_i32 = counter_value
+            .try_into_f32()
+            .expect("Failed to convert counter value to f32") as i32;
+
+        // Small delay to avoid busy waiting
+        tokio::time::sleep(Duration::from_millis(1)).await;
+    }
+
+    // Calculate elapsed time
+    let elapsed = world
+        .boolean
+        .toggle_start_time
+        .expect("toggle_start_time not set")
+        .elapsed();
+    println!(
+        "Time between toggle start and counter verification: {:?}",
+        elapsed
+    );
 
     // Verify the counter value
     assert_eq!(
@@ -189,6 +205,8 @@ async fn the_counter_attribute_must_indicate(world: &mut BasicsWorld, expected_c
 
 #[when(expr = "wo boolean is toggled {int} times")]
 async fn wo_boolean_is_toggled_times(world: &mut BasicsWorld, times: i32) {
+    world.boolean.toggle_start_time = Some(std::time::Instant::now());
+
     // Initialize to false
     world
         .boolean
@@ -213,4 +231,21 @@ async fn wo_boolean_is_toggled_times(world: &mut BasicsWorld, times: i32) {
             .await
             .unwrap();
     }
+}
+
+#[then(expr = "the toggle and counter verification should take less than {int} milliseconds")]
+async fn verify_toggle_and_counter_time(world: &mut BasicsWorld, max_time_ms: i32) {
+    let elapsed = world
+        .boolean
+        .toggle_start_time
+        .expect("toggle_start_time not set")
+        .elapsed();
+
+    let elapsed_ms = elapsed.as_millis() as i32;
+    assert!(
+        elapsed_ms < max_time_ms,
+        "Operation took {}ms, which is more than the maximum allowed {}ms",
+        elapsed_ms,
+        max_time_ms
+    );
 }
