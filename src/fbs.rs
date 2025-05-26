@@ -4,6 +4,8 @@ pub mod panduza_generated;
 mod boolean_buffer;
 pub use boolean_buffer::BooleanBuffer;
 
+pub mod common;
+
 pub mod notification_v0;
 pub mod number;
 pub mod sample;
