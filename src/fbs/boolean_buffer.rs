@@ -3,6 +3,7 @@ use super::panduza_generated::panduza::{
     Boolean, BooleanArgs, Header, HeaderArgs, Message, MessageArgs, Payload,
 };
 use bytes::Bytes;
+use rand::Rng;
 
 #[derive(Default, Clone, Debug)]
 /// BooleanBuffer is a wrapper around a flatbuffer serialized Message with a Boolean payload.
@@ -36,6 +37,7 @@ impl BooleanBuffer {
     pub fn take_data(self) -> Bytes {
         self.raw_data
     }
+
     /// Creates a new BooleanBuffer from a boolean value
     ///
     /// # Arguments
@@ -89,6 +91,7 @@ impl BooleanBuffer {
     pub fn boolean(&self) -> Option<Boolean> {
         self.message().payload_as_boolean()
     }
+
     /// Gets the boolean value from the payload
     ///
     /// # Returns
@@ -107,6 +110,36 @@ impl BooleanBuffer {
     pub fn with_default_args(value: bool) -> Self {
         Self::from_value(value, 0, 0)
     }
+
+    /// Creates a new BooleanBuffer from a boolean value with a random sequence number
+    /// Used by client to generate unique messages
+    ///
+    /// # Arguments
+    /// * `value` - The boolean value to serialize
+    /// * `source` - Source identifier
+    ///
+    /// # Returns
+    /// A new BooleanBuffer containing the serialized value wrapped in a Message with a random sequence number
+    pub fn with_random_sequence(value: bool, source: u16) -> Self {
+        let mut rng = rand::thread_rng();
+        let sequence = rng.gen::<u16>();
+        Self::from_value(value, source, sequence)
+    }
+
+    /// Creates a response message with a boolean value, matching the sequence of the original request.
+    /// This is typically used by servers to respond to client requests.
+    ///
+    /// # Arguments
+    /// * `value` - The boolean value to include in the response
+    /// * `request` - The original request Message to match the sequence number from
+    ///
+    /// # Returns
+    /// A new BooleanBuffer containing the response with matching sequence number
+    pub fn as_response_message(value: bool, request: Message) -> Self {
+        let sequence = request.header().map_or(0, |header| header.sequence());
+        Self::from_value(value, 0, sequence)
+    }
+
 }
 
 /// Implements the conversion from BooleanBuffer to bool

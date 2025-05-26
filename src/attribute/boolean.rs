@@ -66,10 +66,8 @@ impl BooleanAttribute {
 
                     // Manage message
                     if let Some(message) = message {
-                        // Deserialize
-                        let value: bool = serde_json::from_slice(&message).unwrap();
                         // Push into pack
-                        pack_2.lock().unwrap().push(value);
+                        pack_2.lock().unwrap().push(BooleanBuffer::from_raw_data(message));
                     }
                     // None => no more message
                     else {
@@ -124,7 +122,7 @@ impl BooleanAttribute {
                 .await
                 .map_err(|e| e.to_string())?;
 
-            while value != self.get().unwrap() {
+            while value != <bool>::from(self.get().unwrap()) {
                 // append 3 retry before failling if update received but not good
                 timeout(delay, self.update_notifier.notified())
                     .await
@@ -137,20 +135,15 @@ impl BooleanAttribute {
 
     ///
     ///
-    pub fn get(&self) -> Option<bool> {
+    pub fn get(&self) -> Option<BooleanBuffer> {
         self.pack.lock().unwrap().last()
     }
 
     ///
     ///
-    pub fn pop(&self) -> Option<bool> {
+    pub fn pop(&self) -> Option<BooleanBuffer> {
         self.pack.lock().unwrap().pop()
     }
-
-    pub fn get_instance_status_topic(&self) -> String {
-        format!("pza/_/devices/{}", Topic::from_string(self.topic.clone(), true).instance_name())
-    }
-
 
 
     
@@ -161,7 +154,7 @@ impl BooleanAttribute {
         }
 
         while let Some(last_value) = self.get() {
-            if last_value == value {
+            if bool::from(last_value) == value {
                 return Ok(());
             }
             self.update_notifier.notified().await;
