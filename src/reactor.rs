@@ -63,7 +63,11 @@ impl Reactor {
             return None;
         }
 
-        println!("found attribute: name = {}, meta topic = {:?}", n, meta.as_ref().map(|m| m.topic.clone()));
+        println!(
+            "found attribute: name = {}, meta topic = {:?}",
+            n,
+            meta.as_ref().map(|m| m.topic.clone())
+        );
 
         Some(AttributeBuilder::new(self.clone(), meta))
     }
@@ -102,7 +106,7 @@ impl Reactor {
     ///
     pub async fn new_notification_attribute(&self) -> NotificationAttribute {
         let meta = AttributeMetadata::from_topic(
-            "pza/_/notification".to_string(),
+            "pza/_/notifications".to_string(),
             Some("notification-v0".to_string()),
             AttributeMode::ReadOnly,
         );
@@ -134,6 +138,12 @@ impl Reactor {
         retain: bool,
     ) -> Result<Publisher, pubsub::Error> {
         self.router.register_publisher(topic.into(), retain)
+    }
+}
+
+impl PartialEq for Reactor {
+    fn eq(&self, other: &Self) -> bool {
+        true
     }
 }
 

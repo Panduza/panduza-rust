@@ -64,7 +64,9 @@ async fn i_set_wo_boolean(world: &mut BasicsWorld, value: Boolean) {
 #[then(expr = "the rw boolean value is {boolean}")]
 async fn the_rw_boolean_value_is(world: &mut BasicsWorld, expected_value: Boolean) {
     let read_value = world.boolean.att_rw.as_mut().unwrap().get().unwrap();
-    assert_eq!(read_value, expected_value.into_bool(), "read '{:?}' != expected '{:?}'", read_value, expected_value.into_bool() );
+    
+    let rv = <bool>::from(read_value);
+    assert_eq!(rv, expected_value.into_bool(), "read '{:?}' != expected '{:?}'", rv, expected_value.into_bool() );
 }
 
 ///
@@ -73,7 +75,9 @@ async fn the_rw_boolean_value_is(world: &mut BasicsWorld, expected_value: Boolea
 async fn the_ro_boolean_value_is(world: &mut BasicsWorld, expected_value: Boolean) {    
     world.boolean.att_ro.as_mut().unwrap().wait_for_value(expected_value.into_bool()).await.unwrap();
     let read_value = world.boolean.att_ro.as_mut().unwrap().get().unwrap();
-    assert_eq!(read_value, expected_value.into_bool(), "read '{:?}' != expected '{:?}'", read_value, expected_value.into_bool());
+
+    let rv = <bool>::from(read_value);
+    assert_eq!(rv, expected_value.into_bool(), "read '{:?}' != expected '{:?}'", rv, expected_value.into_bool());
 }
 
 #[given(expr = "the number attribute wo_counter {string}")]
