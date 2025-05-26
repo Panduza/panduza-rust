@@ -46,15 +46,11 @@ fn client_config(options: Options) -> Config {
 pub async fn new_connection(options: Options) -> Result<Session, SessionError> {
     let config = client_config(options);
 
-    loop {
-        match open(config.clone()).await {
-            Ok(session) => return Ok(session),
-            Err(e) => {
-                return Err(SessionError::SessionError {
-                    cause: e.to_string(),
-                });
-            }
-        }
+    match open(config).await {
+        Ok(session) => Ok(session),
+        Err(e) => Err(SessionError::SessionError {
+            cause: e.to_string(),
+        }),
     }
 }
 
