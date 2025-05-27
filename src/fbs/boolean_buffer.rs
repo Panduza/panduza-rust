@@ -1,23 +1,12 @@
-use super::common::generate_timestamp;
+use super::common::{generate_timestamp, BufferError};
 use super::panduza_generated::panduza::{
     Boolean, BooleanArgs, Header, HeaderArgs, Message, MessageArgs, Payload,
 };
 use bytes::Bytes;
 use rand::Rng;
 use std::fmt;
-use thiserror::Error;
 
-#[derive(Error, Debug)]
-pub enum BooleanBufferError {
-    #[error("Invalid flatbuffer data")]
-    InvalidData,
-    #[error("Missing boolean payload")]
-    MissingPayload,
-    #[error("Serialization failed")]
-    SerializationError,
-}
-
-type Result<T> = std::result::Result<T, BooleanBufferError>;
+type Result<T> = std::result::Result<T, BufferError>;
 
 #[derive(Default, Clone, Debug)]
 /// BooleanBuffer is a wrapper around a flatbuffer serialized Message with a Boolean payload.
@@ -52,43 +41,6 @@ impl BooleanBuffer {
         self.raw_data
     }
 
-    /// Creates a new BooleanBuffer from a boolean value
-    ///
-    /// # Arguments
-    /// * `value` - The boolean value to serialize
-    /// * `source` - Optional source identifier, defaults to 0 if not specified
-    /// * `sequence` - Optional sequence number, defaults to 0 if not specified
-    ///
-    /// # Returns
-    /// A new BooleanBuffer containing the serialized value wrapped in a Message
-    pub fn from_value(value: bool, source: u16, sequence: u16) -> Self {
-        let mut builder = flatbuffers::FlatBufferBuilder::new(); // Create the boolean payload
-        let boolean_args = BooleanArgs { value: value };
-        let boolean = Boolean::create(&mut builder, &boolean_args);
-
-        // Create header with timestamp
-        let timestamp = generate_timestamp();
-        let header_args = HeaderArgs {
-            timestamp: Some(&timestamp),
-            source: source,
-            sequence: sequence,
-        };
-        let header = Header::create(&mut builder, &header_args);
-
-        // Create the message with the boolean payload
-        let message_args = MessageArgs {
-            header: Some(header),
-            payload_type: Payload::Boolean,
-            payload: Some(boolean.as_union_value()),
-        };
-        let message = Message::create(&mut builder, &message_args);
-
-        builder.finish(message, None);
-
-        let raw_data = Bytes::from(builder.finished_data().to_vec());
-
-        Self { raw_data: raw_data }
-    }
     /// Deserializes the raw data into a Message object
     ///
     /// # Returns
@@ -96,13 +48,12 @@ impl BooleanBuffer {
     pub fn message(&self) -> Message {
         flatbuffers::root::<Message>(&self.raw_data).unwrap()
     }
-
     /// Deserializes the raw data into a Message object with error handling
     ///
     /// # Returns
     /// The deserialized Message object or an error
     pub fn try_message(&self) -> Result<Message> {
-        flatbuffers::root::<Message>(&self.raw_data).map_err(|_| BooleanBufferError::InvalidData)
+        flatbuffers::root::<Message>(&self.raw_data).map_err(|_| BufferError::InvalidData)
     }
 
     /// Validates that the buffer contains valid data
@@ -127,7 +78,6 @@ impl BooleanBuffer {
     pub fn value(&self) -> bool {
         self.boolean().map_or(false, |b| b.value())
     }
-
     /// Gets the boolean value with proper error handling
     ///
     /// # Returns
@@ -136,7 +86,7 @@ impl BooleanBuffer {
         let message = self.try_message()?;
         let boolean = message
             .payload_as_boolean()
-            .ok_or(BooleanBufferError::MissingPayload)?;
+            .ok_or(BufferError::MissingPayload)?;
         Ok(boolean.value())
     }
 
@@ -183,52 +133,14 @@ impl BooleanBuffer {
         }
     }
 
-    /// Creates a new BooleanBuffer from a boolean value with default source and sequence values
-    ///
-    /// # Arguments
-    /// * `value` - The boolean value to serialize
-    ///
-    /// # Returns
-    /// A new BooleanBuffer containing the serialized value wrapped in a Message
-    pub fn with_default_args(value: bool) -> Self {
-        Self::from_value(value, 0, 0)
-    }
-
-    /// Creates a new BooleanBuffer from a boolean value with a random sequence number
-    /// Used by client to generate unique messages
-    ///
-    /// # Arguments
-    /// * `value` - The boolean value to serialize
-    /// * `source` - Source identifier
-    ///
-    /// # Returns
-    /// A new BooleanBuffer containing the serialized value wrapped in a Message with a random sequence number
-    pub fn with_random_sequence(value: bool, source: u16) -> Self {
-        let mut rng = rand::thread_rng();
-        let sequence = rng.gen::<u16>();
-        Self::from_value(value, source, sequence)
-    }
-    /// Creates a response message with a boolean value, matching the sequence of the original request.
-    /// This is typically used by servers to respond to client requests.
-    ///
-    /// # Arguments
-    /// * `value` - The boolean value to include in the response
-    /// * `request` - The original request Message to match the sequence number from
-    ///
-    /// # Returns
-    /// A new BooleanBuffer containing the response with matching sequence number
-    pub fn as_response_message(value: bool, request: Message) -> Self {
-        let sequence = request.header().map_or(0, |header| header.sequence());
-        Self::from_value(value, 0, sequence)
-    }
-
     /// Serializes the buffer to a byte vector
     ///
     /// # Returns
     /// A vector containing the serialized flatbuffer data
     pub fn to_vec(&self) -> Vec<u8> {
         self.raw_data.to_vec()
-    }    /// Creates a BooleanBuffer from a byte slice
+    }
+    /// Creates a BooleanBuffer from a byte slice
     ///
     /// # Arguments
     /// * `data` - The byte slice containing serialized flatbuffer data
@@ -238,14 +150,14 @@ impl BooleanBuffer {
     pub fn from_slice(data: &[u8]) -> Result<Self> {
         // Vérifier que les données ne sont pas vides
         if data.is_empty() {
-            return Err(BooleanBufferError::InvalidData);
+            return Err(BufferError::InvalidData);
         }
-        
+
         // Vérifier si la taille est suffisante pour un flatbuffer valide (minimum 16 octets)
         if data.len() < 16 {
-            return Err(BooleanBufferError::InvalidData);
+            return Err(BufferError::InvalidData);
         }
-        
+
         let bytes = Bytes::copy_from_slice(data);
         let buffer = Self::from_raw_data(bytes);
 
@@ -253,6 +165,7 @@ impl BooleanBuffer {
         buffer.try_message()?;
         Ok(buffer)
     }
+
     /// Gets the size of the serialized data
     ///
     /// # Returns
@@ -290,6 +203,44 @@ impl BooleanBufferBuilder {
         }
     }
 
+    /// Creates a new BooleanBuffer builder with default source and sequence values
+    ///
+    /// # Arguments
+    /// * `value` - The boolean value to serialize
+    ///
+    /// # Returns
+    /// A new BooleanBufferBuilder with default values
+    pub fn with_default_args(value: bool) -> Self {
+        Self::new(value)
+    }
+
+    /// Creates a new BooleanBuffer builder with a random sequence number
+    ///
+    /// # Arguments
+    /// * `value` - The boolean value to serialize
+    /// * `source` - Source identifier
+    ///
+    /// # Returns
+    /// A new BooleanBufferBuilder with a random sequence
+    pub fn with_random_sequence(value: bool, source: u16) -> Self {
+        Self::new(value).source(source).random_sequence()
+    }
+
+    /// Creates a response message with a boolean value, matching the sequence of the original request.
+    /// This is typically used by servers to respond to client requests.
+    ///
+    /// # Arguments
+    /// * `value` - The boolean value to include in the response
+    /// * `request` - The original request Message to match the sequence number from
+    ///
+    /// # Returns
+    /// A new BooleanBuffer containing the response with matching sequence number
+    pub fn as_a_response_message_to(mut self, request: Message) -> Self {
+        let sequence = request.header().map_or(0, |header| header.sequence());
+        self.sequence = Some(sequence);
+        self
+    }
+
     /// Sets the source identifier
     ///
     /// # Arguments
@@ -317,11 +268,35 @@ impl BooleanBufferBuilder {
 
     /// Builds the BooleanBuffer
     pub fn build(self) -> BooleanBuffer {
-        BooleanBuffer::from_value(
-            self.value,
-            self.source.unwrap_or(0),
-            self.sequence.unwrap_or(0),
-        )
+        let mut builder = flatbuffers::FlatBufferBuilder::new(); // Create the boolean payload
+        let boolean_args = BooleanArgs { value: self.value };
+        let boolean = Boolean::create(&mut builder, &boolean_args);
+
+        // Create header with timestamp
+        let timestamp = generate_timestamp();
+        let source = self.source.unwrap_or(0);
+        let sequence = self.sequence.unwrap_or(0);
+
+        let header_args = HeaderArgs {
+            timestamp: Some(&timestamp),
+            source,
+            sequence,
+        };
+        let header = Header::create(&mut builder, &header_args);
+
+        // Create the message with the boolean payload
+        let message_args = MessageArgs {
+            header: Some(header),
+            payload_type: Payload::Boolean,
+            payload: Some(boolean.as_union_value()),
+        };
+        let message = Message::create(&mut builder, &message_args);
+
+        builder.finish(message, None);
+
+        let raw_data = Bytes::from(builder.finished_data().to_vec());
+
+        BooleanBuffer { raw_data }
     }
 }
 
@@ -388,7 +363,7 @@ impl From<bool> for BooleanBuffer {
     /// # Returns
     /// A new BooleanBuffer containing the serialized value
     fn from(value: bool) -> Self {
-        BooleanBuffer::from_value(value, 0, 0)
+        BooleanBufferBuilder::with_default_args(value).build()
     }
 }
 
@@ -456,12 +431,13 @@ mod tests {
         assert_eq!(original.source(), restored.source());
         assert_eq!(original.sequence(), restored.sequence());
     }
-
     #[test]
     fn test_response_message() {
         let request = BooleanBuffer::builder(false).sequence(789).build();
 
-        let response = BooleanBuffer::as_response_message(true, request.message());
+        let response = BooleanBufferBuilder::new(true)
+            .as_a_response_message_to(request.message())
+            .build();
         assert_eq!(response.value(), true);
         assert_eq!(response.sequence(), 789);
         assert_eq!(response.source(), 0); // Default source for responses
@@ -511,7 +487,8 @@ mod tests {
         let result = buffer.try_value();
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), true);
-    }    #[test]
+    }
+    #[test]
     fn test_invalid_data_handling() {
         // Créer des données vraiment corrompues qui ne peuvent pas être un flatbuffer valide
         let invalid_data = vec![1, 2, 3, 4, 5]; // Trop court et sans structure flatbuffer
@@ -519,19 +496,18 @@ mod tests {
         assert!(result.is_err());
 
         match result {
-            Err(BooleanBufferError::InvalidData) => {}
+            Err(BufferError::InvalidData) => {}
             _ => panic!("Expected InvalidData error"),
         }
-        
+
         // Test avec un vecteur vide
         let empty_data = vec![];
         let result = BooleanBuffer::from_slice(&empty_data);
         assert!(result.is_err());
     }
-
     #[test]
     fn test_with_default_args() {
-        let buffer = BooleanBuffer::with_default_args(true);
+        let buffer = BooleanBufferBuilder::with_default_args(true).build();
         assert_eq!(buffer.value(), true);
         assert_eq!(buffer.source(), 0);
         assert_eq!(buffer.sequence(), 0);
@@ -539,7 +515,7 @@ mod tests {
 
     #[test]
     fn test_with_random_sequence() {
-        let buffer = BooleanBuffer::with_random_sequence(false, 100);
+        let buffer = BooleanBufferBuilder::with_random_sequence(false, 100).build();
         assert_eq!(buffer.value(), false);
         assert_eq!(buffer.source(), 100);
         // La séquence doit être différente de 0 (très probablement)

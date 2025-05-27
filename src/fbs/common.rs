@@ -1,5 +1,16 @@
 use super::panduza_generated::panduza::Timestamp;
 use std::time::{SystemTime, UNIX_EPOCH};
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum BufferError {
+    #[error("Invalid flatbuffer data")]
+    InvalidData,
+    #[error("Missing payload")]
+    MissingPayload,
+    #[error("Serialization failed")]
+    SerializationError,
+}
 
 /// Generates a timestamp for message headers using the current system time
 ///
