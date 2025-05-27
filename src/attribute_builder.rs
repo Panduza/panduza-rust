@@ -47,6 +47,9 @@ impl AttributeBuilder {
             .await
             .map_err(|e| e.to_string())?;
 
+        // TODO
+        // Register_listener est potentiellement plus utile
+        // On pourrait juste passer le topic et la session
         Ok(BooleanAttribute::new(
             self.reactor.session.clone(),
             cmd_topic,
