@@ -11,6 +11,10 @@ harness = false
 name = "basics_focus"
 harness = false
 
+[[test]]
+name = "free_run"
+harness = false
+
 [dependencies]
 
 # Main async framework for the platform
