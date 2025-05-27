@@ -7,6 +7,9 @@ pub use boolean_buffer::BooleanBuffer;
 mod string_buffer;
 pub use string_buffer::StringBuffer;
 
+mod bytes_buffer;
+pub use bytes_buffer::BytesBuffer;
+
 pub mod common;
 
 pub mod notification_v0;
