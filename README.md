@@ -28,6 +28,12 @@ cargo test --test basics
 
 # Run scenario with @focus tag
 cargo test --test basics_focus
+
+
+
+
+# Utiliser cargo test standard avec un filtre
+cargo test --lib -- fbs
 ```
 
 ## Flat Buffers
