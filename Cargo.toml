@@ -39,7 +39,7 @@ flatbuffers = "25.2.10"
 
 
 yash-fnmatch = "1.1.2"
-zenoh = {version = "1.3.3", features = ["unstable"]}
+zenoh = { version = "1.3.3" }
 
 
 [dev-dependencies]

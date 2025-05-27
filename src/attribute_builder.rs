@@ -8,9 +8,7 @@ use crate::{
     session, BooleanAttribute, SiAttribute, StringAttribute,
 };
 use bytes::Bytes;
-use zenoh::{
-    handlers::FifoChannelHandler, matching::MatchingListener, matching::MatchingStatus, Session,
-};
+use zenoh::{handlers::FifoChannelHandler, Session};
 
 #[derive(Clone)]
 /// Metadata for an attribute

@@ -6,9 +6,7 @@ use super::{Error, IncomingUpdate, Options, PubSubEvent};
 use bytes::Bytes;
 use thiserror::Error as ThisError;
 use zenoh::pubsub::Subscriber as ZenohSubscriber;
-use zenoh::{
-    handlers::DefaultHandler, matching::MatchingListener, open, sample::Sample, Config, Session,
-};
+use zenoh::{handlers::DefaultHandler, open, sample::Sample, Config, Session};
 use zenoh::{handlers::FifoChannelHandler, Result as ZenohResult};
 
 #[derive(ThisError, Debug, Clone)]
