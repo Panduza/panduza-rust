@@ -137,6 +137,12 @@ impl Reactor {
     }
 }
 
+impl PartialEq for Reactor {
+    fn eq(&self, other: &Self) -> bool {
+        true
+    }
+}
+
 /// Start the reactor
 ///
 /// This function initializes the reactor and waits for the structure to be initialized.
