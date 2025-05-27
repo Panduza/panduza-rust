@@ -178,6 +178,27 @@ impl StringBuffer {
         self.raw_data.len()
     }
 
+    /// Vérifie si la charge utile de la chaîne contient une liste blanche (whitelist)
+    ///
+    /// # Returns
+    /// `true` si une whitelist est présente, `false` sinon
+    pub fn has_whitelist(&self) -> bool {
+        self.string().and_then(|s| s.whitelist()).is_some()
+    }
+
+    /// Récupère la liste des valeurs autorisées (whitelist) de la charge utile
+    ///
+    /// # Returns
+    /// Un vecteur de chaînes représentant les valeurs autorisées, ou None s'il n'y a pas de whitelist
+    pub fn whitelist_values(&self) -> Option<Vec<std::string::String>> {
+        self.string().and_then(|s| s.whitelist()).map(|whitelist| {
+            (0..whitelist.len())
+                .filter_map(|i| Some(whitelist.get(i)))
+                .map(|s| s.to_string())
+                .collect()
+        })
+    }
+
     /// Creates a builder for constructing StringBuffer instances
     ///
     /// # Arguments
