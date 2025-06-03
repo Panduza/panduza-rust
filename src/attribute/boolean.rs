@@ -43,6 +43,17 @@ impl std::fmt::Debug for CallbackEntry {
 /// Unique identifier for callbacks
 pub type CallbackId = u64;
 
+
+
+// TODO: la logique de gestion va changer
+// au lieu d'avoir un data pack, on va passer par un systéme de callback
+// Les attributs sont assez simimilaires, on peut donc les gérer de manière générique
+// L'élément changeant est souvent juste le type de données
+// Il faut manipuler des données de types "Bytes" ou "Zbytes"
+// Une fonction permettra d'assurer une initialisation correcte
+
+
+
 #[derive(Clone, Debug)]
 /// Object to manage the BooleanAttribute
 ///
