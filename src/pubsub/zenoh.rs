@@ -6,9 +6,7 @@ use super::{Error, IncomingUpdate, Options, PubSubEvent};
 use bytes::Bytes;
 use thiserror::Error as ThisError;
 use zenoh::pubsub::Subscriber as ZenohSubscriber;
-use zenoh::{
-    handlers::DefaultHandler, matching::MatchingListener, open, sample::Sample, Config, Session,
-};
+use zenoh::{handlers::DefaultHandler, open, sample::Sample, Config, Session};
 use zenoh::{handlers::FifoChannelHandler, Result as ZenohResult};
 
 #[derive(ThisError, Debug, Clone)]
@@ -36,6 +34,8 @@ fn client_config(options: Options) -> Config {
         }}"#,
         options.ip, options.port, options.ca_certificate
     );
+
+    // println!("Zenoh client config: {}", conf);
     let config = Config::from_json5(&conf).unwrap();
 
     config
@@ -44,13 +44,21 @@ fn client_config(options: Options) -> Config {
 /// Start a Zenoh session
 ///
 pub async fn new_connection(options: Options) -> Result<Session, SessionError> {
+    // println!("0.1");
     let config = client_config(options);
 
+    // println!("0.2");
     match open(config).await {
-        Ok(session) => Ok(session),
-        Err(e) => Err(SessionError::SessionError {
-            cause: e.to_string(),
-        }),
+        Ok(session) => {
+            // println!("0.3");
+            Ok(session)
+        }
+        Err(e) => {
+            // println!("0.4");
+            Err(SessionError::SessionError {
+                cause: e.to_string(),
+            })
+        }
     }
 }
 

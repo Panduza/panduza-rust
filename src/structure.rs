@@ -196,7 +196,8 @@ impl Structure {
 
         let json_value_2 = json_value.clone();
 
-        while let Ok(sample) = query.recv_async().await {
+        // while
+        if let Ok(sample) = query.recv_async().await {
             // println!("LE SAMPLE : {:?}", sample.clone());
             match json_value_2.lock() {
                 Ok(mut deref_value) => {

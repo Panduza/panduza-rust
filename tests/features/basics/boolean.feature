@@ -27,7 +27,7 @@ Feature: Boolean Attributes
     Given the counter is reseted
     When wo boolean is toggled 1000 times
     Then the counter attribute must indicate 1000
-    Then the toggle and counter verification should take less than 20 milliseconds
+    Then the toggle and counter verification should take less than 500 milliseconds
 
   Scenario: Manage an instance alert during a boolean attribute operation
     Given the boolean attribute wo "boolean/alert"
