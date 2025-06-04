@@ -146,13 +146,13 @@ impl Reactor {
 /// This function initializes the reactor and waits for the structure to be initialized.
 /// If the structure initialization times out after 3 seconds, it returns an error.
 pub async fn new_reactor(options: ReactorOptions) -> Result<Reactor, String> {
-    println!("0");
+    // println!("0");
     let session = match new_connection(options.pubsub_options).await {
         Ok(session) => session,
         Err(e) => return Err(format!("Connection failed: {}", e)),
     };
 
-    println!("1");
+    // println!("1");
 
     // let subscriber = session
     //     .declare_subscriber("pza/_/structure/att")
@@ -161,11 +161,11 @@ pub async fn new_reactor(options: ReactorOptions) -> Result<Reactor, String> {
 
     let struct_query = session.get("pza/_/structure/att").await.unwrap();
 
-    println!("2");
+    // println!("2");
 
     let structure = Structure::new(struct_query).await;
 
-    println!("3");
+    // println!("3");
     // let structure_initialized = structure.initialized_notifier();
     // let timeout_duration = std::time::Duration::from_secs(15);
     // let result = tokio::time::timeout(timeout_duration, structure_initialized.notified()).await;
