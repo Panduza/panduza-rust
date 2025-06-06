@@ -18,19 +18,23 @@ pub enum Error {
     ListenError { cause: String },
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 ///1
 ///
 pub struct Options {
     pub ip: String,
     pub port: u16,
+    pub namespace_pub: Option<String>,
+    pub namespace_sub: Option<String>,
 }
 
 impl Options {
-    pub fn new<T: Into<String>>(ip: T, port: u16) -> Self {
+    pub fn new<T: Into<String>>(ip: T, port: u16, namespace_pub: Option<T>, namespace_sub: Option<T>) -> Self {
         Self {
             ip: ip.into(),
             port,
+            namespace_pub: namespace_pub.map(|n| n.into()),
+            namespace_sub: namespace_sub.map(|n| n.into()),
         }
     }
 }
@@ -40,6 +44,8 @@ impl Default for Options {
         Self {
             ip: "localhost".to_string(),
             port: 1883,
+            namespace_pub: None,
+            namespace_sub: None,
         }
     }
 }

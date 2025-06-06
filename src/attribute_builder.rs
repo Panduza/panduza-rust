@@ -28,8 +28,22 @@ impl AttributeBuilder {
 
     pub async fn expect_boolean(&self) -> Result<BooleanAttribute, String> {
         let md = self.metadata.as_ref().unwrap();
-        let att_topic = format!("{}/att", md.topic);
-        let cmd_topic = format!("{}/cmd", md.topic);
+        let att_topic = format!(
+            "{}{}/att",
+            self.reactor
+                .namespace_sub
+                .clone()
+                .map_or("".to_string(), |ns| format!("{}/", ns)),
+            md.topic
+        );
+        let cmd_topic = format!(
+            "{}{}/cmd",
+            self.reactor
+                .namespace_pub
+                .clone()
+                .map_or("".to_string(), |ns| format!("{}/", ns)),
+            md.topic
+        );
 
         let att_receiver = self.reactor.register_listener(att_topic, 20).await?;
 
@@ -49,8 +63,22 @@ impl AttributeBuilder {
 
     pub async fn expect_json(&self) -> Result<JsonAttribute, String> {
         let md = self.metadata.as_ref().unwrap();
-        let att_topic = format!("{}/att", md.topic);
-        let cmd_topic = format!("{}/cmd", md.topic);
+        let att_topic = format!(
+            "{}{}/att",
+            self.reactor
+                .namespace_sub
+                .clone()
+                .map_or("".to_string(), |ns| format!("{}/", ns)),
+            md.topic
+        );
+        let cmd_topic = format!(
+            "{}{}/cmd",
+            self.reactor
+                .namespace_pub
+                .clone()
+                .map_or("".to_string(), |ns| format!("{}/", ns)),
+            md.topic
+        );
 
         let att_receiver = self.reactor.register_listener(att_topic, 20).await?;
 
@@ -64,8 +92,22 @@ impl AttributeBuilder {
 
     pub async fn expect_si(&self) -> Result<SiAttribute, String> {
         let md = self.metadata.as_ref().unwrap();
-        let att_topic = format!("{}/att", md.topic);
-        let cmd_topic = format!("{}/cmd", md.topic);
+        let att_topic = format!(
+            "{}{}/att",
+            self.reactor
+                .namespace_sub
+                .clone()
+                .map_or("".to_string(), |ns| format!("{}/", ns)),
+            md.topic
+        );
+        let cmd_topic = format!(
+            "{}{}/cmd",
+            self.reactor
+                .namespace_pub
+                .clone()
+                .map_or("".to_string(), |ns| format!("{}/", ns)),
+            md.topic
+        );
 
         let att_receiver = self.reactor.register_listener(att_topic, 20).await?;
 
@@ -85,8 +127,22 @@ impl AttributeBuilder {
 
     pub async fn expect_string(&self) -> Result<StringAttribute, String> {
         let md = self.metadata.as_ref().unwrap();
-        let att_topic = format!("{}/att", md.topic);
-        let cmd_topic = format!("{}/cmd", md.topic);
+        let att_topic = format!(
+            "{}{}/att",
+            self.reactor
+                .namespace_sub
+                .clone()
+                .map_or("".to_string(), |ns| format!("{}/", ns)),
+            md.topic
+        );
+        let cmd_topic = format!(
+            "{}{}/cmd",
+            self.reactor
+                .namespace_pub
+                .clone()
+                .map_or("".to_string(), |ns| format!("{}/", ns)),
+            md.topic
+        );
 
         let att_receiver = self.reactor.register_listener(att_topic, 20).await?;
 
@@ -105,9 +161,26 @@ impl AttributeBuilder {
     }
 
     pub async fn expect_enum(&self) -> Result<StringAttribute, String> {
+
         let md = self.metadata.as_ref().unwrap();
-        let att_topic = format!("{}/att", md.topic);
-        let cmd_topic = format!("{}/cmd", md.topic);
+
+        let att_topic = format!(
+            "{}{}/att",
+            self.reactor
+                .namespace_sub
+                .clone()
+                .map_or("".to_string(), |ns| format!("{}/", ns)),
+            md.topic
+        );
+        
+        let cmd_topic = format!(
+            "{}{}/cmd",
+            self.reactor
+                .namespace_pub
+                .clone()
+                .map_or("".to_string(), |ns| format!("{}/", ns)),
+            md.topic
+        );
 
         let att_receiver = self.reactor.register_listener(att_topic, 20).await?;
 
@@ -130,8 +203,22 @@ impl AttributeBuilder {
             .metadata
             .as_ref()
             .expect("Metadata is required but was not provided.");
-        let att_topic = format!("{}/att", md.topic);
-        let cmd_topic = format!("{}/cmd", md.topic);
+        let att_topic = format!(
+            "{}{}/att",
+            self.reactor
+                .namespace_sub
+                .clone()
+                .map_or("".to_string(), |ns| format!("{}/", ns)),
+            md.topic
+        );
+        let cmd_topic = format!(
+            "{}{}/cmd",
+            self.reactor
+                .namespace_pub
+                .clone()
+                .map_or("".to_string(), |ns| format!("{}/", ns)),
+            md.topic
+        );
 
         let att_receiver = self.reactor.register_listener(att_topic, 20).await?;
         let cmd_publisher = self
@@ -158,8 +245,16 @@ impl AttributeBuilder {
 
     pub async fn expect_notification(&self) -> Result<NotificationAttribute, String> {
         let md = self.metadata.as_ref().unwrap();
-        let att_topic = format!("{}/att", md.topic);
-        let cmd_topic = format!("{}/cmd", md.topic);
+        let att_topic = format!(
+            "{}/{}/att",
+            md.topic,
+            self.reactor.namespace_sub.clone().unwrap()
+        );
+        let cmd_topic = format!(
+            "{}/{}/cmd",
+            md.topic,
+            self.reactor.namespace_pub.clone().unwrap()
+        );
 
         let att_receiver = self.reactor.register_listener(att_topic, 20).await?;
 
