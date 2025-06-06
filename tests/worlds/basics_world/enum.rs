@@ -10,6 +10,9 @@ async fn the_enum_attribute_rw(world: &mut BasicsWorld, attribute_name: String) 
         .unwrap()
         .find_attribute(attribute_name)
         .expect("Attribute not found");
+
+    println!("attribute_builder done enum rw");
+    
     let attribute = attribute_builder.expect_enum().await.unwrap();
 
     world.r#enum.att_rw = Some(attribute);

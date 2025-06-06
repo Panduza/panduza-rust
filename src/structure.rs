@@ -42,6 +42,8 @@ impl StructureData {
         //
         let brut: JsonValue = serde_json::from_slice(&payload).map_err(|e| e.to_string())?;
 
+        // println!("brut: {:?}", brut);
+
         //
         if let Some(driver_instances) = brut.get("driver_instances") {
             if let Some(driver_instances) = driver_instances.as_object() {
@@ -153,6 +155,7 @@ impl StructureData {
         // Utilisation de yash_fnmatch pour le matching wildcard
         if let Ok(pattern) = Pattern::parse(without_escape( &pattern_str)) {
             for (topic, metadata) in self.flat.iter() {
+                // println!("topic: {:?}", topic.clone());
                 if pattern.is_match(topic) && topic.chars().rev().take(3).collect::<String>() == pattern_str.chars().rev().take(3).collect::<String>() {
                     println!("Found match: {:?}", topic);
                     return Some(metadata.clone());

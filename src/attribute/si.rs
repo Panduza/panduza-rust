@@ -59,7 +59,7 @@ impl SiAttribute {
                 //
                 let message = att_receiver.recv().await;
 
-                println!("new message on topic {:?}: {:?}", &topic, message);
+                // println!("new message on topic {:?}: {:?}", &topic, message);
 
                 // Manage message
                 if let Some(message) = message {

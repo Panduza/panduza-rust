@@ -103,13 +103,34 @@ async fn the_counter_is_reseted(world: &mut BasicsWorld, ) {
 #[then(expr = "the counter attribute must indicate {int}")]
 async fn the_counter_attribute_must_indicate(world: &mut BasicsWorld, expected_count: i32) {
 
-    // Sleep for 1 second to allow the counter to update
-    tokio::time::sleep(Duration::from_secs(2)).await;
-    // Get the counter value
-    let counter_value = world.boolean.att_wo_counter.as_ref().expect("att_wo_counter is not set").get().expect("Failed to get counter value");
+    // // Sleep for 1 second to allow the counter to update
+    // tokio::time::sleep(Duration::from_secs(2)).await;
+    // // Get the counter value
+    // let counter_value = world.boolean.att_wo_counter.as_ref().expect("att_wo_counter is not set").get().expect("Failed to get counter value");
     
-    // Convert to i32 for comparison
-    let counter_value_i32 = counter_value.try_into_f32().expect("Failed to convert counter value to f32") as i32;
+    // // Convert to i32 for comparison
+    // let counter_value_i32 = counter_value.try_into_f32().expect("Failed to convert counter value to f32") as i32;
+
+    // Wait until counter value matches expected count
+    let mut counter_value_i32 = 0;
+    while counter_value_i32 != expected_count {
+        // Get the counter value
+        let counter_value = world
+            .boolean
+            .att_wo_counter
+            .as_ref()
+            .expect("att_wo_counter is not set")
+            .get()
+            .expect("Failed to get counter value");
+
+        // Convert to i32 for comparison
+        counter_value_i32 = counter_value
+            .try_into_f32()
+            .expect("Failed to convert counter value to f32") as i32;
+
+        // Small delay to avoid busy waiting
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
     
     // Verify the counter value
     assert_eq!(

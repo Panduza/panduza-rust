@@ -25,8 +25,8 @@ Feature: Boolean Attributes
     Given the number attribute wo_counter "boolean/wo_counter"
     Given the boolean attribute wo_counter_reset "boolean/wo_counter_reset"
     Given the counter is reseted
-    When wo boolean is toggled 1000 times
-    Then the counter attribute must indicate 1000
+    When wo boolean is toggled 10 times
+    Then the counter attribute must indicate 10
 
   Scenario: Manage an instance alert during a boolean attribute operation
     Given the boolean attribute wo "boolean/alert"

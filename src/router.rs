@@ -203,6 +203,8 @@ impl Router {
                     match event {
                         crate::pubsub::PubSubEvent::IncomingUpdate(incoming_update) =>
                         {
+                            println!("Message reçu sur le topic: {:?}", incoming_update.topic);
+            println!("Routes disponibles: {:?}", self.routes.keys());
                             if let Some(sender) = self.routes.get(&incoming_update.topic) {
                                 if sender.send(incoming_update.payload).await.is_err() {
                                     // Remove the route if the sender is dead

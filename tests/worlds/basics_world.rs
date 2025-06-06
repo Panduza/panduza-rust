@@ -19,6 +19,9 @@ use std::{fmt::Debug, str::FromStr};
 // const PLAFORM_LOCALHOST: &str = "localhost";
 const PLAFORM_LOCALHOST: &str = "127.0.0.1";
 const PLAFORM_PORT: u16 = 1883;
+const NAMESPACE_PUB: &str = "zaza";
+const NAMESPACE_SUB: &str = "mqtt";
+
 // -----------------------
 
 #[derive(Debug, Default, Parameter)]
@@ -71,7 +74,7 @@ pub struct BooleanSubWorld {
     pub att_rw: Option<BooleanAttribute>,
     pub att_wo: Option<BooleanAttribute>,
     pub att_ro: Option<BooleanAttribute>,
-    
+
     pub att_wo_counter: Option<SiAttribute>,
     pub att_wo_counter_reset: Option<BooleanAttribute>,
 
@@ -175,8 +178,12 @@ impl Debug for BasicsWorld {
 ///
 #[given(expr = "a reactor connected on a test platform")]
 async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
-    let options = ReactorOptions::new(PLAFORM_LOCALHOST, PLAFORM_PORT);
-
+    let options = ReactorOptions::new(
+        PLAFORM_LOCALHOST,
+        PLAFORM_PORT,
+        Some(NAMESPACE_PUB),
+        Some(NAMESPACE_SUB),
+    );
     // No additional setup required before connecting to the test platform
     println!("Connecting to {}:{}...", PLAFORM_LOCALHOST, PLAFORM_PORT);
     let reactor = panduza::new_reactor(options).await.unwrap();

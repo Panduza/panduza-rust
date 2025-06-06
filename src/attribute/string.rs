@@ -69,6 +69,7 @@ impl StringAttribute {
                     if let Some(message) = message {
                         // Deserialize
                         let value: String = serde_json::from_slice(&message).unwrap();
+                        println!("on a recu le message: {:?}", value.clone());
                         // Push into pack
                         pack_2.lock().unwrap().push(value);
                     }
@@ -82,8 +83,11 @@ impl StringAttribute {
 
         // Wait for the first message if mode is not readonly
         if mode != AttributeMode::WriteOnly {
+            println!("on attend le premier message");
+            println!("update_1: {:?}", update_1);
             // Need a timeout here
             update_1.notified().await;
+            println!("on a recu le premier message");
         }
 
         //
@@ -120,6 +124,7 @@ impl StringAttribute {
         self.shoot(value.clone()).await;
 
         if self.mode == AttributeMode::ReadWrite {
+
             let delay = Duration::from_secs(5);
 
             // Wait for change in the data pack
@@ -127,8 +132,11 @@ impl StringAttribute {
                 .await
                 .map_err(|e| e.to_string())?;
 
-            while value != self.get().unwrap() {
-                // append 3 retry before failling if update received but not good
+            while let Some(current_value) = self.get() {
+                if value.clone() == current_value {
+                    break;
+                }
+                // append 3 retry before failing if update received but not good
                 timeout(delay, self.update_notifier.notified())
                     .await
                     .map_err(|e| e.to_string())?;
