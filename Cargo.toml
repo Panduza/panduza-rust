@@ -26,7 +26,7 @@ serde = { version = "1.0", features = ["derive"] }
 # Json serialization & deserialization
 serde_json = "1.0.114"
 # Bytes zero copy mangement
-bytes = "1.10.0"
+bytes = "1.10.1"
 # 
 monitor = "0.1.0"
 # 
