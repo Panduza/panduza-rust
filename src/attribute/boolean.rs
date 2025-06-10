@@ -2,6 +2,7 @@
 use super::{CallbackEntry, CallbackId};
 use crate::fbs::BooleanBuffer;
 use crate::AttributeMetadata;
+use crate::AttributeMode;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -124,30 +125,22 @@ impl BooleanAttribute {
         self.session.put(&self.cmd_topic, pyl).await.unwrap();
     }
 
-    // ///
-    // ///
-    // pub async fn set(&mut self, value: bool) -> Result<(), String> {
-    //     //
-    //     self.shoot(value).await;
+    ///
+    ///
+    pub async fn set(&mut self, value: bool) -> Result<(), String> {
+        //
+        self.shoot(value).await;
 
-    //     if self.mode == AttributeMode::ReadWrite {
-    //         let delay = Duration::from_secs(5);
+        //
+        if self.metadata.mode == AttributeMode::ReadWrite {
+            self.wait_for_value(value, Some(std::time::Duration::from_secs(5)))
+                .await
+                .map_err(|e| format!("Failed to set boolean value: {}, error: {}", value, e))?;
+        }
 
-    //         // Wait for change in the data pack
-    //         timeout(delay, self.update_notifier.notified())
-    //             .await
-    //             .map_err(|e| e.to_string())?;
-
-    //         while value != self.get().unwrap() {
-    //             // append 3 retry before failling if update received but not good
-    //             timeout(delay, self.update_notifier.notified())
-    //                 .await
-    //                 .map_err(|e| e.to_string())?;
-    //         }
-    //     }
-
-    //     Ok(())
-    // }
+        //
+        Ok(())
+    }
 
     /// Get the last received value
     ///
@@ -157,7 +150,11 @@ impl BooleanAttribute {
 
     /// Wait for a specific boolean value to be received
     ///
-    pub async fn wait_for_value(&self, value: bool) -> Result<(), String> {
+    pub async fn wait_for_value(
+        &self,
+        value: bool,
+        timeout: Option<std::time::Duration>,
+    ) -> Result<(), String> {
         use tokio::sync::oneshot;
 
         // Create a oneshot channel to signal when the value is received
@@ -181,12 +178,13 @@ impl BooleanAttribute {
             },
         );
 
-        // Wait for the signal with a timeout
-        let result = tokio::time::timeout(
-            std::time::Duration::from_secs(10), // 10 seconds timeout
-            receiver,
-        )
-        .await;
+        // Wait for the signal with an optional timeout
+        let result = if let Some(duration) = timeout {
+            tokio::time::timeout(duration, receiver).await
+        } else {
+            // Pas de timeout : attend indéfiniment
+            Ok(receiver.await)
+        };
 
         // Remove the callback
         self.remove_callback(callback_id);
