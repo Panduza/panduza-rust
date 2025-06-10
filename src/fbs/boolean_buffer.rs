@@ -1,10 +1,12 @@
 use super::common::{generate_timestamp, BufferError};
+use super::generic::GenericBuffer;
 use super::panduza_generated::panduza::{
     Boolean, BooleanArgs, Header, HeaderArgs, Message, MessageArgs, Payload,
 };
 use bytes::Bytes;
 use rand::Rng;
 use std::fmt;
+use zenoh::bytes::ZBytes;
 
 type Result<T> = std::result::Result<T, BufferError>;
 
@@ -39,6 +41,36 @@ impl BooleanBuffer {
     /// The serialized flatbuffer data
     pub fn take_data(self) -> Bytes {
         self.raw_data
+    }
+
+    /// Consumes the buffer and returns its data as ZBytes
+    ///
+    /// # Returns
+    /// The serialized flatbuffer data as ZBytes
+    pub fn take_as_zbytes(self) -> ZBytes {
+        // Convert the Bytes to ZBytes and transfer ownership
+        ZBytes::from(self.raw_data)
+    }
+
+    /// Get the data as ZBytes without consuming the buffer
+    ///
+    /// # Returns
+    /// A ZBytes containing a copy of the serialized data
+    pub fn to_zbytes(&self) -> ZBytes {
+        // Create a ZBytes from a copy of raw_data
+        ZBytes::from(self.raw_data.clone())
+    }
+
+    /// Creates a BooleanBuffer from ZBytes
+    ///
+    /// # Arguments
+    /// * `zbytes` - The ZBytes containing serialized flatbuffer data
+    ///
+    /// # Returns
+    /// A new BooleanBuffer instance
+    pub fn from_zbytes(zbytes: ZBytes) -> Self {
+        let bytes = Bytes::copy_from_slice(&zbytes.to_bytes());
+        Self::from_raw_data(bytes)
     }
 
     /// Deserializes the raw data into a Message object
@@ -367,6 +399,24 @@ impl From<bool> for BooleanBuffer {
     }
 }
 
+/// Implementation of GenericBuffer for BooleanBuffer
+impl GenericBuffer for BooleanBuffer {
+    fn from_zbytes(zbytes: ZBytes) -> Self {
+        Self::from_zbytes(zbytes)
+    }
+
+    fn to_zbytes(&self) -> ZBytes {
+        self.to_zbytes()
+    }
+
+    fn from_value<T>(value: T) -> Self
+    where
+        T: Into<Self>,
+    {
+        value.into()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -536,5 +586,37 @@ mod tests {
 
         let raw_data_owned = buffer.take_data();
         assert!(!raw_data_owned.is_empty());
+    }
+
+    #[test]
+    fn test_zbytes_conversion() {
+        // Créer un buffer original
+        let original = BooleanBuffer::from(true);
+
+        // Convertir en ZBytes sans consommer le buffer
+        let zbytes = original.to_zbytes();
+
+        // Créer un nouveau buffer à partir des ZBytes
+        let from_zbytes = BooleanBuffer::from_zbytes(zbytes);
+
+        // Vérifier que les valeurs sont les mêmes
+        assert_eq!(original.value(), from_zbytes.value());
+        assert_eq!(original.source(), from_zbytes.source());
+        assert_eq!(original.sequence(), from_zbytes.sequence());
+    }
+
+    #[test]
+    fn test_take_as_zbytes() {
+        // Créer un buffer
+        let buffer = BooleanBuffer::from(true);
+
+        // Consomme le buffer et obtient ZBytes
+        let zbytes = buffer.take_as_zbytes();
+
+        // Créer un nouveau buffer à partir des ZBytes
+        let new_buffer = BooleanBuffer::from_zbytes(zbytes);
+
+        // Vérifier la valeur
+        assert_eq!(new_buffer.value(), true);
     }
 }

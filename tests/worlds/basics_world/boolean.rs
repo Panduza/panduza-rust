@@ -91,7 +91,7 @@ async fn i_set_wo_boolean(world: &mut BasicsWorld, value: Boolean) {
 ///
 #[then(expr = "the rw boolean value is {boolean}")]
 async fn the_rw_boolean_value_is(world: &mut BasicsWorld, expected_value: Boolean) {
-    let read_value = world.boolean.att_rw.as_mut().unwrap().get().unwrap();
+    let read_value = world.boolean.att_rw.as_mut().unwrap().get().await.unwrap();
     assert_eq!(
         read_value,
         expected_value.into_bool(),
@@ -110,10 +110,10 @@ async fn the_ro_boolean_value_is(world: &mut BasicsWorld, expected_value: Boolea
         .att_ro
         .as_mut()
         .unwrap()
-        .wait_for_value(expected_value.into_bool())
+        .wait_for_value(expected_value.into_bool(), Some(Duration::from_secs(5)))
         .await
         .unwrap();
-    let read_value = world.boolean.att_ro.as_mut().unwrap().get().unwrap();
+    let read_value = world.boolean.att_ro.as_mut().unwrap().get().await.unwrap();
     assert_eq!(
         read_value,
         expected_value.into_bool(),
