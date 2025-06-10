@@ -2,9 +2,9 @@ use super::common::{generate_timestamp, BufferError};
 use super::panduza_generated::panduza::{
     Boolean, BooleanArgs, Header, HeaderArgs, Message, MessageArgs, Payload,
 };
+use bytes::Bytes;
 use rand::Rng;
 use std::fmt;
-use zenoh::bytes::ZBytes;
 
 type Result<T> = std::result::Result<T, BufferError>;
 
@@ -13,39 +13,47 @@ type Result<T> = std::result::Result<T, BufferError>;
 /// It provides methods to create, access, and manipulate boolean data.
 pub struct BooleanBuffer {
     /// Internal Raw Data that holds the serialized flatbuffer containing the Message
-    raw_data: ZBytes,
+    raw_data: Bytes,
 }
 
-impl BooleanBuffer {    /// Creates a new BooleanBuffer from existing raw serialized data
+impl BooleanBuffer {
+    /// Creates a new BooleanBuffer from existing raw serialized data
     ///
     /// # Arguments
     /// * `raw_data` - The serialized flatbuffer data
-    pub fn from_raw_data(raw_data: ZBytes) -> Self {
+    pub fn from_raw_data(raw_data: Bytes) -> Self {
         Self { raw_data: raw_data }
+    }
+
+    /// Get a reference to the underlying raw data
+    ///
+    /// # Returns
+    /// A reference to the serialized flatbuffer data
+    pub fn raw_data(&self) -> &Bytes {
+        &self.raw_data
     }
 
     /// Consumes the buffer and returns ownership of the raw data
     ///
     /// # Returns
-    /// The serialized flatbuffer data as ZBytes
-    pub fn take_data(self) -> ZBytes {
+    /// The serialized flatbuffer data
+    pub fn take_data(self) -> Bytes {
         self.raw_data
     }
-    
+
     /// Deserializes the raw data into a Message object
     ///
     /// # Returns
     /// The deserialized Message object
     pub fn message(&self) -> Message {
-        flatbuffers::root::<Message>(self.raw_data.to_bytes()).unwrap()
+        flatbuffers::root::<Message>(&self.raw_data).unwrap()
     }
-
     /// Deserializes the raw data into a Message object with error handling
     ///
     /// # Returns
     /// The deserialized Message object or an error
     pub fn try_message(&self) -> Result<Message> {
-        flatbuffers::root::<Message>(self.raw_data.as_ref()).map_err(|_| BufferError::InvalidData)
+        flatbuffers::root::<Message>(&self.raw_data).map_err(|_| BufferError::InvalidData)
     }
 
     /// Validates that the buffer contains valid data
@@ -123,13 +131,16 @@ impl BooleanBuffer {    /// Creates a new BooleanBuffer from existing raw serial
             ),
             None => (0, 0, None),
         }
-    }    /// Serializes the buffer to a byte vector
+    }
+
+    /// Serializes the buffer to a byte vector
     ///
     /// # Returns
     /// A vector containing the serialized flatbuffer data
     pub fn to_vec(&self) -> Vec<u8> {
-        self.raw_data.clone()
-    }    /// Creates a BooleanBuffer from a byte slice
+        self.raw_data.to_vec()
+    }
+    /// Creates a BooleanBuffer from a byte slice
     ///
     /// # Arguments
     /// * `data` - The byte slice containing serialized flatbuffer data
@@ -147,23 +158,20 @@ impl BooleanBuffer {    /// Creates a new BooleanBuffer from existing raw serial
             return Err(BufferError::InvalidData);
         }
 
-        let buffer = Self { raw_data: data.to_vec() };
+        let bytes = Bytes::copy_from_slice(data);
+        let buffer = Self::from_raw_data(bytes);
 
         // Validate the data
         buffer.try_message()?;
         Ok(buffer)
-    }    /// Gets the size of the serialized data
+    }
+
+    /// Gets the size of the serialized data
     ///
     /// # Returns
     /// The size in bytes of the serialized flatbuffer data
     pub fn size(&self) -> usize {
         self.raw_data.len()
-    }/// Converts the buffer to ZBytes for transmission
-    ///
-    /// # Returns
-    /// The buffer data as ZBytes
-    pub fn to_zbytes(&self) -> ZBytes {
-        ZBytes::from(self.raw_data.clone())
     }
 
     /// Creates a builder for constructing BooleanBuffer instances
@@ -282,9 +290,11 @@ impl BooleanBufferBuilder {
             payload_type: Payload::Boolean,
             payload: Some(boolean.as_union_value()),
         };
-        let message = Message::create(&mut builder, &message_args);        builder.finish(message, None);
+        let message = Message::create(&mut builder, &message_args);
 
-        let raw_data = builder.finished_data().to_vec();
+        builder.finish(message, None);
+
+        let raw_data = Bytes::from(builder.finished_data().to_vec());
 
         BooleanBuffer { raw_data }
     }
@@ -516,13 +526,15 @@ mod tests {
     fn test_buffer_size() {
         let buffer = BooleanBuffer::from(true);
         assert!(buffer.size() > 0);
-    }    #[test]
+    }
+
+    #[test]
     fn test_raw_data_access() {
         let buffer = BooleanBuffer::from(true);
         let raw_data_ref = buffer.raw_data();
         assert!(!raw_data_ref.is_empty());
 
         let raw_data_owned = buffer.take_data();
-        assert!(!raw_data_owned.to_bytes().is_empty());
+        assert!(!raw_data_owned.is_empty());
     }
 }
