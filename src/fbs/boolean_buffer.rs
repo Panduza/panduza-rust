@@ -1,4 +1,5 @@
 use super::common::{generate_timestamp, BufferError};
+use super::generic::GenericBuffer;
 use super::panduza_generated::panduza::{
     Boolean, BooleanArgs, Header, HeaderArgs, Message, MessageArgs, Payload,
 };
@@ -395,6 +396,24 @@ impl From<bool> for BooleanBuffer {
     /// A new BooleanBuffer containing the serialized value
     fn from(value: bool) -> Self {
         BooleanBufferBuilder::with_default_args(value).build()
+    }
+}
+
+/// Implementation of GenericBuffer for BooleanBuffer
+impl GenericBuffer for BooleanBuffer {
+    fn from_zbytes(zbytes: ZBytes) -> Self {
+        Self::from_zbytes(zbytes)
+    }
+
+    fn to_zbytes(&self) -> ZBytes {
+        self.to_zbytes()
+    }
+
+    fn from_value<T>(value: T) -> Self
+    where
+        T: Into<Self>,
+    {
+        value.into()
     }
 }
 

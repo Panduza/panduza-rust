@@ -1,13 +1,13 @@
 pub mod boolean;
 pub mod bytes;
 pub mod data_pack;
+pub mod generic;
 pub mod json;
 pub mod notification;
 pub mod number;
 pub mod si;
 pub mod status;
 pub mod string;
-
 
 /// Unique identifier for callbacks
 pub type CallbackId = u64;
@@ -39,4 +39,3 @@ impl<T> std::fmt::Debug for CallbackEntry<T> {
             .finish()
     }
 }
-
