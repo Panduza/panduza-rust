@@ -49,7 +49,7 @@ impl BooleanAttribute {
 
         // Trigger the callback mecanism on message reception
         let att_topic = format!("{}/att", &metadata.topic);
-        let subscriber = session.declare_subscriber(att_topic).await.unwrap();
+        let subscriber = session.declare_subscriber(&att_topic).await.unwrap();
         let last_value = Arc::new(Mutex::new(None));
         tokio::spawn({
             let callbacks = callbacks.clone();
@@ -83,20 +83,15 @@ impl BooleanAttribute {
             }
         });
 
-        // // Wait for the first message if mode is not readonly
-        // if mode != AttributeMode::WriteOnly {
-        //     let query = session.get(topic_att.clone()).await.unwrap();
-        //     let result = query.recv_async().await.unwrap();
-        //     let value: bool = result
-        //         .result()
-        //         .unwrap()
-        //         .payload()
-        //         .try_to_string()
-        //         .unwrap()
-        //         .parse()
-        //         .unwrap();
-        //     pack.lock().unwrap().push(value);
-        // }        //
+        // Wait for the first message if mode is not readonly
+        if metadata.mode != AttributeMode::WriteOnly {
+            let query = session.get(&att_topic).await.unwrap();
+            let result = query.recv_async().await.unwrap();
+            let boolean_buffer =
+                BooleanBuffer::from_zbytes(result.result().unwrap().payload().clone());
+            let mut last = last_value.lock().unwrap();
+            *last = Some(boolean_buffer);
+        }
 
         // Create the command topic
         let cmd_topic = format!("{}/cmd", &metadata.topic);
@@ -165,17 +160,17 @@ impl BooleanAttribute {
         let sender_for_callback = sender_wrapped.clone();
 
         // Add a callback with condition to wait for the specific value
-        let callback_id = self.add_callback_with_condition(
+        let callback_id = self.add_callback(
             move |_buffer| {
                 // Send signal when the expected value is received
                 if let Some(sender) = sender_for_callback.lock().unwrap().take() {
                     let _ = sender.send(());
                 }
             },
-            move |buffer| {
+            Some(move |buffer: &BooleanBuffer| {
                 // Condition: check if the received value matches the expected value
                 buffer.value() == value
-            },
+            }),
         );
 
         // Wait for the signal with an optional timeout
@@ -197,29 +192,8 @@ impl BooleanAttribute {
     }
 
     /// Add a callback that will be triggered when receiving BooleanBuffer messages
-    ///
-    pub fn add_callback<F>(&self, callback: F) -> CallbackId
-    where
-        F: Fn(&BooleanBuffer) + Send + Sync + 'static,
-    {
-        let mut callbacks = self.callbacks.lock().unwrap();
-        let mut next_id = self.next_callback_id.lock().unwrap();
-
-        let callback_id = *next_id;
-        *next_id += 1;
-
-        let callback_entry = CallbackEntry {
-            callback: Box::new(callback),
-            condition: None,
-        };
-
-        callbacks.insert(callback_id, callback_entry);
-        callback_id
-    }
-
-    /// Add a callback with a condition that will be triggered when receiving BooleanBuffer messages
-    ///
-    pub fn add_callback_with_condition<F, C>(&self, callback: F, condition: C) -> CallbackId
+    /// Optionally, a condition can be provided to filter when the callback is triggered
+    pub fn add_callback<F, C>(&self, callback: F, condition: Option<C>) -> CallbackId
     where
         F: Fn(&BooleanBuffer) + Send + Sync + 'static,
         C: Fn(&BooleanBuffer) -> bool + Send + Sync + 'static,
@@ -232,7 +206,8 @@ impl BooleanAttribute {
 
         let callback_entry = CallbackEntry {
             callback: Box::new(callback),
-            condition: Some(Box::new(condition)),
+            condition: condition
+                .map(|c| Box::new(c) as Box<dyn Fn(&BooleanBuffer) -> bool + Send + Sync>),
         };
 
         callbacks.insert(callback_id, callback_entry);
