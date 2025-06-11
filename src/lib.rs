@@ -48,11 +48,6 @@ pub use topic::Topic;
 pub mod fbs;
 pub use fbs::GenericBuffer;
 
-/// Exemples d'utilisation
-///
-#[cfg(feature = "examples")]
-pub mod examples;
-
 ///
 ///
 pub mod instance_state;
