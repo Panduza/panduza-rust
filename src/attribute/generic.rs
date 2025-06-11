@@ -4,7 +4,7 @@ use crate::AttributeMetadata;
 use crate::AttributeMode;
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::sync::Mutex;
+use tokio::sync::Mutex;
 use zenoh::Session;
 
 /// Generic attribute implementation that can work with any buffer type that implements GenericBuffer
@@ -16,7 +16,7 @@ pub struct GenericAttribute<B: GenericBuffer> {
     /// Metadata for the attribute
     metadata: AttributeMetadata,
 
-    /// Callbacks storage
+    /// Async callbacks storage
     callbacks: Arc<Mutex<HashMap<CallbackId, CallbackEntry<B>>>>,
 
     /// Next callback ID
@@ -32,7 +32,7 @@ pub struct GenericAttribute<B: GenericBuffer> {
 impl<B: GenericBuffer> GenericAttribute<B> {
     /// Create a new instance
     pub async fn new(session: Session, metadata: AttributeMetadata) -> Self {
-        // Initialize callbacks storage
+        // Initialize async callbacks storage
         let callbacks = Arc::new(Mutex::new(HashMap::<CallbackId, CallbackEntry<B>>::new()));
 
         // Trigger the callback mechanism on message reception
@@ -50,12 +50,14 @@ impl<B: GenericBuffer> GenericAttribute<B> {
 
                     // Update the last received value
                     {
-                        let mut last = last_value.lock().unwrap();
+                        let mut last = last_value.lock().await;
                         *last = Some(buffer.clone());
                     }
 
-                    // Trigger all callbacks
-                    let callbacks_map = callbacks.lock().unwrap();
+                    // Trigger all async callbacks
+                    let callbacks_map = callbacks.lock().await;
+                    let mut futures = Vec::new();
+
                     for (_id, callback_entry) in callbacks_map.iter() {
                         // Check condition if present
                         let should_trigger = if let Some(condition) = &callback_entry.condition {
@@ -65,9 +67,15 @@ impl<B: GenericBuffer> GenericAttribute<B> {
                         };
 
                         if should_trigger {
-                            (callback_entry.callback)(&buffer);
+                            futures.push((callback_entry.callback)(buffer.clone()));
                         }
                     }
+
+                    // Drop the lock before awaiting futures
+                    drop(callbacks_map);
+
+                    // Execute all callbacks concurrently
+                    futures::future::join_all(futures).await;
                 }
             }
         });
@@ -77,7 +85,7 @@ impl<B: GenericBuffer> GenericAttribute<B> {
             let query = session.get(&att_topic).await.unwrap();
             let result = query.recv_async().await.unwrap();
             let buffer = B::from_zbytes(result.result().unwrap().payload().clone());
-            let mut last = last_value.lock().unwrap();
+            let mut last = last_value.lock().await;
             *last = Some(buffer);
         }
 
@@ -100,107 +108,77 @@ impl<B: GenericBuffer> GenericAttribute<B> {
     where
         T: Into<B>,
     {
-        // Create a Buffer with the value
-        let buffer = T::into(value);
+        let buffer: B = value.into();
+        let publisher = self
+            .session
+            .declare_publisher(&self.cmd_topic)
+            .await
+            .unwrap();
 
-        // Convert to bytes for sending
-        let payload = buffer.to_zbytes();
-
-        // Send the command
-        self.session.put(&self.cmd_topic, payload).await.unwrap();
+        publisher.put(buffer.to_zbytes()).await.unwrap();
     }
 
-    /// Set a value and wait for validation if in ReadWrite mode
-    pub async fn set<T>(&mut self, value: T) -> Result<(), String>
-    where
-        T: Into<B>,
-        B: PartialEq,
-    {
-        let buffer = T::into(value);
-        self.shoot_buffer(buffer.clone()).await;
-
-        if self.metadata.mode == AttributeMode::ReadWrite {
-            self.wait_for_buffer(buffer, Some(std::time::Duration::from_secs(5)))
-                .await
-                .map_err(|e| format!("Failed to set value: {}", e))?;
-        }
-
-        Ok(())
+    /// Get last received value
+    pub async fn get(&self) -> Option<B> {
+        let last = self.last_value.lock().await;
+        last.clone()
     }
 
-    /// Send a buffer directly and do not wait for validation
-    pub async fn shoot_buffer(&mut self, buffer: B) {
-        // Convert to bytes for sending
-        let payload = buffer.to_zbytes();
-
-        // Send the command
-        self.session.put(&self.cmd_topic, payload).await.unwrap();
-    }
-
-    /// Get the last received value
-    pub fn get(&self) -> Option<B> {
-        self.last_value.lock().unwrap().clone()
-    }
-
-    /// Wait for a specific buffer value to be received
-    pub async fn wait_for_buffer(
+    /// Wait for a specific value with optional timeout
+    pub async fn wait_for_value<F>(
         &self,
-        expected_buffer: B,
+        condition: F,
         timeout: Option<std::time::Duration>,
-    ) -> Result<(), String>
+    ) -> Result<B, String>
     where
-        B: PartialEq,
+        F: Fn(&B) -> bool + Send + Sync + 'static,
     {
-        use tokio::sync::oneshot;
+        // Use a broadcast channel to avoid the move issue
+        let (tx, mut rx) = tokio::sync::broadcast::channel(1);
 
-        // Create a oneshot channel to signal when the value is received
-        let (sender, receiver) = oneshot::channel();
-        let sender_wrapped = Arc::new(Mutex::new(Some(sender)));
+        // Add temporary callback
+        let callback_id = self
+            .add_callback(
+                move |buffer: B| {
+                    let buffer_clone = buffer.clone();
+                    let tx_clone = tx.clone();
+                    Box::pin(async move {
+                        let _ = tx_clone.send(buffer_clone);
+                    })
+                },
+                Some(condition),
+            )
+            .await;
 
-        // Clone the sender for use in the callback closure
-        let sender_for_callback = sender_wrapped.clone();
-
-        // Add a callback with condition to wait for the specific value
-        let callback_id = self.add_callback(
-            move |_buffer| {
-                // Send signal when the expected value is received
-                if let Some(sender) = sender_for_callback.lock().unwrap().take() {
-                    let _ = sender.send(());
-                }
-            },
-            Some(move |buffer: &B| {
-                // Condition: check if the received value matches the expected value
-                *buffer == expected_buffer
-            }),
-        );
-
-        // Wait for the signal with an optional timeout
         let result = if let Some(duration) = timeout {
-            tokio::time::timeout(duration, receiver).await
+            tokio::time::timeout(duration, rx.recv()).await
         } else {
             // No timeout: wait indefinitely
-            Ok(receiver.await)
+            Ok(rx.recv().await)
         };
 
         // Remove the callback
-        self.remove_callback(callback_id);
+        self.remove_callback(callback_id).await;
 
         match result {
-            Ok(Ok(())) => Ok(()),
+            Ok(Ok(buffer)) => Ok(buffer),
             Ok(Err(_)) => Err("Channel closed unexpectedly".to_string()),
             Err(_) => Err("Timeout waiting for value".to_string()),
         }
     }
 
-    /// Add a callback that will be triggered when receiving buffer messages
+    /// Add an async callback that will be triggered when receiving buffer messages
     /// Optionally, a condition can be provided to filter when the callback is triggered
-    pub fn add_callback<F, C>(&self, callback: F, condition: Option<C>) -> CallbackId
+    pub async fn add_callback<F, C>(&self, callback: F, condition: Option<C>) -> CallbackId
     where
-        F: Fn(&B) + Send + Sync + 'static,
+        F: Fn(B) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>
+            + Send
+            + Sync
+            + 'static,
         C: Fn(&B) -> bool + Send + Sync + 'static,
     {
-        let mut callbacks = self.callbacks.lock().unwrap();
-        let mut next_id = self.next_callback_id.lock().unwrap();
+        let mut callbacks = self.callbacks.lock().await;
+        let mut next_id = self.next_callback_id.lock().await;
 
         let callback_id = *next_id;
         *next_id += 1;
@@ -214,21 +192,21 @@ impl<B: GenericBuffer> GenericAttribute<B> {
         callback_id
     }
 
-    /// Remove a callback by its ID
-    pub fn remove_callback(&self, callback_id: CallbackId) -> bool {
-        let mut callbacks = self.callbacks.lock().unwrap();
+    /// Remove an async callback by its ID
+    pub async fn remove_callback(&self, callback_id: CallbackId) -> bool {
+        let mut callbacks = self.callbacks.lock().await;
         callbacks.remove(&callback_id).is_some()
     }
 
-    /// Clear all callbacks
-    pub fn clear_callbacks(&self) {
-        let mut callbacks = self.callbacks.lock().unwrap();
+    /// Clear all async callbacks
+    pub async fn clear_callbacks(&self) {
+        let mut callbacks = self.callbacks.lock().await;
         callbacks.clear();
     }
 
-    /// Get the number of registered callbacks
-    pub fn callback_count(&self) -> usize {
-        let callbacks = self.callbacks.lock().unwrap();
+    /// Get the number of registered async callbacks
+    pub async fn callback_count(&self) -> usize {
+        let callbacks = self.callbacks.lock().await;
         callbacks.len()
     }
 
@@ -248,45 +226,75 @@ pub type BooleanGenericAttribute = GenericAttribute<crate::fbs::BooleanBuffer>;
 
 #[cfg(test)]
 mod tests {
-    use zenoh::bytes::ZBytes;
-
     use super::*;
+    use crate::fbs::BooleanBuffer;
+    use std::time::Duration;
+    use tokio::time::sleep;
+    use zenoh::config::Config;
+    #[tokio::test]
+    async fn test_callback_registration() {
+        let config = Config::default();
+        let session = zenoh::open(config).await.unwrap();
 
-    // Example showing how to implement GenericBuffer for a custom type
-    #[derive(Clone, Debug, PartialEq)]
-    struct MockBuffer {
-        value: String,
+        let metadata = crate::AttributeMetadata {
+            topic: "test/boolean".to_string(),
+            r#type: "boolean".to_string(),
+            info: None,
+            mode: crate::AttributeMode::ReadWrite,
+        };
+
+        let attribute: GenericAttribute<BooleanBuffer> =
+            GenericAttribute::new(session, metadata).await;
+
+        // Test adding async callback
+        let callback_id = attribute
+            .add_callback(
+                |buffer| {
+                    Box::pin(async move {
+                        // Simulate async work
+                        sleep(Duration::from_millis(10)).await;
+                        println!("Async callback triggered with buffer: {:?}", buffer);
+                    })
+                },
+                None::<fn(&BooleanBuffer) -> bool>,
+            )
+            .await;
+
+        assert_eq!(attribute.callback_count().await, 1);
+
+        // Test removing callback
+        let removed = attribute.remove_callback(callback_id).await;
+        assert!(removed);
+        assert_eq!(attribute.callback_count().await, 0);
     }
+    #[tokio::test]
+    async fn test_callback_with_condition() {
+        let config = Config::default();
+        let session = zenoh::open(config).await.unwrap();
 
-    impl GenericBuffer for MockBuffer {
-        fn from_zbytes(zbytes: ZBytes) -> Self {
-            let value = String::from_utf8(zbytes.to_bytes().to_vec()).unwrap_or_default();
-            Self { value }
-        }
+        let metadata = crate::AttributeMetadata {
+            topic: "test/boolean".to_string(),
+            r#type: "boolean".to_string(),
+            info: None,
+            mode: crate::AttributeMode::ReadWrite,
+        };
+        let attribute: GenericAttribute<BooleanBuffer> =
+            GenericAttribute::new(session, metadata).await;
 
-        fn to_zbytes(&self) -> ZBytes {
-            ZBytes::from(self.value.as_bytes().to_vec())
-        }
+        // Test adding async callback with condition
+        let condition: fn(&BooleanBuffer) -> bool = |_buffer: &BooleanBuffer| true;
+        let _callback_id = attribute
+            .add_callback(
+                |buffer| {
+                    Box::pin(async move {
+                        sleep(Duration::from_millis(10)).await;
+                        println!("Conditional async callback triggered: {:?}", buffer);
+                    })
+                },
+                Some(condition), // Always trigger for this test
+            )
+            .await;
 
-        fn from_value<T>(value: T) -> Self
-        where
-            T: Into<Self>,
-        {
-            value.into()
-        }
-    }
-
-    impl From<String> for MockBuffer {
-        fn from(value: String) -> Self {
-            Self { value }
-        }
-    }
-
-    impl From<&str> for MockBuffer {
-        fn from(value: &str) -> Self {
-            Self {
-                value: value.to_string(),
-            }
-        }
+        assert_eq!(attribute.callback_count().await, 1);
     }
 }

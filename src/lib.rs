@@ -28,7 +28,6 @@ pub mod attribute;
 pub use attribute::boolean::BooleanAttribute;
 pub use attribute::bytes::BytesAttribute;
 pub use attribute::generic::{BooleanGenericAttribute, GenericAttribute};
-pub use attribute::async_generic::{AsyncGenericAttribute, AsyncBooleanGenericAttribute};
 pub use attribute::json::JsonAttribute;
 pub use attribute::notification::NotificationAttribute;
 pub use attribute::number::NumberAttribute;

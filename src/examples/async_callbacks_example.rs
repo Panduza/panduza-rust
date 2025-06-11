@@ -3,12 +3,12 @@
 /// Ce fichier montre comment utiliser les nouvelles fonctionnalités de callbacks asynchrones
 /// dans le système Panduza.
 
-use panduza::{AsyncGenericAttribute, CallbackId};
+use panduza::{GenericAttribute, CallbackId};
 use std::time::Duration;
 use tokio::time::sleep;
 
 // Type alias pour plus de lisibilité
-type AsyncBooleanAttribute = AsyncGenericAttribute<panduza::fbs::BooleanBuffer>;
+type BooleanAttribute = GenericAttribute<panduza::fbs::BooleanBuffer>;
 
 /// Exemple simple d'utilisation d'un callback asynchrone
 pub async fn example_simple_async_callback() -> Result<(), Box<dyn std::error::Error>> {
@@ -20,11 +20,10 @@ pub async fn example_simple_async_callback() -> Result<(), Box<dyn std::error::E
         topic: "device/relay/state".to_string(),
         r#type: "boolean".to_string(),
         info: None,
-        mode: panduza::AttributeMode::ReadWrite,
-    };
+        mode: panduza::AttributeMode::ReadWrite,    };
 
     // Créer un attribut async
-    let attribute: AsyncBooleanAttribute = AsyncGenericAttribute::new(session, metadata).await;
+    let attribute: BooleanAttribute = GenericAttribute::new(session, metadata).await;
 
     // Ajouter un callback asynchrone simple
     let callback_id = attribute.add_async_callback(
@@ -61,11 +60,10 @@ pub async fn example_conditional_async_callback() -> Result<(), Box<dyn std::err
         topic: "sensor/temperature/value".to_string(),
         r#type: "number".to_string(),
         info: None,
-        mode: panduza::AttributeMode::ReadOnly,
-    };
+        mode: panduza::AttributeMode::ReadOnly,    };
 
-    let attribute: AsyncGenericAttribute<panduza::fbs::NumberBuffer> = 
-        AsyncGenericAttribute::new(session, metadata).await;
+    let attribute: GenericAttribute<panduza::fbs::NumberBuffer> = 
+        GenericAttribute::new(session, metadata).await;
 
     // Callback avec condition : ne se déclenche que pour des valeurs élevées
     let alert_callback_id = attribute.add_async_callback(
@@ -115,10 +113,10 @@ pub async fn example_wait_for_value() -> Result<(), Box<dyn std::error::Error>> 
         topic: "device/sensor/ready".to_string(),
         r#type: "boolean".to_string(),
         info: None,
-        mode: panduza::AttributeMode::ReadOnly,
+    mode: panduza::AttributeMode::ReadOnly,
     };
 
-    let attribute: AsyncBooleanAttribute = AsyncGenericAttribute::new(session, metadata).await;
+    let attribute: BooleanAttribute = GenericAttribute::new(session, metadata).await;
 
     // Attendre que le capteur soit prêt (valeur true) avec un timeout de 10 secondes
     match attribute.wait_value(
@@ -149,10 +147,8 @@ pub async fn example_callback_management() -> Result<(), Box<dyn std::error::Err
         r#type: "string".to_string(),
         info: None,
         mode: panduza::AttributeMode::ReadWrite,
-    };
-
-    let attribute: AsyncGenericAttribute<panduza::fbs::StringBuffer> = 
-        AsyncGenericAttribute::new(session, metadata).await;
+    };    let attribute: GenericAttribute<panduza::fbs::StringBuffer> = 
+        GenericAttribute::new(session, metadata).await;
 
     // Enregistrer plusieurs callbacks
     let mut callback_ids = Vec::new();

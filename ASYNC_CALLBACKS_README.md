@@ -21,7 +21,7 @@ pub struct AsyncCallbackEntry<T> {
 }
 ```
 
-#### `AsyncGenericAttribute<B>`
+#### `GenericAttribute<B>`
 Implémentation d'attribut générique avec support des callbacks asynchrones.
 
 ### Fonctionnalités Principales
@@ -37,7 +37,7 @@ Implémentation d'attribut générique avec support des callbacks asynchrones.
 ### Création d'un Attribut Asynchrone
 
 ```rust
-use panduza::{AsyncGenericAttribute, AttributeMetadata, AttributeMode};
+use panduza::{GenericAttribute, AttributeMetadata, AttributeMode};
 
 // Configuration
 let config = zenoh::config::Config::default();
@@ -51,8 +51,8 @@ let metadata = AttributeMetadata {
 };
 
 // Créer l'attribut
-let attribute: AsyncGenericAttribute<StringBuffer> = 
-    AsyncGenericAttribute::new(session, metadata).await;
+let attribute: GenericAttribute<StringBuffer> = 
+    GenericAttribute::new(session, metadata).await;
 ```
 
 ### Ajout de Callbacks Asynchrones
