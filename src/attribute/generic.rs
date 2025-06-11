@@ -118,6 +118,27 @@ impl<B: GenericBuffer> GenericAttribute<B> {
         publisher.put(buffer.to_zbytes()).await.unwrap();
     }
 
+    /// Send command and wait for validation
+    pub async fn set<T>(&mut self, value: T) -> Result<(), String>
+    where
+        T: Into<B> + Clone,
+        B: PartialEq,
+    {
+        let buffer: B = value.into();
+        let expected_buffer = buffer.clone();
+
+        self.shoot(buffer).await;
+
+        // Wait for the value to be confirmed
+        self.wait_for_value(
+            move |received_buffer| *received_buffer == expected_buffer,
+            Some(std::time::Duration::from_secs(5)),
+        )
+        .await?;
+
+        Ok(())
+    }
+
     /// Get last received value
     pub async fn get(&self) -> Option<B> {
         let last = self.last_value.lock().await;
