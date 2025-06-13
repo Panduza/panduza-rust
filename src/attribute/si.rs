@@ -71,7 +71,7 @@ impl SiAttribute {
             }
         });
 
-        // Wait for the first message if mode is not readonly
+        // Wait for the first message if mode is not WriteOnly
         if mode != AttributeMode::WriteOnly {
             let query = session.get(topic_att.clone()).await.unwrap();
             let result = query.recv_async().await.unwrap();
@@ -153,5 +153,20 @@ impl SiAttribute {
             "pza/_/devices/{}",
             Topic::from_string(self.topic.clone(), true).instance_name()
         )
+    }
+
+    pub async fn wait_for_value(&self, value: f32) -> Result<(), String> {
+        if self.mode == AttributeMode::WriteOnly {
+            return Err("Cannot wait for value in WriteOnly mode".to_string());
+        }
+
+        while let Some(last_value) = self.get() {
+            println!("last_value: {:?}", last_value.try_into_f32().unwrap());
+            if last_value.try_into_f32().unwrap() == value {
+                return Ok(());
+            }
+            self.update_notifier.notified().await;
+        }
+        Ok(())
     }
 }
