@@ -224,12 +224,13 @@ impl TaskMonitor {
     /// Cancel all tasks
     ///
     pub async fn cancel_all_monitored_tasks(&mut self) {
+        println!("Cancelling all monitored tasks");
         // lock elements
         let mut hlock = self.handles.lock().await;
 
         // abort all tasks first
         for h in hlock.iter_mut() {
-            // println!("Aborting task: {:?}", h.0);
+            println!("Aborting task: {:?}", h.0);
             h.1.abort();
         }
 

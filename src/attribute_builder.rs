@@ -8,7 +8,9 @@ use crate::{
     session, BooleanAttribute, SiAttribute, StringAttribute,
 };
 use bytes::Bytes;
-use zenoh::{handlers::FifoChannelHandler, Session};
+use zenoh::{
+    handlers::FifoChannelHandler, Session,
+};
 
 #[derive(Clone)]
 /// Metadata for an attribute
@@ -34,8 +36,30 @@ impl AttributeBuilder {
 
     pub async fn expect_boolean(&self) -> Result<BooleanAttribute, String> {
         let md = self.metadata.as_ref().unwrap();
-        let att_topic = format!("{}/att", md.topic);
-        let cmd_topic = format!("{}/cmd", md.topic);
+        let att_topic = format!(
+            "{}{}/att",
+            self.reactor
+                .namespace
+                .clone()
+                .map_or("".to_string(), |ns| if ns.is_empty() {
+                    "".to_string()
+                } else {
+                    format!("{}/", ns)
+                }),
+            md.topic
+        );
+        let cmd_topic = format!(
+            "{}{}/cmd",
+            self.reactor
+                .namespace
+                .clone()
+                .map_or("".to_string(), |ns| if ns.is_empty() {
+                    "".to_string()
+                } else {
+                    format!("{}/", ns)
+                }),
+            md.topic
+        );
 
         let att_receiver = self.reactor.register_listener(att_topic.clone()).await;
 
@@ -47,9 +71,6 @@ impl AttributeBuilder {
             .await
             .map_err(|e| e.to_string())?;
 
-        // TODO
-        // Register_listener est potentiellement plus utile
-        // On pourrait juste passer le topic et la session
         Ok(BooleanAttribute::new(
             self.reactor.session.clone(),
             cmd_topic,
@@ -62,8 +83,30 @@ impl AttributeBuilder {
 
     pub async fn expect_string(&self) -> Result<StringAttribute, String> {
         let md = self.metadata.as_ref().unwrap();
-        let att_topic = format!("{}/att", md.topic);
-        let cmd_topic = format!("{}/cmd", md.topic);
+        let att_topic = format!(
+            "{}{}/att",
+            self.reactor
+                .namespace
+                .clone()
+                .map_or("".to_string(), |ns| if ns.is_empty() {
+                    "".to_string()
+                } else {
+                    format!("{}/", ns)
+                }),
+            md.topic
+        );
+        let cmd_topic = format!(
+            "{}{}/cmd",
+            self.reactor
+                .namespace
+                .clone()
+                .map_or("".to_string(), |ns| if ns.is_empty() {
+                    "".to_string()
+                } else {
+                    format!("{}/", ns)
+                }),
+            md.topic
+        );
 
         let att_receiver = self.reactor.register_listener(att_topic.clone()).await;
 
@@ -87,8 +130,30 @@ impl AttributeBuilder {
 
     pub async fn expect_bytes(&self) -> Result<BytesAttribute, String> {
         let md = self.metadata.as_ref().unwrap();
-        let att_topic = format!("{}/att", md.topic);
-        let cmd_topic = format!("{}/cmd", md.topic);
+        let att_topic = format!(
+            "{}{}/att",
+            self.reactor
+                .namespace
+                .clone()
+                .map_or("".to_string(), |ns| if ns.is_empty() {
+                    "".to_string()
+                } else {
+                    format!("{}/", ns)
+                }),
+            md.topic
+        );
+        let cmd_topic = format!(
+            "{}{}/cmd",
+            self.reactor
+                .namespace
+                .clone()
+                .map_or("".to_string(), |ns| if ns.is_empty() {
+                    "".to_string()
+                } else {
+                    format!("{}/", ns)
+                }),
+            md.topic
+        );
 
         let att_receiver = self.reactor.register_listener(att_topic.clone()).await;
 
@@ -110,8 +175,26 @@ impl AttributeBuilder {
 
     pub async fn expect_number(&self) -> Result<NumberAttribute, String> {
         let md = self.metadata.as_ref().unwrap();
-        let att_topic = format!("{}/att", md.topic);
-        let cmd_topic = format!("{}/cmd", md.topic);
+        let att_topic = format!(
+            "{}{}/att",
+            self.reactor
+                .namespace
+                .clone()
+                .map_or("".to_string(), |ns| format!("{}/", ns)),
+            md.topic
+        );
+        let cmd_topic = format!(
+            "{}{}/cmd",
+            self.reactor
+                .namespace
+                .clone()
+                .map_or("".to_string(), |ns| if ns.is_empty() {
+                    "".to_string()
+                } else {
+                    format!("{}/", ns)
+                }),
+            md.topic
+        );
 
         let att_receiver = self.reactor.register_listener(att_topic).await;
 
@@ -131,24 +214,22 @@ impl AttributeBuilder {
     }
     pub async fn expect_json(&self) -> Result<JsonAttribute, String> {
         let md = self.metadata.as_ref().unwrap();
-        let att_topic = format!("{}/att", md.topic);
-        let cmd_topic = format!("{}/cmd", md.topic);
-
-        let att_receiver = self.reactor.register_listener(att_topic).await;
-
-        let cmd_publisher = self
-            .reactor
-            .register_publisher(cmd_topic.clone())
-            .await
-            .map_err(|e| e.to_string())?;
-
-        Ok(JsonAttribute::new(self.reactor.session.clone(), cmd_topic, att_receiver).await)
-    }
-
-    pub async fn expect_si(&self) -> Result<SiAttribute, String> {
-        let md = self.metadata.as_ref().unwrap();
-        let att_topic = format!("{}/att", md.topic);
-        let cmd_topic = format!("{}/cmd", md.topic);
+        let att_topic = format!(
+            "{}{}/att",
+            self.reactor
+                .namespace
+                .clone()
+                .map_or("".to_string(), |ns| format!("{}/", ns)),
+            md.topic
+        );
+        let cmd_topic = format!(
+            "{}{}/cmd",
+            self.reactor
+                .namespace
+                .clone()
+                .map_or("".to_string(), |ns| format!("{}/", ns)),
+            md.topic
+        );
 
         let att_receiver = self.reactor.register_listener(att_topic.clone()).await;
 
@@ -157,6 +238,56 @@ impl AttributeBuilder {
             .register_publisher(cmd_topic.clone())
             .await
             .map_err(|e| e.to_string())?;
+
+        Ok(JsonAttribute::new(
+            self.reactor.session.clone(),
+            cmd_topic,
+            att_topic,
+            md.mode.clone(),
+            att_receiver,
+        )
+        .await)
+    }
+
+    pub async fn expect_si(&self) -> Result<SiAttribute, String> {
+        let md = self.metadata.as_ref().unwrap();
+        let att_topic = format!(
+            "{}{}/att",
+            self.reactor
+                .namespace
+                .clone()
+                .map_or("".to_string(), |ns| if ns.is_empty() {
+                    "".to_string()
+                } else {
+                    format!("{}/", ns)
+                }),
+            md.topic
+        );
+        let cmd_topic = format!(
+            "{}{}/cmd",
+            self.reactor
+                .namespace
+                .clone()
+                .map_or("".to_string(), |ns| if ns.is_empty() {
+                    "".to_string()
+                } else {
+                    format!("{}/", ns)
+                }),
+            md.topic
+        );
+
+        println!("att_topic: {}", att_topic);
+
+        let att_receiver = self.reactor.register_listener(att_topic.clone()).await;
+
+        let cmd_publisher = self
+            .reactor
+            .register_publisher(cmd_topic.clone())
+            .await
+            .map_err(|e| {
+                println!("Failed to register publisher: {}", e);
+                e.to_string()
+            })?;
 
         Ok(SiAttribute::new(
             self.reactor.session.clone(),
@@ -170,8 +301,30 @@ impl AttributeBuilder {
 
     pub async fn expect_enum(&self) -> Result<StringAttribute, String> {
         let md = self.metadata.as_ref().unwrap();
-        let att_topic = format!("{}/att", md.topic);
-        let cmd_topic = format!("{}/cmd", md.topic);
+        let att_topic = format!(
+            "{}{}/att",
+            self.reactor
+                .namespace
+                .clone()
+                .map_or("".to_string(), |ns| if ns.is_empty() {
+                    "".to_string()
+                } else {
+                    format!("{}/", ns)
+                }),
+            md.topic
+        );
+        let cmd_topic = format!(
+            "{}{}/cmd",
+            self.reactor
+                .namespace
+                .clone()
+                .map_or("".to_string(), |ns| if ns.is_empty() {
+                    "".to_string()
+                } else {
+                    format!("{}/", ns)
+                }),
+            md.topic
+        );
 
         let att_receiver = self.reactor.register_listener(att_topic.clone()).await;
 

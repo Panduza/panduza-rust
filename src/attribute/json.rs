@@ -1,4 +1,5 @@
 // use crate::pubsub::Publisher;
+use crate::AttributeMode;
 use crate::Topic;
 use bytes::Bytes;
 use serde_json::Value as JsonValue;
@@ -22,6 +23,8 @@ pub struct JsonAttribute {
     /// TODO: maybe add this into the data pack
     topic: String,
 
+    mode: AttributeMode,
+
     /// Global Session
     ///
     session: Session,
@@ -40,7 +43,9 @@ impl JsonAttribute {
     ///
     pub async fn new(
         session: Session,
-        topic: String,
+        topic_cmd: String,
+        topic_att: String,
+        mode: AttributeMode,
         mut att_receiver: Subscriber<FifoChannelHandler<Sample>>,
     ) -> Self {
         //
@@ -64,17 +69,31 @@ impl JsonAttribute {
             }
         });
 
-        // Wait for the first message
-        // Need a timeout here
-        update_1.notified().await;
+        // Wait for the first message if mode is not readonly
+        if mode != AttributeMode::WriteOnly {
+            let query = session.get(topic_att.clone()).await.unwrap();
+            let result = query.recv_async().await.unwrap();
+            let value: JsonValue = serde_json::from_slice(
+                result
+                    .result()
+                    .unwrap()
+                    .payload()
+                    .try_to_string()
+                    .unwrap()
+                    .as_bytes(),
+            )
+            .unwrap();
+            pack.lock().unwrap().push(value);
+        }
 
         //
         // Return attribute
         Self {
-            topic: topic,
+            topic: topic_cmd,
             session: session,
             pack: pack,
             update_notifier: update_1,
+            mode,
         }
     }
 
@@ -131,7 +150,7 @@ impl JsonAttribute {
 
     pub fn get_instance_status_topic(&self) -> String {
         format!(
-            "pza/_/devices/{}",
+            "pza/_/devices/{}", //add zenoh
             Topic::from_string(self.topic.clone(), true).instance_name()
         )
     }

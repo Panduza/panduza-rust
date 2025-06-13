@@ -15,6 +15,7 @@ pub struct BenchmarkConfig {
     pub ip: String,
     pub port: u16,
     pub ca_certificate: String,
+    pub namespace: Option<String>,
 }
 
 impl TestConfig {

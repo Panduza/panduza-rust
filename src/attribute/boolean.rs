@@ -78,6 +78,7 @@ impl BooleanAttribute {
                 .unwrap()
                 .parse()
                 .unwrap();
+            println!("BooleanAttribute: new value: {}", value.clone());
             pack.lock().unwrap().push(value);
         }
 

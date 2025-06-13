@@ -149,8 +149,6 @@ impl StructureData {
             pattern_str
         };
 
-        println!("Looking for pattern: {:?}", pattern_str);
-
         // Utilisation de yash_fnmatch pour le matching wildcard
         if let Ok(pattern) = Pattern::parse(without_escape(&pattern_str)) {
             for (topic, metadata) in self.flat.iter() {
@@ -158,7 +156,6 @@ impl StructureData {
                     && topic.chars().rev().take(3).collect::<String>()
                         == pattern_str.chars().rev().take(3).collect::<String>()
                 {
-                    println!("Found match: {:?}", topic);
                     return Some(metadata.clone());
                 }
             }
@@ -196,8 +193,7 @@ impl Structure {
 
         let json_value_2 = json_value.clone();
 
-        // while
-        if let Ok(sample) = query.recv_async().await {
+        while let Ok(sample) = query.recv_async().await {
             // println!("LE SAMPLE : {:?}", sample.clone());
             match json_value_2.lock() {
                 Ok(mut deref_value) => {

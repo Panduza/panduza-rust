@@ -45,7 +45,6 @@ impl StatusAttribute {
     ) -> Self {
         // Create data pack
         let pack = Arc::new(Mutex::new(AttributeDataPack::<StatusBuffer>::default()));
-
         let update_1 = pack.lock().unwrap().update_notifier();
 
         // Create the recv task
@@ -67,8 +66,6 @@ impl StatusAttribute {
             &result.result().unwrap().payload().to_bytes(),
         ));
         pack.lock().unwrap().push(value);
-
-        // update_1.notified().await;
 
         // Return attribute
         Self {
