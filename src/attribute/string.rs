@@ -57,24 +57,14 @@ impl StringAttribute {
         // Create the recv task
         let pack_2 = pack.clone();
         tokio::spawn({
-            // let topic = topic.clone();
+            let topic = topic.clone();
             async move {
                 loop {
-                    //
                     let message = att_receiver.recv().await;
-
-                    // println!("new message on topic {:?}: {:?}", &topic, message);
-
-                    // Manage message
                     if let Some(message) = message {
-                        // Deserialize
-                        let value: String = serde_json::from_slice(&message).unwrap();
-                        println!("on a recu le message: {:?}", value.clone());
-                        // Push into pack
+                        let value = String::from_utf8_lossy(&message).to_string();
                         pack_2.lock().unwrap().push(value);
-                    }
-                    // None => no more message
-                    else {
+                    } else {
                         break;
                     }
                 }
@@ -83,11 +73,8 @@ impl StringAttribute {
 
         // Wait for the first message if mode is not readonly
         if mode != AttributeMode::WriteOnly {
-            println!("on attend le premier message");
-            println!("update_1: {:?}", update_1);
             // Need a timeout here
             update_1.notified().await;
-            println!("on a recu le premier message");
         }
 
         //
