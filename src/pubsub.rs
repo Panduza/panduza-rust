@@ -19,13 +19,14 @@ pub enum Error {
     ListenError { cause: String },
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 ///1
 ///
 pub struct Options {
     pub ip: String,
     pub port: u16,
     pub ca_certificate: String,
+    pub namespace: Option<String>,
 }
 
 impl Default for Options {
@@ -34,16 +35,18 @@ impl Default for Options {
             ip: "127.0.0.1".to_string(),
             port: 7447,
             ca_certificate: "./minica.pem".to_string(),
+            namespace: None,
         }
     }
 }
 
 impl Options {
-    pub fn new<T: Into<String>>(ip: T, port: u16, ca_certificate: T) -> Self {
+    pub fn new<T: Into<String>>(ip: T, port: u16, ca_certificate: T, namespace: Option<T>) -> Self {
         Self {
             ip: ip.into(),
             port,
             ca_certificate: ca_certificate.into(),
+            namespace: namespace.map(|n| n.into()),
         }
     }
 }

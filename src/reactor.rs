@@ -20,15 +20,15 @@ use zenoh::{
 ///
 pub type DataReceiver = tokio::sync::mpsc::Receiver<Bytes>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ReactorOptions {
     pubsub_options: Options,
 }
 
 impl ReactorOptions {
-    pub fn new<T: Into<String>>(ip: T, port: u16, ca_certificate: T) -> Self {
+    pub fn new<T: Into<String>>(ip: T, port: u16, ca_certificate: T, namespace: Option<T>) -> Self {
         Self {
-            pubsub_options: Options::new(ip, port, ca_certificate),
+            pubsub_options: Options::new(ip, port, ca_certificate, namespace),
         }
     }
 }
@@ -44,13 +44,19 @@ pub struct Reactor {
     pub session: Session,
 
     structure: Structure,
+
+    pub namespace: Option<String>,
 }
 
 impl Reactor {
     ///
     ///
-    pub fn new(session: Session, structure: Structure) -> Self {
-        Self { session, structure }
+    pub fn new(session: Session, structure: Structure, namespace: Option<String>) -> Self {
+        Self {
+            session,
+            structure,
+            namespace,
+        }
     }
 
     ///
@@ -60,19 +66,8 @@ impl Reactor {
         let meta = self.structure.find_attribute(&n);
 
         if meta.is_none() {
-            println!(
-                "not found attribute {:?} vs {:?}",
-                &n,
-                self.structure.list_of_registered_topics()
-            );
             return None;
         }
-
-        println!(
-            "found attribute: name = {}, meta topic = {:?}",
-            n,
-            meta.as_ref().map(|m| m.topic.clone())
-        );
 
         Some(AttributeBuilder::new(self.clone(), meta))
     }
@@ -81,7 +76,17 @@ impl Reactor {
     ///
     pub fn build_instance_status_attribute<A: Into<String>>(&self, topic: A) -> AttributeBuilder {
         let meta = Some(AttributeMetadata::from_topic(
-            topic.into(),
+            format!(
+                "{}{}",
+                self.namespace
+                    .clone()
+                    .map_or("".to_string(), |ns| if ns.is_empty() {
+                        "".to_string()
+                    } else {
+                        format!("{}/", ns)
+                    }),
+                topic.into()
+            ),
             Some("json".to_string()),
             AttributeMode::ReadOnly,
         ));
@@ -89,11 +94,33 @@ impl Reactor {
         return AttributeBuilder::new(self.clone(), meta);
     }
 
+    // fn format_topic(&self, topic: &str) -> String {
+    //     if let Some(namespace) = &self.namespace {
+    //         if topic.starts_with("pza/") {
+    //             format!("{}/{}", namespace, topic)
+    //         } else {
+    //             topic.to_string()
+    //         }
+    //     } else {
+    //         topic.to_string()
+    //     }
+    // }
+
     /// Attribute to get access to the status of the platform
     ///
     pub async fn new_status_attribute(&self) -> StatusAttribute {
         let meta = AttributeMetadata::from_topic(
-            "pza/_/status".to_string(),
+            format!(
+                "{}{}",
+                self.namespace
+                    .clone()
+                    .map_or("".to_string(), |ns| if ns.is_empty() {
+                        "".to_string()
+                    } else {
+                        format!("{}/", ns)
+                    }),
+                "pza/_/status"
+            ),
             Some("status-v0".to_string()),
             AttributeMode::ReadOnly,
         );
@@ -111,7 +138,17 @@ impl Reactor {
     ///
     pub async fn new_notification_attribute(&self) -> NotificationAttribute {
         let meta = AttributeMetadata::from_topic(
-            "pza/_/notification".to_string(),
+            format!(
+                "{}{}",
+                self.namespace
+                    .clone()
+                    .map_or("".to_string(), |ns| if ns.is_empty() {
+                        "".to_string()
+                    } else {
+                        format!("{}/", ns)
+                    }),
+                "pza/_/notification"
+            ),
             Some("notification-v0".to_string()),
             AttributeMode::ReadOnly,
         );
@@ -146,34 +183,41 @@ impl Reactor {
 /// This function initializes the reactor and waits for the structure to be initialized.
 /// If the structure initialization times out after 3 seconds, it returns an error.
 pub async fn new_reactor(options: ReactorOptions) -> Result<Reactor, String> {
-    // println!("0");
-    let session = match new_connection(options.pubsub_options).await {
+    let session = match new_connection(options.pubsub_options.clone()).await {
         Ok(session) => session,
         Err(e) => return Err(format!("Connection failed: {}", e)),
     };
 
-    // println!("1");
+    let namespace = options.pubsub_options.namespace.clone();
 
-    // let subscriber = session
-    //     .declare_subscriber("pza/_/structure/att")
-    //     .await
-    //     .unwrap();
+    // println!(
+    //     "{}",
+    //     format!(
+    //         "{}pza/_/structure/att",
+    //         options
+    //             .pubsub_options
+    //             .namespace
+    //             .clone()
+    //             .map_or("".to_string(), |ns| format!("{}/", ns))
+    //     )
+    // );
 
-    let struct_query = session.get("pza/_/structure/att").await.unwrap();
-
-    // println!("2");
+    let struct_query = session
+        .get(format!(
+            "{}pza/_/structure/att",
+            options.pubsub_options.namespace.clone().map_or(
+                "".to_string(),
+                |ns| if ns.is_empty() {
+                    "".to_string()
+                } else {
+                    format!("{}/", ns)
+                }
+            )
+        ))
+        .await
+        .unwrap();
 
     let structure = Structure::new(struct_query).await;
 
-    // println!("3");
-    // let structure_initialized = structure.initialized_notifier();
-    // let timeout_duration = std::time::Duration::from_secs(15);
-    // let result = tokio::time::timeout(timeout_duration, structure_initialized.notified()).await;
-
-    // match result {
-    //     Ok(_) => Ok(Reactor::new(session, structure)),
-    //     Err(_) => Err("Timeout while waiting for structure initialization".to_string()),
-    // }
-
-    Ok(Reactor::new(session, structure))
+    Ok(Reactor::new(session, structure, namespace))
 }

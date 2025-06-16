@@ -19,6 +19,7 @@ use std::{fmt::Debug, str::FromStr};
 const PLAFORM_LOCALHOST: &str = "127.0.0.1";
 const PLAFORM_PORT: u16 = 7447;
 const PLAFORM_CA_CERTIFICATE: &str = "minica.pem";
+const NAMESPACE: &str = "";
 // -----------------------
 
 #[derive(Debug, Default, Parameter)]
@@ -177,7 +178,12 @@ impl Debug for BasicsWorld {
 ///
 #[given(expr = "a reactor connected on a test platform")]
 async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
-    let options = ReactorOptions::new(PLAFORM_LOCALHOST, PLAFORM_PORT, PLAFORM_CA_CERTIFICATE);
+    let options = ReactorOptions::new(
+        PLAFORM_LOCALHOST,
+        PLAFORM_PORT,
+        PLAFORM_CA_CERTIFICATE,
+        Some(NAMESPACE),
+    );
 
     // No additional setup required before connecting to the test platform
     println!("Connecting to {}:{}...", PLAFORM_LOCALHOST, PLAFORM_PORT);
@@ -185,8 +191,11 @@ async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
     println!("ok");
 
     println!("Getting status attribute...");
+
     world.r = Some(reactor);
+
     world.platform_status = Some(world.r.as_ref().unwrap().new_status_attribute().await);
+
     println!("ok");
 
     // Get the notification attribute from the reactor and store it in the world
