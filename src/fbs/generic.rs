@@ -4,7 +4,7 @@ use zenoh::bytes::ZBytes;
 ///
 /// All buffer types that want to work with GenericAttribute must implement this trait.
 /// This provides a common interface for serialization, deserialization, and conversion operations.
-pub trait GenericBuffer: Clone + Send + Sync + 'static {
+pub trait GenericBuffer: Clone + Default + Send + Sync + 'static {
     /// Create a buffer instance from ZBytes (Zenoh bytes)
     /// This is used when receiving data from Zenoh
     fn from_zbytes(zbytes: ZBytes) -> Self;
