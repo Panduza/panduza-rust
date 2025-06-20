@@ -1,5 +1,5 @@
 use super::{CallbackEntry, CallbackId};
-use crate::fbs::GenericBuffer;
+use crate::fbs::PanduzaBuffer;
 use crate::AttributeMetadata;
 use crate::AttributeMode;
 use std::collections::HashMap;
@@ -9,7 +9,7 @@ use zenoh::Session;
 
 /// Generic attribute implementation that can work with any buffer type that implements GenericBuffer
 #[derive(Clone, Debug)]
-pub struct GenericAttribute<B: GenericBuffer> {
+pub struct GenericAttribute<B: PanduzaBuffer> {
     /// Global Session
     session: Session,
 
@@ -29,7 +29,7 @@ pub struct GenericAttribute<B: GenericBuffer> {
     last_value: Arc<Mutex<Option<B>>>,
 }
 
-impl<B: GenericBuffer> GenericAttribute<B> {
+impl<B: PanduzaBuffer> GenericAttribute<B> {
     /// Create a new instance
     pub async fn new(session: Session, metadata: AttributeMetadata) -> Self {
         // Initialize async callbacks storage

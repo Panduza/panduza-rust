@@ -46,7 +46,8 @@ pub use topic::Topic;
 /// FlatBuffers serialization and deserialization
 ///
 pub mod fbs;
-pub use fbs::GenericBuffer;
+pub use fbs::PanduzaBuffer;
+pub use fbs::PanduzaBufferBuilder;
 
 ///
 ///

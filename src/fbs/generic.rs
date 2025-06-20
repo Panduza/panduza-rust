@@ -1,20 +1,45 @@
+use crate::fbs::panduza_generated::panduza::Message;
 use zenoh::bytes::ZBytes;
 
 /// Trait that defines the interface for generic buffer types that can be used with GenericAttribute
 ///
 /// All buffer types that want to work with GenericAttribute must implement this trait.
 /// This provides a common interface for serialization, deserialization, and conversion operations.
-pub trait GenericBuffer: Clone + Default + Send + Sync + 'static {
-    /// Create a buffer instance from ZBytes (Zenoh bytes)
-    /// This is used when receiving data from Zenoh
-    fn from_zbytes(zbytes: ZBytes) -> Self;
+pub trait PanduzaBuffer: Clone + Default + Send + Sync + 'static {
+    /// Create a new instance of the buffer builder
+    /// It will use default values for the fields
+    fn new() -> Self;
 
-    /// Convert the buffer to ZBytes for transmission over Zenoh
-    fn to_zbytes(&self) -> ZBytes;
-
-    /// Create a buffer from a primitive value
-    /// For example, BooleanBuffer::from(true) or NumberBuffer::from(42.5)
-    fn from_value<T>(value: T) -> Self
+    ///
+    ///
+    fn with_value<T>(self, value: T) -> Self
     where
         T: Into<Self>;
+
+    ///
+    fn with_source(self, source: u16) -> Self;
+
+    ///
+    fn with_sequence(self, sequence: u16) -> Self;
+
+    ///
+    fn with_random_sequence(self) -> Self;
+
+    ///
+    fn with_sequence_as_a_reply_to<T>(self, command: T) -> Self
+    where
+        T: Into<Self>;
+
+    ///
+    fn build(self) -> Result<Self, String>;
+
+    /// Create a buffer instance from ZBytes (Zenoh bytes)
+    /// This is used when receiving data from Zenoh
+    fn build_from_zbytes(zbytes: ZBytes) -> Self;
+
+    ///
+    fn is_builded(&self) -> bool;
+
+    /// Convert the buffer to ZBytes for transmission over Zenoh
+    fn to_zbytes(self) -> ZBytes;
 }

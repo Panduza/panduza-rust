@@ -13,7 +13,7 @@ pub use bytes_buffer::BytesBuffer;
 pub mod common;
 
 mod generic;
-pub use generic::GenericBuffer;
+pub use generic::PanduzaBuffer;
 
 pub mod notification_v0;
 pub mod number;
