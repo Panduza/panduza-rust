@@ -1,4 +1,3 @@
-use crate::fbs::panduza_generated::panduza::Message;
 use zenoh::bytes::ZBytes;
 
 /// Trait that defines the interface for generic buffer types that can be used with GenericAttribute

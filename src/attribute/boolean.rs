@@ -1,4 +1,3 @@
-// use crate::pubsub::Publisher;
 use super::CallbackId;
 use crate::fbs::BooleanBuffer;
 use crate::AttributeMetadata;
