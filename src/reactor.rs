@@ -26,9 +26,23 @@ pub struct ReactorOptions {
 }
 
 impl ReactorOptions {
-    pub fn new<T: Into<String>>(ip: T, port: u16, ca_certificate: T, namespace: Option<T>) -> Self {
+    pub fn new<T: Into<String>>(
+        ip: T,
+        port: u16,
+        ca_certificate: T,
+        connect_certificate: T,
+        connect_private_key: T,
+        namespace: Option<T>,
+    ) -> Self {
         Self {
-            pubsub_options: Options::new(ip, port, ca_certificate, namespace),
+            pubsub_options: Options::new(
+                ip,
+                port,
+                ca_certificate,
+                connect_certificate,
+                connect_private_key,
+                namespace,
+            ),
         }
     }
 }

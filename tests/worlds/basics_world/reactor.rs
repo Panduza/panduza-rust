@@ -20,7 +20,7 @@ fn the_reactor_is_successfully_connected_to_the_platform(world: &mut BasicsWorld
 async fn a_reactor_trying_to_connect_to_an_invalid_platform(world: &mut BasicsWorld) {
     world.reactor.connection_failed = false;
 
-    let options = ReactorOptions::new("pok", 5894, "minica.pem", None);
+    let options = ReactorOptions::new("pok", 5894, "zaza.pem", "cert.pem", "key.pem", None);
 
     match panduza::new_reactor(options).await {
         Ok(reactor) => {

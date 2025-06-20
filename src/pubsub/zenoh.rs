@@ -27,12 +27,19 @@ fn client_config(options: Options) -> Config {
             "transport": {{
                 "link": {{
                     "tls": {{
-                        "root_ca_certificate": "{}"
+                        "root_ca_certificate": "{}",
+                        "enable_mtls": true,
+                        "connect_private_key": "{}",
+                        "connect_certificate": "{}"
                     }}
-                }}
+                }}, 
             }}
         }}"#,
-        options.ip, options.port, options.ca_certificate
+        options.ip,
+        options.port,
+        options.root_ca_certificate,
+        options.connect_private_key,
+        options.connect_certificate
     );
 
     // println!("Zenoh client config: {}", conf);

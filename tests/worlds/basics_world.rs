@@ -18,7 +18,9 @@ use std::{fmt::Debug, str::FromStr};
 // --- TEST PARAMETERS ---
 const PLAFORM_LOCALHOST: &str = "127.0.0.1";
 const PLAFORM_PORT: u16 = 7447;
-const PLAFORM_CA_CERTIFICATE: &str = "minica.pem";
+const ROOT_CA_CERTIFICATE: &str = "root_ca_certificate.pem";
+const CLIENT_PRIVATE_KEY: &str = "client_private_key.pem";
+const CLIENT_CERTIFICATE: &str = "client_certificate.pem";
 const NAMESPACE: &str = "";
 // -----------------------
 
@@ -181,7 +183,9 @@ async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
     let options = ReactorOptions::new(
         PLAFORM_LOCALHOST,
         PLAFORM_PORT,
-        PLAFORM_CA_CERTIFICATE,
+        ROOT_CA_CERTIFICATE,
+        CLIENT_CERTIFICATE,
+        CLIENT_PRIVATE_KEY,
         Some(NAMESPACE),
     );
 
