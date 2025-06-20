@@ -47,7 +47,6 @@ pub use topic::Topic;
 ///
 pub mod fbs;
 pub use fbs::PanduzaBuffer;
-pub use fbs::PanduzaBufferBuilder;
 
 ///
 ///

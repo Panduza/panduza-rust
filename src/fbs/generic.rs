@@ -26,11 +26,6 @@ pub trait PanduzaBuffer: Clone + Default + Send + Sync + 'static {
     fn with_random_sequence(self) -> Self;
 
     ///
-    fn with_sequence_as_a_reply_to<T>(self, command: T) -> Self
-    where
-        T: Into<Self>;
-
-    ///
     fn build(self) -> Result<Self, String>;
 
     /// Create a buffer instance from ZBytes (Zenoh bytes)
@@ -39,6 +34,9 @@ pub trait PanduzaBuffer: Clone + Default + Send + Sync + 'static {
 
     ///
     fn is_builded(&self) -> bool;
+
+    ///
+    fn sequence(&self) -> u16;
 
     /// Convert the buffer to ZBytes for transmission over Zenoh
     fn to_zbytes(self) -> ZBytes;

@@ -46,7 +46,7 @@ impl<B: PanduzaBuffer> GenericAttribute<B> {
             async move {
                 while let Ok(sample) = subscriber.recv_async().await {
                     // Create Buffer from the received zbytes
-                    let buffer = B::from_zbytes(sample.payload().clone());
+                    let buffer = B::build_from_zbytes(sample.payload().clone());
 
                     // Update the last received value
                     {
@@ -84,7 +84,7 @@ impl<B: PanduzaBuffer> GenericAttribute<B> {
         if metadata.mode != AttributeMode::WriteOnly {
             let query = session.get(&att_topic).await.unwrap();
             let result = query.recv_async().await.unwrap();
-            let buffer = B::from_zbytes(result.result().unwrap().payload().clone());
+            let buffer = B::build_from_zbytes(result.result().unwrap().payload().clone());
             let mut last = last_value.lock().await;
             *last = Some(buffer);
         }
