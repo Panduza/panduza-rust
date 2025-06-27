@@ -9,6 +9,14 @@ Feature: Reactor Object
     Given a reactor trying to connect to an invalid platform
     Then the reactor returned an error
 
+  Scenario: Fail connecting to a platform with a wrong certificate
+    Given a reactor trying to connect to a platform with a wrong certificate
+    Then the reactor returned an error
+
+  Scenario: Fail connecting to a platform with an expired certificate
+    Given a reactor trying to connect to a platform with an expired certificate
+    Then the reactor returned an error
+
   Scenario: Connect to a platform
     Given a reactor connected on a test platform
     Then the reactor is successfully connected to the platform

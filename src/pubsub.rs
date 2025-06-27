@@ -36,9 +36,9 @@ impl Default for Options {
         Options {
             ip: "127.0.0.1".to_string(),
             port: 7447,
-            root_ca_certificate: "./ca_certificate.pem".to_string(),
-            connect_certificate: "./client_certificate.pem".to_string(),
-            connect_private_key: "./client_private_key.pem".to_string(),
+            root_ca_certificate: "./credentials/certificates/root_ca_certificate.pem".to_string(),
+            connect_certificate: "./credentials/certificates/writer_certificate.pem".to_string(),
+            connect_private_key: "./credentials/keys/writer_private_key.pem".to_string(),
             namespace: None,
         }
     }

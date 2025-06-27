@@ -35,6 +35,44 @@ async fn a_reactor_trying_to_connect_to_an_invalid_platform(world: &mut BasicsWo
 
 ///
 ///
+#[given(expr = "a reactor trying to connect to a platform with a wrong certificate")]
+async fn a_reactor_trying_to_connect_to_a_platform_with_a_wrong_certificate(world: &mut BasicsWorld) {
+    world.reactor.connection_failed = false;
+
+    let options = ReactorOptions::new("127.0.0.1", 7447, "credentials/certificates/root_ca_certificate.pem", "credentials/certificates/bad_client_certificate.pem", "credentials/keys/bad_client_private_key.pem", None);
+
+    match panduza::new_reactor(options).await {
+        Ok(reactor) => {
+            world.r = Some(reactor);
+        }
+        Err(_) => {
+            world.reactor.connection_failed = true;
+            world.r = None;
+        }
+    }
+}
+
+///
+///
+#[given(expr = "a reactor trying to connect to a platform with an expired certificate")]
+async fn a_reactor_trying_to_connect_to_a_platform_with_an_expired_certificate(world: &mut BasicsWorld) {
+    world.reactor.connection_failed = false;
+
+    let options = ReactorOptions::new("127.0.0.1", 7447, "credentials/certificates/root_ca_certificate.pem", "credentials/certificates/expired_client_certificate.pem", "credentials/keys/expired_client_private_key.pem", None);
+
+    match panduza::new_reactor(options).await {
+        Ok(reactor) => {
+            world.r = Some(reactor);
+        }
+        Err(_) => {
+            world.reactor.connection_failed = true;
+            world.r = None;
+        }
+    }
+}
+
+///
+///
 #[given(expr = "an attribute name {string}")]
 fn an_attribute_name(world: &mut BasicsWorld, s: String) {
     world.reactor.att_name = Some(s);
