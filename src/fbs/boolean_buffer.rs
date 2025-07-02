@@ -142,9 +142,9 @@ impl PanduzaBuffer for BooleanBuffer {
         flatbuffers::root::<Message>(data).expect("Failed to deserialize Message from raw_data")
     }
 
-        ///
-    /// 
-    fn has_value_equal_to_message_value(&self, message: &Message) -> bool{
+    ///
+    ///
+    fn has_value_equal_to_message_value(&self, message: &Message) -> bool {
         if let Some(payload) = message.payload_as_boolean() {
             if let Some(value) = self.value {
                 return payload.value() == value;
@@ -152,7 +152,6 @@ impl PanduzaBuffer for BooleanBuffer {
         }
         false
     }
-
 }
 
 impl From<bool> for BooleanBuffer {
@@ -165,13 +164,14 @@ impl From<bool> for BooleanBuffer {
 
 impl From<BooleanBuffer> for bool {
     fn from(buffer: BooleanBuffer) -> Self {
-        buffer.value.expect("BooleanBuffer must contain a value")
+        match buffer.value {
+            Some(v) => v,
+            None => buffer.value(),
+        }
     }
 }
 
 impl BooleanBuffer {
-
-
     /// Extracts the Boolean payload from the Message
     ///
     /// # Returns

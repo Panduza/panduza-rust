@@ -127,17 +127,22 @@ impl<B: PanduzaBuffer> GenericAttribute<B> {
         let buffer: B = value.into();
         let expected_buffer = buffer.clone();
 
-
-        let build = buffer.with_source(0).with_random_sequence().build().unwrap();
+        let build = buffer
+            .with_source(0)
+            .with_random_sequence()
+            .build()
+            .unwrap();
         self.shoot(build).await;
 
         //
         if self.metadata.mode == AttributeMode::ReadWrite {
             self.wait_for_value(
-                move |received_buffer| expected_buffer.has_value_equal_to_message_value(&received_buffer.as_message()),
+                move |received_buffer| {
+                    expected_buffer.has_value_equal_to_message_value(&received_buffer.as_message())
+                },
                 Some(std::time::Duration::from_secs(5)),
             )
-            .await?;            
+            .await?;
         }
 
         Ok(())
@@ -158,6 +163,16 @@ impl<B: PanduzaBuffer> GenericAttribute<B> {
     where
         F: Fn(&B) -> bool + Send + Sync + 'static,
     {
+        // Check if the last_value already satisfies the condition
+        {
+            let last = self.last_value.lock().await;
+            if let Some(ref buffer) = *last {
+                if condition(buffer) {
+                    return Ok(buffer.clone());
+                }
+            }
+        }
+
         // Use a broadcast channel to avoid the move issue
         let (tx, mut rx) = tokio::sync::broadcast::channel(1);
 
