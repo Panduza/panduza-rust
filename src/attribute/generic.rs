@@ -131,12 +131,14 @@ impl<B: PanduzaBuffer> GenericAttribute<B> {
         let build = buffer.with_source(0).with_random_sequence().build().unwrap();
         self.shoot(build).await;
 
-        // Wait for the value to be confirmed
-        self.wait_for_value(
-            move |received_buffer| expected_buffer.has_value_equal_to_message_value(&received_buffer.as_message()),
-            Some(std::time::Duration::from_secs(5)),
-        )
-        .await?;
+        //
+        if self.metadata.mode == AttributeMode::ReadWrite {
+            self.wait_for_value(
+                move |received_buffer| expected_buffer.has_value_equal_to_message_value(&received_buffer.as_message()),
+                Some(std::time::Duration::from_secs(5)),
+            )
+            .await?;            
+        }
 
         Ok(())
     }
