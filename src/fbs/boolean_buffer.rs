@@ -133,6 +133,26 @@ impl PanduzaBuffer for BooleanBuffer {
                 .expect("Raw data must be set before converting to ZBytes"),
         )
     }
+
+    fn as_message(&self) -> Message {
+        let data = self
+            .raw_data
+            .as_ref()
+            .expect("Buffer must be built to access the message");
+        flatbuffers::root::<Message>(data).expect("Failed to deserialize Message from raw_data")
+    }
+
+        ///
+    /// 
+    fn has_value_equal_to_message_value(&self, message: &Message) -> bool{
+        if let Some(payload) = message.payload_as_boolean() {
+            if let Some(value) = self.value {
+                return payload.value() == value;
+            }
+        }
+        false
+    }
+
 }
 
 impl From<bool> for BooleanBuffer {
@@ -150,22 +170,14 @@ impl From<BooleanBuffer> for bool {
 }
 
 impl BooleanBuffer {
-    /// Returns the deserialized Message from the raw_data, or panics if not present.
-    ///
-    pub fn message(&self) -> Message {
-        let data = self
-            .raw_data
-            .as_ref()
-            .expect("Buffer must be built to access the message");
-        flatbuffers::root::<Message>(data).expect("Failed to deserialize Message from raw_data")
-    }
+
 
     /// Extracts the Boolean payload from the Message
     ///
     /// # Returns
     /// The deserialized Boolean object, or None if the payload is not a Boolean
     pub fn boolean(&self) -> Option<Boolean> {
-        self.message().payload_as_boolean()
+        self.as_message().payload_as_boolean()
     }
 
     /// Gets the boolean value from the payload

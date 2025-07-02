@@ -133,7 +133,7 @@ impl<B: PanduzaBuffer> GenericAttribute<B> {
 
         // Wait for the value to be confirmed
         self.wait_for_value(
-            move |received_buffer| *received_buffer == expected_buffer,
+            move |received_buffer| expected_buffer.has_value_equal_to_message_value(&received_buffer.as_message()),
             Some(std::time::Duration::from_secs(5)),
         )
         .await?;

@@ -1,4 +1,7 @@
 use zenoh::bytes::ZBytes;
+use super::panduza_generated::panduza::{
+    Header, HeaderArgs, Message, MessageArgs, Payload,
+};
 
 /// Trait that defines the interface for generic buffer types that can be used with GenericAttribute
 ///
@@ -39,4 +42,13 @@ pub trait PanduzaBuffer: Clone + Default + Send + Sync + 'static {
 
     /// Convert the buffer to ZBytes for transmission over Zenoh
     fn to_zbytes(self) -> ZBytes;
+
+    ///
+    /// 
+    fn as_message(&self) -> Message;
+
+    ///
+    /// 
+    fn has_value_equal_to_message_value(&self, message: &Message) -> bool;
+
 }
