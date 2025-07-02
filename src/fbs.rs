@@ -10,6 +10,9 @@ pub use string_buffer::StringBuffer;
 mod bytes_buffer;
 pub use bytes_buffer::BytesBuffer;
 
+mod number_buffer;
+pub use number_buffer::NumberBuffer;
+
 pub mod common;
 
 mod generic;
