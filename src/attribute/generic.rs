@@ -127,7 +127,9 @@ impl<B: PanduzaBuffer> GenericAttribute<B> {
         let buffer: B = value.into();
         let expected_buffer = buffer.clone();
 
-        self.shoot(buffer).await;
+
+        let build = buffer.with_source(0).with_random_sequence().build().unwrap();
+        self.shoot(build).await;
 
         // Wait for the value to be confirmed
         self.wait_for_value(
