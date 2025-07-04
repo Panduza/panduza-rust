@@ -2,7 +2,6 @@ use crate::attribute::notification::NotificationAttribute;
 use crate::attribute::status::StatusAttribute;
 use crate::pubsub::Error;
 use crate::structure::Structure;
-use std::sync::Arc;
 
 use crate::{
     pubsub::{new_connection, Options},

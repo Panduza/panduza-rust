@@ -30,7 +30,7 @@ impl AttributeBuilder {
             metadata: metadata,
         }
     }
-    
+
     // ------------------------------------------------------------------------
 
     /// BOOLEAN
@@ -56,7 +56,7 @@ impl AttributeBuilder {
     // ------------------------------------------------------------------------
 
     /// STRING
-    /// 
+    ///
     pub async fn expect_string(self) -> Result<StringAttribute, String> {
         let metadata = self
             .metadata
@@ -96,11 +96,11 @@ impl AttributeBuilder {
 
         let att_receiver = self.reactor.register_listener(att_topic.clone()).await;
 
-        let cmd_publisher = self
-            .reactor
-            .register_publisher(cmd_topic.clone())
-            .await
-            .map_err(|e| e.to_string())?;
+        // let cmd_publisher = self
+        //     .reactor
+        //     .register_publisher(cmd_topic.clone())
+        //     .await
+        //     .map_err(|e| e.to_string())?;
 
         Ok(JsonAttribute::new(
             self.reactor.session.clone(),

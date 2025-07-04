@@ -8,9 +8,7 @@ use std::{
 use tokio::sync::Notify;
 use yash_fnmatch::{without_escape, Pattern};
 use zenoh::handlers::FifoChannelHandler;
-use zenoh::pubsub::Subscriber;
 use zenoh::query::Reply;
-use zenoh::sample::Sample;
 
 #[derive(Debug)]
 struct StructureData {
