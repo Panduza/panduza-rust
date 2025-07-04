@@ -31,7 +31,6 @@ pub use attribute::generic::{BooleanGenericAttribute, GenericAttribute};
 pub use attribute::json::JsonAttribute;
 pub use attribute::notification::NotificationAttribute;
 pub use attribute::number::NumberAttribute;
-pub use attribute::si::SiAttribute;
 pub use attribute::status::StatusAttribute;
 pub use attribute::string::StringAttribute;
 

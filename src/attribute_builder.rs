@@ -6,7 +6,6 @@ use crate::attribute::status::StatusAttribute;
 use crate::attribute_metadata::AttributeMetadata;
 use crate::reactor::Reactor;
 use crate::BooleanAttribute;
-use crate::SiAttribute;
 use crate::StringAttribute;
 
 #[derive(Clone)]
@@ -31,6 +30,8 @@ impl AttributeBuilder {
             metadata: metadata,
         }
     }
+    
+    // ------------------------------------------------------------------------
 
     /// BOOLEAN
     ///
@@ -41,6 +42,8 @@ impl AttributeBuilder {
         Ok(BooleanAttribute::new(self.reactor.session, metadata).await)
     }
 
+    // ------------------------------------------------------------------------
+
     /// NUMBER
     ///
     pub async fn expect_number(self) -> Result<NumberAttribute, String> {
@@ -49,6 +52,8 @@ impl AttributeBuilder {
             .ok_or_else(|| "Metadata is required".to_string())?;
         Ok(NumberAttribute::new(self.reactor.session, metadata).await)
     }
+
+    // ------------------------------------------------------------------------
 
     /// STRING
     /// 
@@ -59,49 +64,15 @@ impl AttributeBuilder {
         Ok(StringAttribute::new(self.reactor.session, metadata).await)
     }
 
-    pub async fn expect_bytes(&self) -> Result<BytesAttribute, String> {
-        let md = self.metadata.as_ref().unwrap();
-        let att_topic = format!(
-            "{}{}/att",
-            self.reactor
-                .namespace
-                .clone()
-                .map_or("".to_string(), |ns| if ns.is_empty() {
-                    "".to_string()
-                } else {
-                    format!("{}/", ns)
-                }),
-            md.topic
-        );
-        let cmd_topic = format!(
-            "{}{}/cmd",
-            self.reactor
-                .namespace
-                .clone()
-                .map_or("".to_string(), |ns| if ns.is_empty() {
-                    "".to_string()
-                } else {
-                    format!("{}/", ns)
-                }),
-            md.topic
-        );
+    // ------------------------------------------------------------------------
 
-        let att_receiver = self.reactor.register_listener(att_topic.clone()).await;
-
-        let cmd_publisher = self
-            .reactor
-            .register_publisher(cmd_topic.clone())
-            .await
-            .map_err(|e| e.to_string())?;
-
-        Ok(BytesAttribute::new(
-            self.reactor.session.clone(),
-            md.mode.clone(),
-            att_receiver,
-            cmd_topic,
-            att_topic,
-        )
-        .await)
+    /// BYTES
+    ///
+    pub async fn expect_bytes(self) -> Result<BytesAttribute, String> {
+        let metadata = self
+            .metadata
+            .ok_or_else(|| "Metadata is required".to_string())?;
+        Ok(BytesAttribute::new(self.reactor.session, metadata).await)
     }
 
     pub async fn expect_json(&self) -> Result<JsonAttribute, String> {
@@ -141,56 +112,7 @@ impl AttributeBuilder {
         .await)
     }
 
-    pub async fn expect_si(&self) -> Result<SiAttribute, String> {
-        let md = self.metadata.as_ref().unwrap();
-        let att_topic = format!(
-            "{}{}/att",
-            self.reactor
-                .namespace
-                .clone()
-                .map_or("".to_string(), |ns| if ns.is_empty() {
-                    "".to_string()
-                } else {
-                    format!("{}/", ns)
-                }),
-            md.topic
-        );
-        let cmd_topic = format!(
-            "{}{}/cmd",
-            self.reactor
-                .namespace
-                .clone()
-                .map_or("".to_string(), |ns| if ns.is_empty() {
-                    "".to_string()
-                } else {
-                    format!("{}/", ns)
-                }),
-            md.topic
-        );
-
-        println!("att_topic: {}", att_topic);
-
-        let att_receiver = self.reactor.register_listener(att_topic.clone()).await;
-
-        let cmd_publisher = self
-            .reactor
-            .register_publisher(cmd_topic.clone())
-            .await
-            .map_err(|e| {
-                println!("Failed to register publisher: {}", e);
-                e.to_string()
-            })?;
-
-        Ok(SiAttribute::new(
-            self.reactor.session.clone(),
-            cmd_topic,
-            att_topic,
-            md.mode.clone(),
-            att_receiver,
-        )
-        .await)
-    }
-
+    // ------------------------------------------------------------------------
 
     pub async fn expect_status(&self) -> Result<StatusAttribute, String> {
         let md = self.metadata.as_ref().unwrap();
@@ -201,18 +123,20 @@ impl AttributeBuilder {
         Ok(StatusAttribute::new(self.reactor.session.clone(), att_topic, att_receiver).await)
     }
 
+    // ------------------------------------------------------------------------
+
     pub async fn expect_notification(&self) -> Result<NotificationAttribute, String> {
         let md = self.metadata.as_ref().unwrap();
         let att_topic = format!("{}/att", md.topic);
-        let cmd_topic = format!("{}/cmd", md.topic);
+        // let cmd_topic = format!("{}/cmd", md.topic);
 
         let att_receiver = self.reactor.register_listener(att_topic).await;
 
-        let cmd_publisher = self
-            .reactor
-            .register_publisher(cmd_topic.clone())
-            .await
-            .map_err(|e| e.to_string())?;
+        // let cmd_publisher = self
+        //     .reactor
+        //     .register_publisher(cmd_topic.clone())
+        //     .await
+        //     .map_err(|e| e.to_string())?;
 
         Ok(NotificationAttribute::new(
             self.reactor.session.clone(),

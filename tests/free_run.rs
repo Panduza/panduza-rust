@@ -6,7 +6,7 @@ async fn main() {
     println!("Running free run test");
 
     // Créer les options pour se connecter à localhost sur le port MQTT par défaut (1883)
-    let options = ReactorOptions::new("127.0.0.1", 7447, "minica.pem");
+    let options = ReactorOptions::new("127.0.0.1", 7447, "minica.pem", None);
 
     // Créer et initialiser le réacteur
     match new_reactor(options).await {
