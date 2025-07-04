@@ -123,6 +123,8 @@ async fn the_ro_boolean_value_is(world: &mut BasicsWorld, expected_value: Boolea
     );
 }
 
+///
+///
 #[given(expr = "the number attribute wo_counter {string}")]
 async fn the_boolean_attribute_wo_counter(world: &mut BasicsWorld, s: String) {
     let attribute_builder = world
@@ -131,11 +133,16 @@ async fn the_boolean_attribute_wo_counter(world: &mut BasicsWorld, s: String) {
         .unwrap()
         .find_attribute(s)
         .expect("Attribute not found");
-    let attribute: panduza::SiAttribute = attribute_builder.expect_si().await.unwrap();
+    let attribute = attribute_builder
+        .expect_number()
+        .await
+        .expect("Failed to get attribute as number");
 
     world.boolean.att_wo_counter = Some(attribute);
 }
 
+///
+///
 #[given(expr = "the boolean attribute wo_counter_reset {string}")]
 async fn the_boolean_attribute_wo_counter_reset(world: &mut BasicsWorld, s: String) {
     let attribute_builder = world
@@ -149,6 +156,8 @@ async fn the_boolean_attribute_wo_counter_reset(world: &mut BasicsWorld, s: Stri
     world.boolean.att_wo_counter_reset = Some(attribute);
 }
 
+///
+///
 #[given(expr = "the counter is reseted")]
 async fn the_counter_is_reseted(world: &mut BasicsWorld) {
     world
@@ -161,6 +170,8 @@ async fn the_counter_is_reseted(world: &mut BasicsWorld) {
         .unwrap();
 }
 
+///
+///
 #[then(expr = "the counter attribute must indicate {int}")]
 async fn the_counter_attribute_must_indicate(world: &mut BasicsWorld, expected_count: i32) {
     // Wait until counter value matches expected count
@@ -173,12 +184,11 @@ async fn the_counter_attribute_must_indicate(world: &mut BasicsWorld, expected_c
             .as_ref()
             .expect("att_wo_counter is not set")
             .get()
+            .await
             .expect("Failed to get counter value");
 
         // Convert to i32 for comparison
-        counter_value_i32 = counter_value
-            .try_into_f32()
-            .expect("Failed to convert counter value to f32") as i32;
+        counter_value_i32 = counter_value.value() as i32;
 
         // Small delay to avoid busy waiting
         tokio::time::sleep(Duration::from_millis(1)).await;
@@ -203,6 +213,8 @@ async fn the_counter_attribute_must_indicate(world: &mut BasicsWorld, expected_c
     );
 }
 
+///
+///
 #[when(expr = "wo boolean is toggled {int} times")]
 async fn wo_boolean_is_toggled_times(world: &mut BasicsWorld, times: i32) {
     world.boolean.toggle_start_time = Some(std::time::Instant::now());
@@ -233,6 +245,10 @@ async fn wo_boolean_is_toggled_times(world: &mut BasicsWorld, times: i32) {
     }
 }
 
+// ----------------------------------------------------------------------------
+
+///
+///
 #[then(expr = "the toggle and counter verification should take less than {int} milliseconds")]
 async fn verify_toggle_and_counter_time(world: &mut BasicsWorld, max_time_ms: i32) {
     let elapsed = world

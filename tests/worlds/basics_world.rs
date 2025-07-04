@@ -11,7 +11,7 @@ use panduza::{
     attribute::si::SiAttribute, reactor::ReactorOptions, AttributeBuilder, BooleanAttribute,
     BytesAttribute, JsonAttribute, Reactor, StringAttribute,
 };
-use panduza::{NotificationAttribute, StatusAttribute};
+use panduza::{NotificationAttribute, NumberAttribute, StatusAttribute};
 use std::time::Duration;
 use std::{fmt::Debug, str::FromStr};
 
@@ -73,7 +73,7 @@ pub struct BooleanSubWorld {
     pub att_wo: Option<BooleanAttribute>,
     pub att_ro: Option<BooleanAttribute>,
 
-    pub att_wo_counter: Option<SiAttribute>,
+    pub att_wo_counter: Option<NumberAttribute>,
     pub att_wo_counter_reset: Option<BooleanAttribute>,
 
     pub topic_rw: Option<String>,

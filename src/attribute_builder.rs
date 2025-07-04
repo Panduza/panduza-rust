@@ -1,16 +1,13 @@
-use crate::{
-    attribute::{
-        bytes::BytesAttribute, json::JsonAttribute, notification::NotificationAttribute,
-        number::NumberAttribute, status::StatusAttribute,
-    },
-    attribute_metadata::AttributeMetadata,
-    reactor::{self, Reactor},
-    session, BooleanAttribute, SiAttribute, StringAttribute,
-};
-use bytes::Bytes;
-use zenoh::{
-    handlers::FifoChannelHandler, Session,
-};
+use crate::attribute::bytes::BytesAttribute;
+use crate::attribute::json::JsonAttribute;
+use crate::attribute::notification::NotificationAttribute;
+use crate::attribute::number::NumberAttribute;
+use crate::attribute::status::StatusAttribute;
+use crate::attribute_metadata::AttributeMetadata;
+use crate::reactor::Reactor;
+use crate::BooleanAttribute;
+use crate::SiAttribute;
+use crate::StringAttribute;
 
 #[derive(Clone)]
 /// Metadata for an attribute
@@ -36,14 +33,21 @@ impl AttributeBuilder {
     }
 
     /// BOOLEAN
-    /// 
+    ///
     pub async fn expect_boolean(self) -> Result<BooleanAttribute, String> {
-        let metadata = self.metadata.ok_or_else(|| "Metadata is required".to_string())?;
-        Ok(BooleanAttribute::new(
-            self.reactor.session,
-            metadata,
-        )
-        .await)
+        let metadata = self
+            .metadata
+            .ok_or_else(|| "Metadata is required".to_string())?;
+        Ok(BooleanAttribute::new(self.reactor.session, metadata).await)
+    }
+
+    /// NUMBER
+    ///
+    pub async fn expect_number(self) -> Result<NumberAttribute, String> {
+        let metadata = self
+            .metadata
+            .ok_or_else(|| "Metadata is required".to_string())?;
+        Ok(NumberAttribute::new(self.reactor.session, metadata).await)
     }
 
     pub async fn expect_string(&self) -> Result<StringAttribute, String> {
@@ -138,45 +142,6 @@ impl AttributeBuilder {
         .await)
     }
 
-    pub async fn expect_number(&self) -> Result<NumberAttribute, String> {
-        let md = self.metadata.as_ref().unwrap();
-        let att_topic = format!(
-            "{}{}/att",
-            self.reactor
-                .namespace
-                .clone()
-                .map_or("".to_string(), |ns| format!("{}/", ns)),
-            md.topic
-        );
-        let cmd_topic = format!(
-            "{}{}/cmd",
-            self.reactor
-                .namespace
-                .clone()
-                .map_or("".to_string(), |ns| if ns.is_empty() {
-                    "".to_string()
-                } else {
-                    format!("{}/", ns)
-                }),
-            md.topic
-        );
-
-        let att_receiver = self.reactor.register_listener(att_topic).await;
-
-        let cmd_publisher = self
-            .reactor
-            .register_publisher(cmd_topic.clone())
-            .await
-            .map_err(|e| e.to_string())?;
-
-        Ok(NumberAttribute::new(
-            self.reactor.session.clone(),
-            md.mode.clone(),
-            att_receiver,
-            cmd_topic,
-        )
-        .await)
-    }
     pub async fn expect_json(&self) -> Result<JsonAttribute, String> {
         let md = self.metadata.as_ref().unwrap();
         let att_topic = format!(
