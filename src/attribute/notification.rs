@@ -1,18 +1,9 @@
-use crate::fbs::notification_v0::NotificationBuffer;
-use crate::fbs::notification_v0::NotificationType;
-// use crate::pubsub::Publisher;
-use crate::reactor::DataReceiver;
-use crate::AttributeMode;
-use bytes::Bytes;
-use std::sync::Arc;
-use std::sync::Mutex;
-use tokio::sync::Notify;
-use zenoh::handlers::FifoChannelHandler;
-use zenoh::pubsub::Subscriber;
-use zenoh::sample::Sample;
+use super::CallbackId;
+use crate::fbs::NotificationBuffer;
+use crate::fbs::NotificationType;
+use crate::AttributeMetadata;
+use crate::GenericAttribute;
 use zenoh::Session;
-
-use super::data_pack::AttributeDataPack;
 
 pub struct NotificationPack {
     pub notifications: Vec<NotificationBuffer>,
@@ -43,95 +34,82 @@ impl NotificationPack {
 /// Object to manage the NotificationAttribute
 ///
 pub struct NotificationAttribute {
-    ///
-    /// TODO: maybe add this into the data pack
-    topic: String,
-
-    mode: AttributeMode,
-
-    /// Global Session
-    ///
-    session: Session,
-
-    /// Initial data
-    ///
-    pack: Arc<Mutex<AttributeDataPack<NotificationBuffer>>>,
-
-    /// Update notifier
-    ///
-    update_notifier: Arc<Notify>,
+    pub inner: GenericAttribute<NotificationBuffer>,
 }
 
 impl NotificationAttribute {
     /// Create a new instance
     ///
-    pub async fn new(
-        session: Session,
-        topic: String,
-        mode: AttributeMode,
-        mut att_receiver: Subscriber<FifoChannelHandler<Sample>>,
-    ) -> Self {
-        //
-        // Create data pack
-        let pack = Arc::new(Mutex::new(
-            AttributeDataPack::<NotificationBuffer>::default(),
-        ));
-
-        //
-        //
-        let update_1 = pack.lock().unwrap().update_notifier();
-
-        //
-        // Create the recv task
-        let pack_2 = pack.clone();
-
-        tokio::spawn(async move {
-            while let Ok(sample) = att_receiver.recv_async().await {
-                let value = NotificationBuffer::from_raw_data(Bytes::copy_from_slice(
-                    &sample.payload().to_bytes(),
-                ));
-                // Push into pack
-                pack_2.lock().unwrap().push(value);
-            }
-        });
-
-        //
-        // Return attribute
-        Self {
-            topic: topic,
-            session: session,
-            pack: pack,
-            update_notifier: update_1,
-            mode: mode,
-        }
+    pub async fn new(session: Session, metadata: AttributeMetadata) -> Self {
+        let inner = GenericAttribute::<NotificationBuffer>::new(session, metadata).await;
+        Self { inner }
     }
 
-    /// Notify when new data have been received
+    /// Send command and do not wait for validation
     ///
-    pub fn update_notifier(&self) -> Arc<Notify> {
-        self.update_notifier.clone()
+    #[inline]
+    pub async fn shoot(&mut self, value: NotificationBuffer) {
+        self.inner.shoot(value).await;
     }
 
     ///
     ///
-    pub fn get(&self) -> Option<NotificationBuffer> {
-        self.pack.lock().unwrap().last()
+    #[inline]
+    pub async fn set(&mut self, value: NotificationBuffer) -> Result<(), String> {
+        self.inner.set(value).await
     }
 
+    /// Get the last received value
     ///
-    ///
-    pub fn pop(&self) -> Option<NotificationBuffer> {
-        self.pack.lock().unwrap().pop()
+    #[inline]
+    pub async fn get(&self) -> Option<NotificationBuffer> {
+        self.inner.get().await
     }
 
+    /// Wait for a specific notification value to be received
     ///
+    #[inline]
+    pub async fn wait_for_value<F>(
+        &self,
+        condition: F,
+        timeout: Option<std::time::Duration>,
+    ) -> Result<(), String>
+    where
+        F: Fn(&NotificationBuffer) -> bool + Send + Sync + 'static,
+    {
+        self.inner
+            .wait_for_value(condition, timeout)
+            .await
+            .map(|_| ())
+    }
+
+    /// Add a callback that will be triggered when receiving NotificationBuffer messages
+    /// Optionally, a condition can be provided to filter when the callback is triggered
+    #[inline]
+    pub async fn add_callback<F, C>(&self, callback: F, condition: Option<C>) -> CallbackId
+    where
+        F: Fn(
+                NotificationBuffer,
+            ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>
+            + Send
+            + Sync
+            + 'static,
+        C: Fn(&NotificationBuffer) -> bool + Send + Sync + 'static,
+    {
+        self.inner.add_callback(callback, condition).await
+    }
+
+    /// Remove a callback by its ID
     ///
-    pub fn pop_all(&self) -> NotificationPack {
-        let mut pack = self.pack.lock().unwrap();
-        let mut notifications = Vec::new();
-        while let Some(value) = pack.pop() {
-            notifications.push(value);
-        }
-        NotificationPack::new(notifications)
+    #[inline]
+    pub async fn remove_callback(&self, callback_id: CallbackId) -> bool {
+        self.inner.remove_callback(callback_id).await
+    }
+
+    /// Get attribute metadata
+    ///
+    #[inline]
+    pub fn metadata(&self) -> &AttributeMetadata {
+        self.inner.metadata()
     }
 }

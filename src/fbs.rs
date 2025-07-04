@@ -13,12 +13,15 @@ pub use bytes_buffer::BytesBuffer;
 mod number_buffer;
 pub use number_buffer::NumberBuffer;
 
+mod notification_buffer;
+pub use notification_buffer::NotificationBuffer;
+pub use notification_buffer::NotificationType;
+
 pub mod common;
 
 mod generic;
 pub use generic::PanduzaBuffer;
 
-pub mod notification_v0;
 pub mod number;
 pub mod sample;
 pub mod status_v0;
