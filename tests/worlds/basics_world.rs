@@ -2,13 +2,13 @@ mod boolean;
 mod bytes;
 mod r#enum;
 mod reactor;
-mod si;
+mod number;
 mod string;
 
 use cucumber::Parameter;
 use cucumber::{given, then, World};
 use panduza::{
-    attribute::si::SiAttribute, reactor::ReactorOptions, AttributeBuilder, BooleanAttribute,
+    reactor::ReactorOptions, AttributeBuilder, BooleanAttribute,
     BytesAttribute, JsonAttribute, Reactor, StringAttribute,
 };
 use panduza::{NotificationAttribute, NumberAttribute, StatusAttribute};
@@ -84,10 +84,10 @@ pub struct BooleanSubWorld {
 }
 
 #[derive(Default)]
-pub struct SiSubWorld {
-    pub att_rw: Option<SiAttribute>,
-    pub att_wo: Option<SiAttribute>,
-    pub att_ro: Option<SiAttribute>,
+pub struct NumberSubWorld {
+    pub att_rw: Option<NumberAttribute>,
+    pub att_wo: Option<NumberAttribute>,
+    pub att_ro: Option<NumberAttribute>,
     // pub topic_rw: Option<String>,
     // pub topic_wo: Option<String>,
     // pub topic_ro: Option<String>,
@@ -153,9 +153,9 @@ pub struct BasicsWorld {
     ///
     pub string: StringSubWorld,
 
-    /// Si sub world data
+    /// Number sub world data
     ///
-    pub si: SiSubWorld,
+    pub number: NumberSubWorld,
 
     /// Enum sub world data
     ///
