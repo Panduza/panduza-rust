@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use cucumber::{given, then, when};
 
 use super::BasicsWorld;
@@ -53,37 +55,31 @@ async fn i_set_wo_string_to(world: &mut BasicsWorld, s: String) {
 
 #[then(expr = "the rw string value is {string}")]
 async fn the_rw_string_value_is(world: &mut BasicsWorld, s: String) {
-    let read_value = world.string.att_rw.as_mut().unwrap().get().unwrap();
+    let read_value = world.string.att_rw.as_mut().unwrap().get().await.unwrap();
     assert_eq!(
-        read_value, s,
+        read_value.value(), s,
         "read '{:?}' != expected '{:?}'",
         read_value, s
     );
 }
 
 #[then(expr = "the ro string value is {string}")]
-async fn the_ro_string_value_is(world: &mut BasicsWorld, s: String) {
-    let timeout = std::time::Duration::from_secs(3);
-    let start_time = std::time::Instant::now();
-    let expected_value = s;
-
-    loop {
-        let read_value = world.string.att_ro.as_ref().unwrap().get().unwrap();
-        if read_value == expected_value {
-            break;
-        }
-        if start_time.elapsed() >= timeout {
-            panic!(
-                "Timeout reached: read '{:?}' != expected '{:?}'",
-                read_value, expected_value
-            );
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-    }
-    let read_value = world.string.att_ro.as_ref().unwrap().get().unwrap();
+async fn the_ro_string_value_is(world: &mut BasicsWorld, expected_value: String) {
+    let expected_value_clone = expected_value.clone();
+    world
+        .string
+        .att_ro
+        .as_mut()
+        .unwrap()
+        .wait_for_value(expected_value_clone, Some(Duration::from_secs(5)))
+        .await
+        .unwrap();
+    let read_value = world.string.att_ro.as_mut().unwrap().get().await.unwrap();
     assert_eq!(
-        read_value, expected_value,
+        read_value.value(),
+        expected_value,
         "read '{:?}' != expected '{:?}'",
-        read_value, expected_value
+        read_value,
+        expected_value
     );
 }

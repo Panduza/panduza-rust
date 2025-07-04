@@ -1,6 +1,5 @@
 mod boolean;
 mod bytes;
-mod r#enum;
 mod reactor;
 mod number;
 mod string;
@@ -104,16 +103,6 @@ pub struct StringSubWorld {
 }
 
 #[derive(Default)]
-pub struct EnumSubWorld {
-    pub att_rw: Option<StringAttribute>,
-    pub att_wo: Option<StringAttribute>,
-    pub att_ro: Option<StringAttribute>,
-    // pub topic_rw: Option<String>,
-    // pub topic_wo: Option<String>,
-    // pub topic_ro: Option<String>,
-}
-
-#[derive(Default)]
 pub struct BytesSubWorld {
     pub att_rw: Option<BytesAttribute>,
     pub att_wo: Option<BytesAttribute>,
@@ -156,10 +145,6 @@ pub struct BasicsWorld {
     /// Number sub world data
     ///
     pub number: NumberSubWorld,
-
-    /// Enum sub world data
-    ///
-    pub r#enum: EnumSubWorld,
 
     /// Bytes sub world data
     ///

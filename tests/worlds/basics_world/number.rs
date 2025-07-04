@@ -73,7 +73,7 @@ async fn the_rw_number_value_is(world: &mut BasicsWorld, f: f32) {
 
 #[then(expr = "the ro number value is {float}")]
 async fn the_ro_number_value_is(world: &mut BasicsWorld, expected_value: f32) {
-        world
+    world
         .number
         .att_ro
         .as_mut()
