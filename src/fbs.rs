@@ -1,6 +1,8 @@
 #[allow(warnings)]
 pub mod panduza_generated;
 
+pub mod common;
+
 mod boolean_buffer;
 pub use boolean_buffer::BooleanBuffer;
 
@@ -17,12 +19,9 @@ mod notification_buffer;
 pub use notification_buffer::NotificationBuffer;
 pub use notification_buffer::NotificationType;
 
-pub mod common;
+pub mod status_buffer;
+pub use status_buffer::InstanceStatusBuffer;
+pub use status_buffer::StatusBuffer;
 
 mod generic;
 pub use generic::PanduzaBuffer;
-
-pub mod number;
-pub mod status_v0;
-pub mod trigger_v0;
-pub mod vector_f32_v0;

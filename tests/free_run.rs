@@ -60,13 +60,13 @@ async fn main() {
 
             // Attendre indéfiniment pour recevoir des notifications
             // En production, vous pourriez vouloir ajouter une condition d'arrêt
-            loop {
-                notification_attr.update_notifier().notified().await;
+            // loop {
+            //     notification_attr.update_notifier().notified().await;
 
-                // Afficher le compteur total après chaque cycle de notifications
-                let total_count = shared_counter.lock().unwrap();
-                println!(">>> Total notifications traitées: {} <<<", *total_count);
-            }
+            //     // Afficher le compteur total après chaque cycle de notifications
+            //     let total_count = shared_counter.lock().unwrap();
+            //     println!(">>> Total notifications traitées: {} <<<", *total_count);
+            // }
         }
         Err(e) => {
             eprintln!("Erreur lors de la création du reactor: {}", e);
