@@ -1,16 +1,19 @@
 mod boolean;
 mod bytes;
-mod reactor;
 mod number;
+mod reactor;
 mod string;
 
 use cucumber::Parameter;
 use cucumber::{given, then, World};
+use futures::FutureExt;
+use panduza::attribute::notification::NotificationPack;
 use panduza::{
-    reactor::ReactorOptions, AttributeBuilder, BooleanAttribute,
-    BytesAttribute, JsonAttribute, Reactor, StringAttribute,
+    reactor::ReactorOptions, AttributeBuilder, BooleanAttribute, BytesAttribute, JsonAttribute,
+    Reactor, StringAttribute,
 };
 use panduza::{NotificationAttribute, NumberAttribute, StatusAttribute};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use std::{fmt::Debug, str::FromStr};
 
@@ -126,6 +129,10 @@ pub struct BasicsWorld {
     ///
     pub platform_notifications: Option<NotificationAttribute>,
 
+    /// Fifo to store incoming platform notifications
+    ///
+    pub platform_notifications_pack: Option<Arc<Mutex<NotificationPack>>>,
+
     ///
     ///
     pub att_instance_status: Option<JsonAttribute>,
@@ -171,28 +178,70 @@ async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
     );
 
     // No additional setup required before connecting to the test platform
-    println!("Connecting to {}:{}...", PLAFORM_LOCALHOST, PLAFORM_PORT);
-    let reactor = panduza::new_reactor(options).await.unwrap();
-    println!("ok");
+    {
+        println!("Connecting to {}:{}...", PLAFORM_LOCALHOST, PLAFORM_PORT);
+        let reactor = panduza::new_reactor(options).await.unwrap();
+        world.r = Some(reactor);
+        println!("      connection => ok");
+    }
 
-    println!("Getting status attribute...");
-
-    world.r = Some(reactor);
-
-    world.platform_status = Some(world.r.as_ref().unwrap().new_status_attribute().await);
-
-    println!("ok");
+    // Get the status attribute from the reactor and store it in the world
+    {
+        println!("Getting status attribute...");
+        world.platform_status = Some(
+            world
+                .r
+                .as_ref()
+                .expect("need reactor to get status attribute")
+                .new_status_attribute()
+                .await,
+        );
+        println!("      status att => ok");
+    }
 
     // Get the notification attribute from the reactor and store it in the world
-    println!("Getting notification attribute...");
-    world.platform_notifications =
-        Some(world.r.as_ref().unwrap().new_notification_attribute().await);
-    println!("ok");
+    {
+        // Create a pack to store notifications
+        println!("Getting notification attribute...");
+        world.platform_notifications_pack = Some(Arc::new(Mutex::new(NotificationPack::default())));
+        world.platform_notifications = Some(
+            world
+                .r
+                .as_ref()
+                .expect("need reactor to get notification attribute")
+                .new_notification_attribute()
+                .await,
+        );
+
+        // // Set up a callback to store new notifications into the pack
+        // if let Some(platform_notifications) = world.platform_notifications.as_mut() {
+        //     platform_notifications
+        //         .add_callback(
+        //             {
+        //                 let pack = world.platform_notifications_pack.clone();
+        //                 move |notif| {
+        //                     let pack = pack.clone();
+        //                     // Clone the notification and push it into the pack
+        //                     async move {
+        //                         if let Some(pack) = pack {
+        //                             let mut pack = pack.lock().unwrap();
+        //                             pack.push(notif);
+        //                         }
+        //                     }
+        //                     .boxed()
+        //                 }
+        //             },
+        //             None::<fn(&panduza::fbs::NotificationBuffer) -> bool>,
+        //         )
+        //         .await;
+        // }
+        println!("ok");
+    }
 
     world
         .platform_status
         .as_mut()
-        .unwrap()
+        .expect("need status attribute to wait for instances")
         .wait_for_all_instances_to_be_running(Duration::from_secs(15))
         .await
         .expect("Error while waiting for instance to be in running state");
@@ -232,19 +281,28 @@ async fn the_status_attribute_must_indicate_for_one_instance(world: &mut BasicsW
         .expect("Error while waiting for instance to be in running state");
 }
 
+// ----------------------------------------------------------------------------
+
 #[then(expr = "the notification attribute must indicate no alert")]
 fn the_notification_attribute_must_indicate_no_alert(world: &mut BasicsWorld) {
     // clear all notifications
-    world.platform_notifications.as_mut().unwrap().pop_all();
+    world
+        .platform_notifications_pack
+        .as_mut()
+        .unwrap()
+        .lock()
+        .unwrap()
+        .reset();
 }
 
 #[then(expr = "the notification attribute must indicate an alert for this instance")]
 fn the_notification_attribute_must_indicate_an_alert_for_this_instance(world: &mut BasicsWorld) {
     // check that the notification attribute is not empty
     assert!(!world
-        .platform_notifications
+        .platform_notifications_pack
         .as_mut()
         .unwrap()
-        .pop_all()
+        .lock()
+        .unwrap()
         .has_alert());
 }

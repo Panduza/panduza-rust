@@ -1,5 +1,5 @@
 use crate::fbs::status_v0::StatusBuffer;
-use crate::reactor::DataReceiver;
+// use crate::reactor::DataReceiver;
 use bytes::Bytes;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -8,7 +8,7 @@ use tokio::sync::Notify;
 use tokio::time::timeout;
 use zenoh::handlers::FifoChannelHandler;
 use zenoh::pubsub::Subscriber;
-use zenoh::query::Reply;
+// use zenoh::query::Reply;
 use zenoh::sample::Sample;
 use zenoh::Session;
 
@@ -45,7 +45,10 @@ impl StatusAttribute {
     ) -> Self {
         // Create data pack
         let pack = Arc::new(Mutex::new(AttributeDataPack::<StatusBuffer>::default()));
-        let update_1 = pack.lock().unwrap().update_notifier();
+        let update_1 = pack
+            .lock()
+            .expect("Failed to acquire lock on data pack during initialization")
+            .update_notifier();
 
         // Create the recv task
         let pack_2 = pack.clone();
@@ -56,16 +59,31 @@ impl StatusAttribute {
                     &sample.payload().to_bytes(),
                 ));
                 // Push into pack
-                pack_2.lock().unwrap().push(value);
+                pack_2
+                    .lock()
+                    .expect("Failed to acquire lock on data pack in receiver task")
+                    .push(value);
             }
         });
 
-        let query = session.get(topic.clone()).await.unwrap();
-        let result = query.recv_async().await.unwrap();
+        let query = session
+            .get(topic.clone())
+            .await
+            .expect("Failed to create query for initial status fetch");
+        let result = query
+            .recv_async()
+            .await
+            .expect("Failed to receive initial query response");
         let value: StatusBuffer = StatusBuffer::from_raw_data(Bytes::copy_from_slice(
-            &result.result().unwrap().payload().to_bytes(),
+            &result
+                .result()
+                .expect("Query result is empty")
+                .payload()
+                .to_bytes(),
         ));
-        pack.lock().unwrap().push(value);
+        pack.lock()
+            .expect("Failed to acquire lock on data pack for initial value")
+            .push(value);
 
         // Return attribute
         Self {
@@ -95,13 +113,13 @@ impl StatusAttribute {
     ///
     ///
     pub fn get(&self) -> Option<StatusBuffer> {
-        self.pack.lock().unwrap().last()
+        self.pack.lock().expect("status get").last()
     }
 
     ///
     ///
     pub fn pop(&self) -> Option<StatusBuffer> {
-        self.pack.lock().unwrap().pop()
+        self.pack.lock().expect("status pop").pop()
     }
 
     /// Control that all instances are in running state

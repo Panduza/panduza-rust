@@ -146,7 +146,7 @@ impl Reactor {
                     } else {
                         format!("{}/", ns)
                     }),
-                "pza/_/notification"
+                "pza/_/notifications"
             ),
             Some("notification-v0".to_string()),
             AttributeMode::ReadOnly,

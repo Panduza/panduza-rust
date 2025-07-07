@@ -5,6 +5,8 @@ use crate::AttributeMetadata;
 use crate::GenericAttribute;
 use zenoh::Session;
 
+#[derive(Clone, Debug, Default)]
+/// A pack of notifications, used to group multiple NotificationBuffer objects together.
 pub struct NotificationPack {
     pub notifications: Vec<NotificationBuffer>,
 }
@@ -14,6 +16,18 @@ impl NotificationPack {
     ///
     pub fn new(notifications: Vec<NotificationBuffer>) -> Self {
         Self { notifications }
+    }
+
+    /// Push a new notification into the pack
+    ///
+    pub fn push(&mut self, notification: NotificationBuffer) {
+        self.notifications.push(notification);
+    }
+
+    /// Reset the pack, clearing all notifications
+    ///
+    pub fn reset(&mut self) {
+        self.notifications.clear();
     }
 
     pub fn is_empty(&self) -> bool {

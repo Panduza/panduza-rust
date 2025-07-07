@@ -82,29 +82,23 @@ impl NotificationBuffer {
 
     ///
     ///
-    pub fn with_type(mut self, notification_type: NotificationType) -> Self {
+    pub fn with_notification_type(mut self, notification_type: NotificationType) -> Self {
         self.notification_type = Some(notification_type);
         self
     }
 
     ///
     ///
-    pub fn with_source<T: Into<String>>(mut self, source: T) -> Self {
+    pub fn with_notification_source<T: Into<String>>(mut self, source: T) -> Self {
         self.source = Some(source.into());
         self
     }
 
     ///
     ///
-    pub fn with_message<T: Into<String>>(mut self, message: T) -> Self {
+    pub fn with_notification_message<T: Into<String>>(mut self, message: T) -> Self {
         self.message = Some(message.into());
         self
-    }
-
-    ///
-    ///
-    pub fn is_builded(&self) -> bool {
-        self.raw_data.is_some()
     }
 
     ///
@@ -255,8 +249,10 @@ impl PanduzaBuffer for NotificationBuffer {
         }
     }
 
+    ///
+    ///
     fn is_builded(&self) -> bool {
-        self.is_builded()
+        self.raw_data.is_some()
     }
 
     fn sequence(&self) -> u16 {
