@@ -96,6 +96,13 @@ impl NotificationBuffer {
 
     ///
     ///
+    pub fn with_message<T: Into<String>>(mut self, message: T) -> Self {
+        self.message = Some(message.into());
+        self
+    }
+
+    ///
+    ///
     pub fn is_builded(&self) -> bool {
         self.raw_data.is_some()
     }

@@ -125,25 +125,10 @@ impl AttributeBuilder {
 
     // ------------------------------------------------------------------------
 
-    pub async fn expect_notification(&self) -> Result<NotificationAttribute, String> {
-        let md = self.metadata.as_ref().unwrap();
-        let att_topic = format!("{}/att", md.topic);
-        // let cmd_topic = format!("{}/cmd", md.topic);
-
-        let att_receiver = self.reactor.register_listener(att_topic).await;
-
-        // let cmd_publisher = self
-        //     .reactor
-        //     .register_publisher(cmd_topic.clone())
-        //     .await
-        //     .map_err(|e| e.to_string())?;
-
-        Ok(NotificationAttribute::new(
-            self.reactor.session.clone(),
-            md.topic.clone(),
-            md.mode.clone(),
-            att_receiver,
-        )
-        .await)
+    pub async fn expect_notification(self) -> Result<NotificationAttribute, String> {
+        let metadata = self
+            .metadata
+            .ok_or_else(|| "Metadata is required".to_string())?;
+        Ok(NotificationAttribute::new(self.reactor.session, metadata).await)
     }
 }

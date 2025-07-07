@@ -22,7 +22,7 @@ impl NotificationPack {
 
     pub fn has_alert(&self) -> bool {
         for notification in &self.notifications {
-            if notification.object().type_() == NotificationType::Alert as u16 {
+            if notification.notification_type().unwrap() == NotificationType::Alert {
                 return true;
             }
         }
