@@ -1,12 +1,20 @@
 use crate::fbs::panduza_generated::panduza::InstanceStatusArgs;
-use flatbuffers::{FlatBufferBuilder, WIPOffset};
+use flatbuffers::FlatBufferBuilder;
 
 #[derive(Default, Clone, Debug, PartialEq)]
 /// InstanceStatusBuffer is a wrapper around a flatbuffer serialized Message with an InstanceStatus payload.
 /// It provides methods to create, access, and manipulate instance status data.
 pub struct InstanceStatusBuffer {
+    /// Source of the status, typically a unique identifier for the instance.
+    ///
     instance: Option<String>,
+
+    /// State of the instance, represented as a u16.
+    ///
     state: Option<u16>,
+
+    /// Optional error string providing additional context about the instance status.
+    ///
     error_string: Option<String>,
 }
 
