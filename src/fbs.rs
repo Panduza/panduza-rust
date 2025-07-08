@@ -90,6 +90,14 @@ pub trait PzaBufferBuilder<B: PzaBuffer>: Clone + Default + Send + Sync + 'stati
 /// Trait that defines the interface for generic buffer types that can be used with GenericAttribute
 ///
 pub trait PzaBuffer: Clone + Default + Send + Sync + 'static {
+    /// Create a buffer instance from ZBytes (Zenoh bytes)
+    /// This is used when receiving data from Zenoh
+    /// PzaBuffer implementations is based on bytes::Bytes (to work with fbs)
+    fn from_zbytes(zbytes: ZBytes) -> Self;
+
+    /// Convert the buffer to ZBytes for transmission over Zenoh
+    fn to_zbytes(self) -> ZBytes;
+
     /// Returns the source of the buffer
     ///
     fn source(&self) -> u16;
@@ -97,14 +105,6 @@ pub trait PzaBuffer: Clone + Default + Send + Sync + 'static {
     /// Returns the sequence number of the buffer
     ///
     fn sequence(&self) -> u16;
-
-    /// Create a buffer instance from ZBytes (Zenoh bytes)
-    /// This is used when receiving data from Zenoh
-    /// PzaBuffer implementations is based on bytes::Bytes (to work with fbs)
-    fn build_from_zbytes(zbytes: ZBytes) -> Self;
-
-    /// Convert the buffer to ZBytes for transmission over Zenoh
-    fn to_zbytes(self) -> ZBytes;
 
     ///
     ///
