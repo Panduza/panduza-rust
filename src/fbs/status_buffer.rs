@@ -1,20 +1,15 @@
-///
 mod instance_status_buffer;
-pub use instance_status_buffer::InstanceStatusBuffer;
-
-use crate::fbs::PzaBufferBuilder;
-
 use super::common::generate_timestamp;
 use super::panduza_generated::panduza::{
-    Header, HeaderArgs, InstanceStatus as FbInstanceStatus, InstanceStatusArgs, Message,
-    MessageArgs, Payload, Status as FbStatus, StatusArgs,
+    Header, HeaderArgs, InstanceStatus as FbInstanceStatus, Message, MessageArgs, Payload,
+    Status as FbStatus, StatusArgs,
 };
+use crate::fbs::PzaBuffer;
+use crate::fbs::PzaBufferBuilder;
 use bytes::Bytes;
+pub use instance_status_buffer::InstanceStatusBuffer;
 use rand::Rng;
 use zenoh::bytes::ZBytes;
-
-use crate::fbs::PzaBuffer;
-use crate::fbs::PzaBufferError;
 
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct StatusBufferBuilder {
@@ -93,6 +88,15 @@ impl PzaBufferBuilder<StatusBuffer> for StatusBufferBuilder {
     }
 }
 
+impl StatusBufferBuilder {
+    /// Attaches a list of instance statuses to the status buffer builder.
+    ///
+    pub fn with_instance_status_list(mut self, instances: Vec<InstanceStatusBuffer>) -> Self {
+        self.instances = Some(instances);
+        self
+    }
+}
+
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
@@ -139,149 +143,3 @@ impl PzaBuffer for StatusBuffer {
         false
     }
 }
-
-// #[derive(Default, Clone, Debug, PartialEq)]
-// /// StatusBuffer is a wrapper around a flatbuffer serialized Message with a Status payload.
-// /// It provides methods to create, access, and manipulate status data.
-// pub struct StatusBuffer {
-//     ///
-//     value: Option<Vec<InstanceStatusBuffer>>,
-
-//     source: Option<u16>,
-//     sequence: Option<u16>,
-//     raw_data: Option<Bytes>,
-// }
-
-// impl PanduzaBuffer for StatusBuffer {
-//     fn new() -> Self {
-//         Self {
-//             value: None,
-//             source: None,
-//             sequence: None,
-//             raw_data: None,
-//         }
-//     }
-
-//     fn with_value<T>(self, value: T) -> Self
-//     where
-//         T: Into<Self>,
-//     {
-//         Self {
-//             value: value.into().value,
-//             ..self
-//         }
-//     }
-
-//     fn with_source(self, source: u16) -> Self {
-//         Self {
-//             source: Some(source),
-//             ..self
-//         }
-//     }
-
-//     fn with_sequence(self, sequence: u16) -> Self {
-//         Self {
-//             sequence: Some(sequence),
-//             ..self
-//         }
-//     }
-
-//     fn with_random_sequence(self) -> Self {
-//         let mut rng = rand::thread_rng();
-//         Self {
-//             sequence: Some(rng.gen::<u16>()),
-//             ..self
-//         }
-//     }
-
-//     fn build(self) -> Result<Self, String> {
-//         let mut builder = flatbuffers::FlatBufferBuilder::new();
-//         let value = self.value.clone().ok_or("value not provided".to_string())?;
-//         let timestamp = generate_timestamp();
-//         let status_args = StatusArgs {
-//             instances: None,
-//             timestamp: Some(&timestamp),
-//         };
-//         let status = FbStatus::create(&mut builder, &status_args);
-
-//         let source = self.source.ok_or("source not provided".to_string())?;
-//         let sequence = self.sequence.ok_or("sequence not provided".to_string())?;
-
-//         let header_args = HeaderArgs {
-//             timestamp: Some(&timestamp),
-//             source,
-//             sequence,
-//         };
-//         let header = Header::create(&mut builder, &header_args);
-
-//         let message_args = MessageArgs {
-//             header: Some(header),
-//             payload_type: Payload::Status,
-//             payload: Some(status.as_union_value()),
-//         };
-//         let message = Message::create(&mut builder, &message_args);
-
-//         builder.finish(message, None);
-
-//         Ok(Self {
-//             raw_data: Some(Bytes::from(builder.finished_data().to_vec())),
-//             value: self.value,
-//             source: self.source,
-//             sequence: self.sequence,
-//         })
-//     }
-
-//     fn build_from_zbytes(zbytes: ZBytes) -> Self {
-//         let bytes = Bytes::copy_from_slice(&zbytes.to_bytes());
-//         Self {
-//             raw_data: Some(bytes),
-//             value: None,
-//             source: None,
-//             sequence: None,
-//         }
-//     }
-
-//     fn is_builded(&self) -> bool {
-//         self.raw_data.is_some()
-//     }
-
-//     fn sequence(&self) -> u16 {
-//         self.sequence
-//             .expect("Sequence must be set before accessing it")
-//     }
-
-//     fn to_zbytes(self) -> ZBytes {
-//         ZBytes::from(
-//             self.raw_data
-//                 .expect("Raw data must be set before converting to ZBytes"),
-//         )
-//     }
-
-//     fn as_message(&self) -> Message {
-//         let data = self
-//             .raw_data
-//             .as_ref()
-//             .expect("Buffer must be built to access the message");
-//         flatbuffers::root::<Message>(data).expect("Failed to deserialize Message from raw_data")
-//     }
-
-//     fn has_value_equal_to_message_value(&self, message: &Message) -> bool {
-//         // if let Some(payload) = message.payload_as_status() {
-//         //     if let Some(value) = self.value {
-//         //         return payload.value() == value;
-//         //     }
-//         // }
-//         false
-//     }
-// }
-
-// impl StatusBuffer {
-//     pub fn status(&self) -> Option<FbStatus> {
-//         self.as_message().payload_as_status()
-//     }
-
-//     pub fn with_instance_status_list(mut self, instances: Vec<InstanceStatusBuffer>) -> Self {
-//         self.value = Some(instances);
-//         self
-//     }
-// }

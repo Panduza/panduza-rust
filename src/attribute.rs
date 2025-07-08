@@ -6,8 +6,14 @@ pub mod json;
 pub mod notification;
 pub mod number;
 pub mod status;
-pub mod std_msg;
+
 pub mod string;
+
+/// Standard message attribute for sending messages
+/// The attribute manages a value than change over time
+pub mod std_msg;
+
+// The attribute manages a RO stream of data
 
 /// Unique identifier for callbacks
 pub type CallbackId = u64;
