@@ -6,6 +6,7 @@ pub mod json;
 pub mod notification;
 pub mod number;
 pub mod status;
+pub mod std_msg;
 pub mod string;
 
 /// Unique identifier for callbacks

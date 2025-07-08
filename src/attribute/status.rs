@@ -1,19 +1,19 @@
+use super::std_msg::StdMsgAttribute;
 use super::CallbackId;
 use crate::fbs::status_buffer::StatusBuffer;
 use crate::AttributeMetadata;
-use crate::GenericAttribute;
 use zenoh::Session;
 
 #[derive(Clone, Debug)]
 /// Objet pour gérer StatusAttribute
 pub struct StatusAttribute {
-    pub inner: GenericAttribute<StatusBuffer>,
+    pub inner: StdMsgAttribute<StatusBuffer>,
 }
 
 impl StatusAttribute {
     /// Crée une nouvelle instance
     pub async fn new(session: Session, metadata: AttributeMetadata) -> Self {
-        let inner = GenericAttribute::<StatusBuffer>::new(session, metadata).await;
+        let inner = StdMsgAttribute::<StatusBuffer>::new(session, metadata).await;
         Self { inner }
     }
 
