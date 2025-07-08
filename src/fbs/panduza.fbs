@@ -42,7 +42,6 @@ table InstanceStatus {
 
 table Status {
     instances:[InstanceStatus];
-    timestamp: Timestamp;
 }
 
 // ----------------------------------------------

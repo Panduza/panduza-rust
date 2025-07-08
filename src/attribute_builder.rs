@@ -75,6 +75,30 @@ impl AttributeBuilder {
         Ok(BytesAttribute::new(self.reactor.session, metadata).await)
     }
 
+    // ------------------------------------------------------------------------
+
+    /// STATUS
+    ///
+    pub async fn expect_status(self) -> Result<StatusAttribute, String> {
+        let metadata = self
+            .metadata
+            .ok_or_else(|| "Metadata is required".to_string())?;
+        Ok(StatusAttribute::new(self.reactor.session, metadata).await)
+    }
+
+    // ------------------------------------------------------------------------
+
+    /// NOTIFICATION
+    ///
+    pub async fn expect_notification(self) -> Result<NotificationAttribute, String> {
+        let metadata = self
+            .metadata
+            .ok_or_else(|| "Metadata is required".to_string())?;
+        Ok(NotificationAttribute::new(self.reactor.session, metadata).await)
+    }
+
+    // ------------------------------------------------------------------------
+
     pub async fn expect_json(&self) -> Result<JsonAttribute, String> {
         let md = self.metadata.as_ref().unwrap();
         let att_topic = format!(
@@ -110,25 +134,5 @@ impl AttributeBuilder {
             att_receiver,
         )
         .await)
-    }
-
-    // ------------------------------------------------------------------------
-
-    pub async fn expect_status(&self) -> Result<StatusAttribute, String> {
-        let md = self.metadata.as_ref().unwrap();
-        let att_topic = format!("{}/att", md.topic);
-
-        let att_receiver = self.reactor.register_listener(att_topic.clone()).await;
-
-        Ok(StatusAttribute::new(self.reactor.session.clone(), att_topic, att_receiver).await)
-    }
-
-    // ------------------------------------------------------------------------
-
-    pub async fn expect_notification(self) -> Result<NotificationAttribute, String> {
-        let metadata = self
-            .metadata
-            .ok_or_else(|| "Metadata is required".to_string())?;
-        Ok(NotificationAttribute::new(self.reactor.session, metadata).await)
     }
 }
