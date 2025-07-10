@@ -1,83 +1,23 @@
+use super::ro_stream::RoStreamAttribute;
 use super::CallbackId;
 use crate::fbs::NotificationBuffer;
 use crate::fbs::NotificationType;
 use crate::AttributeMetadata;
-use crate::GenericAttribute;
 use zenoh::Session;
-
-#[derive(Clone, Debug, Default)]
-/// A pack of notifications, used to group multiple NotificationBuffer objects together.
-pub struct NotificationPack {
-    pub notifications: Vec<NotificationBuffer>,
-}
-
-impl NotificationPack {
-    /// Create a new instance
-    ///
-    pub fn new(notifications: Vec<NotificationBuffer>) -> Self {
-        Self { notifications }
-    }
-
-    /// Push a new notification into the pack
-    ///
-    pub fn push(&mut self, notification: NotificationBuffer) {
-        self.notifications.push(notification);
-    }
-
-    /// Reset the pack, clearing all notifications
-    ///
-    pub fn reset(&mut self) {
-        self.notifications.clear();
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.notifications.is_empty()
-    }
-
-    pub fn has_alert(&self) -> bool {
-        for notification in &self.notifications {
-            if notification.notification_type().unwrap() == NotificationType::Alert {
-                return true;
-            }
-        }
-        false
-    }
-}
 
 #[derive(Clone, Debug)]
 /// Object to manage the NotificationAttribute
 ///
 pub struct NotificationAttribute {
-    pub inner: GenericAttribute<NotificationBuffer>,
+    pub inner: RoStreamAttribute<NotificationBuffer>,
 }
 
 impl NotificationAttribute {
     /// Create a new instance
     ///
     pub async fn new(session: Session, metadata: AttributeMetadata) -> Self {
-        let inner = GenericAttribute::<NotificationBuffer>::new(session, metadata).await;
+        let inner = RoStreamAttribute::new(session, metadata).await;
         Self { inner }
-    }
-
-    /// Send command and do not wait for validation
-    ///
-    #[inline]
-    pub async fn shoot(&mut self, value: NotificationBuffer) {
-        self.inner.shoot(value).await;
-    }
-
-    ///
-    ///
-    #[inline]
-    pub async fn set(&mut self, value: NotificationBuffer) -> Result<(), String> {
-        self.inner.set(value).await
-    }
-
-    /// Get the last received value
-    ///
-    #[inline]
-    pub async fn get(&self) -> Option<NotificationBuffer> {
-        self.inner.get().await
     }
 
     /// Wait for a specific notification value to be received
