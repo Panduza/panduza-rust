@@ -88,4 +88,10 @@ impl NotificationAttribute {
     pub fn metadata(&self) -> &AttributeMetadata {
         self.inner.metadata()
     }
+
+    /// Create a new notification pack for this attribute
+    ///
+    pub async fn new_pack(&self) -> notification_pack::NotificationPack {
+        notification_pack::NotificationPack::new(self.clone()).await
+    }
 }
