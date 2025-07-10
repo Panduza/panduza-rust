@@ -24,11 +24,13 @@ pub use number_buffer::NumberBuffer;
 ///
 mod notification_buffer;
 pub use notification_buffer::NotificationBuffer;
+pub use notification_buffer::NotificationBufferBuilder;
 pub use notification_buffer::NotificationType;
 
 pub mod status_buffer;
 pub use status_buffer::InstanceStatusBuffer;
 pub use status_buffer::StatusBuffer;
+pub use status_buffer::StatusBufferBuilder;
 
 mod generic;
 pub use generic::PanduzaBuffer;
