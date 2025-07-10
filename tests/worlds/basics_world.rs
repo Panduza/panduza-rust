@@ -7,7 +7,7 @@ mod string;
 use cucumber::Parameter;
 use cucumber::{given, then, World};
 use futures::FutureExt;
-use panduza::attribute::notification::NotificationPack;
+use panduza::attribute::notification::notification_pack::NotificationPack;
 use panduza::{
     reactor::ReactorOptions, AttributeBuilder, BooleanAttribute, BytesAttribute, JsonAttribute,
     Reactor, StringAttribute,
@@ -131,7 +131,7 @@ pub struct BasicsWorld {
 
     /// Fifo to store incoming platform notifications
     ///
-    pub platform_notifications_pack: Option<Arc<Mutex<NotificationPack>>>,
+    pub platform_notifications_pack: Option<NotificationPack>,
 
     ///
     ///
@@ -179,15 +179,15 @@ async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
 
     // No additional setup required before connecting to the test platform
     {
-        println!("Connecting to {}:{}...", PLAFORM_LOCALHOST, PLAFORM_PORT);
+        print!("Connecting to {}:{}...", PLAFORM_LOCALHOST, PLAFORM_PORT);
         let reactor = panduza::new_reactor(options).await.unwrap();
         world.r = Some(reactor);
-        println!("      connection => ok");
+        println!(" ok!");
     }
 
     // Get the status attribute from the reactor and store it in the world
     {
-        println!("Getting status attribute...");
+        print!("Getting status attribute...");
         world.platform_status = Some(
             world
                 .r
@@ -196,14 +196,13 @@ async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
                 .new_status_attribute()
                 .await,
         );
-        println!("      status att => ok");
+        println!(" ok!");
     }
 
     // Get the notification attribute from the reactor and store it in the world
     {
         // Create a pack to store notifications
-        println!("Getting notification attribute...");
-        world.platform_notifications_pack = Some(Arc::new(Mutex::new(NotificationPack::default())));
+        print!("Getting notification attribute...");
         world.platform_notifications = Some(
             world
                 .r
@@ -212,30 +211,16 @@ async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
                 .new_notification_attribute()
                 .await,
         );
-
-        // // Set up a callback to store new notifications into the pack
-        // if let Some(platform_notifications) = world.platform_notifications.as_mut() {
-        //     platform_notifications
-        //         .add_callback(
-        //             {
-        //                 let pack = world.platform_notifications_pack.clone();
-        //                 move |notif| {
-        //                     let pack = pack.clone();
-        //                     // Clone the notification and push it into the pack
-        //                     async move {
-        //                         if let Some(pack) = pack {
-        //                             let mut pack = pack.lock().unwrap();
-        //                             pack.push(notif);
-        //                         }
-        //                     }
-        //                     .boxed()
-        //                 }
-        //             },
-        //             None::<fn(&panduza::fbs::NotificationBuffer) -> bool>,
-        //         )
-        //         .await;
-        // }
-        println!("ok");
+        print!("!");
+        world.platform_notifications_pack = Some(
+            world
+                .platform_notifications
+                .as_ref()
+                .expect("need notification attribute to create pack")
+                .new_pack()
+                .await,
+        );
+        println!(" ok!");
     }
 
     world
@@ -264,13 +249,13 @@ async fn the_status_attribute_must_be(world: &mut BasicsWorld) {
 
 #[then(expr = "the status attribute must indicate an error for one instance")]
 async fn the_status_attribute_must_indicate_for_one_instance(world: &mut BasicsWorld) {
-    // world
-    //     .platform_status
-    //     .as_mut()
-    //     .unwrap()
-    //     .wait_for_at_least_one_instance_to_be_not_running(Duration::from_secs(15))
-    //     .await
-    //     .expect("Error while waiting for instance to be in error state");
+    world
+        .platform_status
+        .as_mut()
+        .unwrap()
+        .wait_for_at_least_one_instance_to_be_not_running(Duration::from_secs(15))
+        .await
+        .expect("Error while waiting for instance to be in error state");
 
     world
         .platform_status
@@ -279,6 +264,8 @@ async fn the_status_attribute_must_indicate_for_one_instance(world: &mut BasicsW
         .wait_for_all_instances_to_be_running(Duration::from_secs(15))
         .await
         .expect("Error while waiting for instance to be in running state");
+
+    tokio::time::sleep(Duration::from_secs(3)).await;
 }
 
 // ----------------------------------------------------------------------------
@@ -286,13 +273,7 @@ async fn the_status_attribute_must_indicate_for_one_instance(world: &mut BasicsW
 #[then(expr = "the notification attribute must indicate no alert")]
 fn the_notification_attribute_must_indicate_no_alert(world: &mut BasicsWorld) {
     // clear all notifications
-    world
-        .platform_notifications_pack
-        .as_mut()
-        .unwrap()
-        .lock()
-        .unwrap()
-        .reset();
+    world.platform_notifications_pack.as_mut().unwrap().reset();
 }
 
 #[then(expr = "the notification attribute must indicate an alert for this instance")]
@@ -301,8 +282,6 @@ fn the_notification_attribute_must_indicate_an_alert_for_this_instance(world: &m
     assert!(!world
         .platform_notifications_pack
         .as_mut()
-        .unwrap()
-        .lock()
         .unwrap()
         .has_alert());
 }

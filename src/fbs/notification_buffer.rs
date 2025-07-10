@@ -10,10 +10,10 @@ use zenoh::bytes::ZBytes;
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct NotificationBufferBuilder {
     notification_type: Option<NotificationType>,
-    source: Option<String>,
-    message: Option<String>,
+    notification_source: Option<String>,
+    notification_message: Option<String>,
     sequence: Option<u16>,
-    header_source: Option<u16>,
+    source: Option<u16>,
 }
 
 impl NotificationBufferBuilder {
@@ -23,12 +23,12 @@ impl NotificationBufferBuilder {
     }
 
     pub fn with_notification_source<S: Into<String>>(mut self, source: S) -> Self {
-        self.source = Some(source.into());
+        self.notification_source = Some(source.into());
         self
     }
 
     pub fn with_notification_message<S: Into<String>>(mut self, message: S) -> Self {
-        self.message = Some(message.into());
+        self.notification_message = Some(message.into());
         self
     }
 
@@ -37,8 +37,8 @@ impl NotificationBufferBuilder {
         self
     }
 
-    pub fn with_header_source(mut self, header_source: u16) -> Self {
-        self.header_source = Some(header_source);
+    pub fn with_source(mut self, source: u16) -> Self {
+        self.source = Some(source);
         self
     }
 
@@ -54,8 +54,8 @@ impl NotificationBufferBuilder {
         let notification_type = self
             .notification_type
             .ok_or("notification_type not provided".to_string())?;
-        let source_str = self.source.as_deref().unwrap_or("");
-        let message_str = self.message.as_deref().unwrap_or("");
+        let source_str = self.notification_source.as_deref().unwrap_or("");
+        let message_str = self.notification_message.as_deref().unwrap_or("");
 
         let source_fb = builder.create_string(source_str);
         let message_fb = builder.create_string(message_str);
@@ -68,7 +68,7 @@ impl NotificationBufferBuilder {
         let notification = FbNotification::create(&mut builder, &notification_args);
 
         let header_source = self
-            .header_source
+            .source
             .ok_or("header_source not provided".to_string())?;
         let sequence = self.sequence.ok_or("sequence not provided".to_string())?;
 

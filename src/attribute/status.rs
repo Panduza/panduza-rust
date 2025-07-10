@@ -82,4 +82,20 @@ impl StatusAttribute {
     }
 
     // ------------------------------------------------------------------------
+
+    /// Waits until at least one instance of StatusBuffer is not in the "running" state
+    pub async fn wait_for_at_least_one_instance_to_be_not_running(
+        &self,
+        timeout: std::time::Duration,
+    ) -> Result<(), String> {
+        self.inner
+            .wait_for_value(
+                |status_buffer| !status_buffer.all_instances_are_running(),
+                Some(timeout),
+            )
+            .await
+            .map(|_| ())
+    }
+
+    // ------------------------------------------------------------------------
 }
