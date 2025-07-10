@@ -1,21 +1,21 @@
+use super::std_obj::StdObjAttribute;
 use super::CallbackId;
 use crate::fbs::BooleanBuffer;
 use crate::AttributeMetadata;
-use crate::GenericAttribute;
 use zenoh::Session;
 
 #[derive(Clone, Debug)]
 /// Object to manage the BooleanAttribute
 ///
 pub struct BooleanAttribute {
-    pub inner: GenericAttribute<BooleanBuffer>,
+    pub inner: StdObjAttribute<BooleanBuffer>,
 }
 
 impl BooleanAttribute {
     /// Create a new instance
     ///
     pub async fn new(session: Session, metadata: AttributeMetadata) -> Self {
-        let inner = GenericAttribute::<BooleanBuffer>::new(session, metadata).await;
+        let inner = StdObjAttribute::<BooleanBuffer>::new(session, metadata).await;
         Self { inner }
     }
 
@@ -23,14 +23,32 @@ impl BooleanAttribute {
     ///
     #[inline]
     pub async fn shoot(&mut self, value: bool) {
-        self.inner.shoot(value).await;
+        self.inner
+            .shoot(
+                BooleanBuffer::builder()
+                    .with_value(value)
+                    .with_source(0)
+                    .with_random_sequence()
+                    .build()
+                    .expect("Failed to build BooleanBuffer"),
+            )
+            .await;
     }
 
     ///
     ///
     #[inline]
     pub async fn set(&mut self, value: bool) -> Result<(), String> {
-        self.inner.set(value).await
+        self.inner
+            .set(
+                BooleanBuffer::builder()
+                    .with_value(value)
+                    .with_source(0)
+                    .with_random_sequence()
+                    .build()
+                    .expect("Failed to build BooleanBuffer"),
+            )
+            .await
     }
 
     /// Get the last received value
@@ -38,20 +56,6 @@ impl BooleanAttribute {
     #[inline]
     pub async fn get(&self) -> Option<BooleanBuffer> {
         self.inner.get().await
-    }
-
-    /// Wait for a specific boolean value to be received
-    ///
-    #[inline]
-    pub async fn wait_for_value(
-        &self,
-        value: bool,
-        timeout: Option<std::time::Duration>,
-    ) -> Result<(), String> {
-        self.inner
-            .wait_for_value(move |buf: &BooleanBuffer| buf.value() == value, timeout)
-            .await
-            .map(|_| ())
     }
 
     /// Add a callback that will be triggered when receiving BooleanBuffer messages
