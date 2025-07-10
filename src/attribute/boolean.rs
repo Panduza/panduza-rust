@@ -51,6 +51,21 @@ impl BooleanAttribute {
             .await
     }
 
+    // ------------------------------------------------------------------------
+
+    #[inline]
+    pub async fn wait_for_value(&self, value: bool, timeout: Option<std::time::Duration>) {
+        self.inner
+            .wait_for_value(
+                move |buf: &BooleanBuffer| buf.value() == Some(value),
+                timeout,
+            )
+            .await
+            .ok();
+    }
+
+    // ------------------------------------------------------------------------
+
     /// Get the last received value
     ///
     #[inline]

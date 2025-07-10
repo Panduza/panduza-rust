@@ -57,9 +57,11 @@ async fn i_set_wo_string_to(world: &mut BasicsWorld, s: String) {
 async fn the_rw_string_value_is(world: &mut BasicsWorld, s: String) {
     let read_value = world.string.att_rw.as_mut().unwrap().get().await.unwrap();
     assert_eq!(
-        read_value.value(), s,
+        read_value.value(),
+        Some(s.as_str()),
         "read '{:?}' != expected '{:?}'",
-        read_value, s
+        read_value,
+        s
     );
 }
 
@@ -77,7 +79,7 @@ async fn the_ro_string_value_is(world: &mut BasicsWorld, expected_value: String)
     let read_value = world.string.att_ro.as_mut().unwrap().get().await.unwrap();
     assert_eq!(
         read_value.value(),
-        expected_value,
+        Some(expected_value.as_str()),
         "read '{:?}' != expected '{:?}'",
         read_value,
         expected_value
