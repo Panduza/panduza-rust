@@ -1,9 +1,10 @@
 use super::ro_stream::RoStreamAttribute;
 use super::CallbackId;
 use crate::fbs::NotificationBuffer;
-use crate::fbs::NotificationType;
 use crate::AttributeMetadata;
 use zenoh::Session;
+
+pub mod notification_pack;
 
 #[derive(Clone, Debug)]
 /// Object to manage the NotificationAttribute
@@ -40,7 +41,28 @@ impl NotificationAttribute {
     /// Add a callback that will be triggered when receiving NotificationBuffer messages
     /// Optionally, a condition can be provided to filter when the callback is triggered
     #[inline]
-    pub async fn add_callback<F, C>(&self, callback: F, condition: Option<C>) -> CallbackId
+    pub async fn add_callback<F>(&self, callback: F) -> CallbackId
+    where
+        F: Fn(
+                NotificationBuffer,
+            ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>
+            + Send
+            + Sync
+            + 'static,
+    {
+        self.inner
+            .add_callback(callback, None::<fn(&NotificationBuffer) -> bool>)
+            .await
+    }
+
+    /// Add a callback that will be triggered when receiving NotificationBuffer messages
+    /// Optionally, a condition can be provided to filter when the callback is triggered
+    #[inline]
+    pub async fn add_callback_with_condition<F, C>(
+        &self,
+        callback: F,
+        condition: Option<C>,
+    ) -> CallbackId
     where
         F: Fn(
                 NotificationBuffer,
