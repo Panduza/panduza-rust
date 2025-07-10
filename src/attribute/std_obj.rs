@@ -149,9 +149,7 @@ impl<B: PzaBuffer> StdObjAttribute<B> {
         //
         if self.metadata.mode == AttributeMode::ReadWrite {
             self.wait_for_value(
-                move |received_buffer| {
-                    expected_buffer.has_value_equal_to_message_value(&received_buffer.as_message())
-                },
+                move |received_buffer| expected_buffer.has_same_message_value(received_buffer),
                 Some(std::time::Duration::from_secs(5)),
             )
             .await?;

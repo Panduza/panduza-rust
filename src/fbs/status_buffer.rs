@@ -26,15 +26,6 @@ pub struct StatusBufferBuilder {
 impl PzaBufferBuilder<StatusBuffer> for StatusBufferBuilder {
     // ------------------------------------------------------------------------
 
-    fn with_value<T>(self, value: T) -> Self
-    where
-        T: Into<Self>,
-    {
-        todo!()
-    }
-
-    // ------------------------------------------------------------------------
-
     fn with_source(mut self, source: u16) -> Self {
         self.source = Some(source);
         self
@@ -156,17 +147,48 @@ impl PzaBuffer for StatusBuffer {
             .expect("Failed to deserialize Message from raw_data")
     }
 
-    fn has_value_equal_to_message_value(&self, message: &Message) -> bool {
-        // À adapter selon la logique métier, ici on compare les instances si possible
-        // let self_status = self.as_message().payload_as_status();
-        // let other_status = message.payload_as_status();
-        // match (self_status, other_status) {
-        //     (Some(s1), Some(s2)) => s1.instances() == s2.instances(),
-        //     (None, None) => true,
-        //     _ => false,
-        // }
-        false
+    // ------------------------------------------------------------------------
+
+    fn has_same_message_value<B: PzaBuffer>(&self, other_buffer: &B) -> bool {
+        let self_msg = self.as_message();
+        let other_msg = other_buffer.as_message();
+
+        // Compare payload types
+        if self_msg.payload_type() != other_msg.payload_type() {
+            return false;
+        }
+
+        // Compare payloads for Status type
+        if let (Some(self_status), Some(other_status)) =
+            (self_msg.payload_as_status(), other_msg.payload_as_status())
+        {
+            let self_instances = self_status.instances();
+            let other_instances = other_status.instances();
+
+            let self_len = self_instances.map(|v| v.len()).unwrap_or(0);
+            let other_len = other_instances.map(|v| v.len()).unwrap_or(0);
+            if self_len != other_len {
+                return false;
+            }
+
+            match (self_instances, other_instances) {
+                (Some(self_vec), Some(other_vec)) => {
+                    for (a, b) in self_vec.iter().zip(other_vec.iter()) {
+                        if a.state() != b.state() {
+                            return false;
+                        }
+                    }
+                    true
+                }
+                (None, None) => true,
+                _ => false,
+            }
+        } else {
+            false
+        }
     }
+
+    // ------------------------------------------------------------------------
 }
 
 impl StatusBuffer {

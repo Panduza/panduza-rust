@@ -100,34 +100,52 @@ pub struct NotificationBuffer {
 }
 
 impl PzaBuffer for NotificationBuffer {
+    // ------------------------------------------------------------------------
+
     fn from_zbytes(zbytes: ZBytes) -> Self {
         let bytes = Bytes::copy_from_slice(&zbytes.to_bytes());
         NotificationBuffer { raw_data: bytes }
     }
+    // ------------------------------------------------------------------------
 
     fn to_zbytes(self) -> ZBytes {
         ZBytes::from(self.raw_data)
     }
+    // ------------------------------------------------------------------------
 
     fn source(&self) -> u16 {
         let msg = self.as_message();
         msg.header().map(|h| h.source()).unwrap_or(0)
     }
 
+    // ------------------------------------------------------------------------
+
     fn sequence(&self) -> u16 {
         let msg = self.as_message();
         msg.header().map(|h| h.sequence()).unwrap_or(0)
     }
+
+    // ------------------------------------------------------------------------
 
     fn as_message(&self) -> Message {
         flatbuffers::root::<Message>(&self.raw_data)
             .expect("Failed to deserialize Message from raw_data")
     }
 
-    fn has_value_equal_to_message_value(&self, _message: &Message) -> bool {
-        // NotificationBuffer does not have a value field to compare
-        true
+    // ------------------------------------------------------------------------
+
+    fn has_same_message_value<B: PzaBuffer>(&self, other_buffer: &B) -> bool {
+        let self_msg = self.as_message();
+        let other_msg = other_buffer.as_message();
+
+        // Compare payload types
+        if self_msg.payload_type() != other_msg.payload_type() {
+            return false;
+        }
+
+        false
     }
+    // ------------------------------------------------------------------------
 }
 
 impl NotificationBuffer {

@@ -10,9 +10,6 @@ use zenoh::Session;
 ///
 #[derive(Clone, Debug)]
 pub struct RoStreamAttribute<B: PzaBuffer> {
-    /// Global Session
-    session: Session,
-
     /// Metadata for the attribute
     metadata: AttributeMetadata,
 
@@ -81,7 +78,6 @@ impl<B: PzaBuffer> RoStreamAttribute<B> {
 
         // Return attribute
         Self {
-            session,
             metadata,
             callbacks,
             next_callback_id: Arc::new(Mutex::new(0)),

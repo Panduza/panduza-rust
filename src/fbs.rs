@@ -67,13 +67,6 @@ pub enum PzaBufferError {
 /// Trait that defines the interface for buffer builders
 ///
 pub trait PzaBufferBuilder<B: PzaBuffer>: Clone + Default + Send + Sync + 'static {
-    /// Sets the value for the buffer
-    /// Can be anyting that can be converted into the buffer builder
-    ///
-    fn with_value<T>(self, value: T) -> Self
-    where
-        T: Into<Self>;
-
     /// Sets the source sender for the buffer
     ///
     fn with_source(self, source: u16) -> Self;
@@ -116,5 +109,5 @@ pub trait PzaBuffer: Clone + Default + Send + Sync + 'static {
 
     ///
     ///
-    fn has_value_equal_to_message_value(&self, message: &Message) -> bool;
+    fn has_same_message_value<B: PzaBuffer>(&self, other_buffer: &B) -> bool;
 }

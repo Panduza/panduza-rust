@@ -23,7 +23,7 @@ pub struct JsonAttribute {
     /// TODO: maybe add this into the data pack
     topic: String,
 
-    mode: AttributeMode,
+    _mode: AttributeMode,
 
     /// Global Session
     ///
@@ -46,7 +46,7 @@ impl JsonAttribute {
         topic_cmd: String,
         topic_att: String,
         mode: AttributeMode,
-        mut att_receiver: Subscriber<FifoChannelHandler<Sample>>,
+        att_receiver: Subscriber<FifoChannelHandler<Sample>>,
     ) -> Self {
         //
         // Create data pack
@@ -93,7 +93,7 @@ impl JsonAttribute {
             session: session,
             pack: pack,
             update_notifier: update_1,
-            mode,
+            _mode: mode,
         }
     }
 
