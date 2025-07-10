@@ -1,4 +1,4 @@
-use super::std_msg::StdMsgAttribute;
+use super::std_obj::StdObjAttribute;
 use super::CallbackId;
 use crate::fbs::status_buffer::StatusBuffer;
 use crate::AttributeMetadata;
@@ -7,32 +7,20 @@ use zenoh::Session;
 #[derive(Clone, Debug)]
 /// Objet pour gérer StatusAttribute
 pub struct StatusAttribute {
-    pub inner: StdMsgAttribute<StatusBuffer>,
+    /// Internal implementation
+    ///
+    pub inner: StdObjAttribute<StatusBuffer>,
 }
 
 impl StatusAttribute {
-    /// Crée une nouvelle instance
+    /// New instance
+    ///
     pub async fn new(session: Session, metadata: AttributeMetadata) -> Self {
-        let inner = StdMsgAttribute::<StatusBuffer>::new(session, metadata).await;
+        // Create inner implementation
+        let inner = StdObjAttribute::<StatusBuffer>::new(session, metadata).await;
+
+        // Return the new StatusAttribute instance
         Self { inner }
-    }
-
-    /// Envoie une commande sans attendre la validation
-    #[inline]
-    pub async fn shoot(&mut self, value: StatusBuffer) {
-        self.inner.shoot(value).await;
-    }
-
-    /// Définit la valeur et attend la validation
-    #[inline]
-    pub async fn set(&mut self, value: StatusBuffer) -> Result<(), String> {
-        self.inner.set(value).await
-    }
-
-    /// Récupère la dernière valeur reçue
-    #[inline]
-    pub async fn get(&self) -> Option<StatusBuffer> {
-        self.inner.get().await
     }
 
     /// Attend une valeur spécifique de StatusBuffer (via un prédicat)
@@ -76,21 +64,22 @@ impl StatusAttribute {
         self.inner.metadata()
     }
 
-    /// Attend que toutes les instances de StatusBuffer soient en état "running"
+    // ------------------------------------------------------------------------
+
+    /// Waits until all instances of StatusBuffer are in the "running" state
+    ///
     pub async fn wait_for_all_instances_to_be_running(
         &self,
         timeout: std::time::Duration,
     ) -> Result<(), String> {
-        // self.wait_for_value(
-        //     move |status_buffer| {
-        //         // Supposons que StatusBuffer a une méthode ou champ `is_running()` ou similaire
-        //         // et qu'il peut représenter plusieurs instances.
-        //         // Adaptez cette logique selon la structure réelle de StatusBuffer.
-        //         status_buffer
-        //     },
-        //     timeout,
-        // )
-        // .await
-        Ok(())
+        self.inner
+            .wait_for_value(
+                |status_buffer| status_buffer.all_instances_are_running(),
+                Some(timeout),
+            )
+            .await
+            .map(|_| ())
     }
+
+    // ------------------------------------------------------------------------
 }

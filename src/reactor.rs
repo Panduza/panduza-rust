@@ -130,7 +130,7 @@ impl Reactor {
             .expect_status()
             .await
             .map_err(|e| e.to_string())
-            .unwrap()
+            .expect("Failed to create status attribute")
     }
 
     /// Attribute to get access to the streaming notification system of the platform

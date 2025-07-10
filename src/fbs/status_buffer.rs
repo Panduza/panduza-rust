@@ -1,11 +1,16 @@
 mod instance_status_buffer;
 use super::common::generate_timestamp;
-use super::panduza_generated::panduza::{
-    Header, HeaderArgs, InstanceStatus as FbInstanceStatus, Message, MessageArgs, Payload,
-    Status as FbStatus, StatusArgs,
-};
+use super::panduza_generated::panduza::Header;
+use super::panduza_generated::panduza::HeaderArgs;
+use super::panduza_generated::panduza::InstanceStatus as FbInstanceStatus;
+use super::panduza_generated::panduza::Message;
+use super::panduza_generated::panduza::MessageArgs;
+use super::panduza_generated::panduza::Payload;
+use super::panduza_generated::panduza::Status as FbStatus;
+use super::panduza_generated::panduza::StatusArgs;
 use crate::fbs::PzaBuffer;
 use crate::fbs::PzaBufferBuilder;
+use crate::InstanceState;
 use bytes::Bytes;
 pub use instance_status_buffer::InstanceStatusBuffer;
 use rand::Rng;
@@ -19,6 +24,8 @@ pub struct StatusBufferBuilder {
 }
 
 impl PzaBufferBuilder<StatusBuffer> for StatusBufferBuilder {
+    // ------------------------------------------------------------------------
+
     fn with_value<T>(self, value: T) -> Self
     where
         T: Into<Self>,
@@ -26,21 +33,29 @@ impl PzaBufferBuilder<StatusBuffer> for StatusBufferBuilder {
         todo!()
     }
 
+    // ------------------------------------------------------------------------
+
     fn with_source(mut self, source: u16) -> Self {
         self.source = Some(source);
         self
     }
+
+    // ------------------------------------------------------------------------
 
     fn with_sequence(mut self, sequence: u16) -> Self {
         self.sequence = Some(sequence);
         self
     }
 
+    // ------------------------------------------------------------------------
+
     fn with_random_sequence(mut self) -> Self {
         let mut rng = rand::thread_rng();
         self.sequence = Some(rng.gen::<u16>());
         self
     }
+
+    // ------------------------------------------------------------------------
 
     fn build(self) -> Result<StatusBuffer, String> {
         let mut builder = flatbuffers::FlatBufferBuilder::new();
@@ -107,24 +122,34 @@ pub struct StatusBuffer {
 }
 
 impl PzaBuffer for StatusBuffer {
+    // ------------------------------------------------------------------------
+
     fn from_zbytes(zbytes: ZBytes) -> Self {
         let bytes = Bytes::copy_from_slice(&zbytes.to_bytes());
         StatusBuffer { raw_data: bytes }
     }
 
+    // ------------------------------------------------------------------------
+
     fn to_zbytes(self) -> ZBytes {
         ZBytes::from(self.raw_data)
     }
+
+    // ------------------------------------------------------------------------
 
     fn source(&self) -> u16 {
         let msg = self.as_message();
         msg.header().map(|h| h.source()).unwrap_or(0)
     }
 
+    // ------------------------------------------------------------------------
+
     fn sequence(&self) -> u16 {
         let msg = self.as_message();
         msg.header().map(|h| h.sequence()).unwrap_or(0)
     }
+
+    // ------------------------------------------------------------------------
 
     fn as_message(&self) -> Message {
         flatbuffers::root::<Message>(&self.raw_data)
@@ -142,4 +167,27 @@ impl PzaBuffer for StatusBuffer {
         // }
         false
     }
+}
+
+impl StatusBuffer {
+    // ------------------------------------------------------------------------
+
+    /// Returns true if all instances in the status buffer are in the "running" state.
+    ///
+    pub fn all_instances_are_running(&self) -> bool {
+        let msg = self.as_message();
+        if let Some(status) = msg.payload_as_status() {
+            if let Some(instances) = status.instances() {
+                for inst in instances {
+                    if inst.state() != InstanceState::Running as u16 {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
+        false
+    }
+
+    // ------------------------------------------------------------------------
 }

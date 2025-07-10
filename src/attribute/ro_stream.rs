@@ -1,7 +1,6 @@
 use super::{CallbackEntry, CallbackId};
 use crate::fbs::PzaBuffer;
 use crate::AttributeMetadata;
-use crate::AttributeMode;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -10,7 +9,7 @@ use zenoh::Session;
 /// Standard message attribute implementation
 ///
 #[derive(Clone, Debug)]
-pub struct StdMsgAttribute<B: PzaBuffer> {
+pub struct RoStreamAttribute<B: PzaBuffer> {
     /// Global Session
     session: Session,
 
@@ -22,15 +21,9 @@ pub struct StdMsgAttribute<B: PzaBuffer> {
 
     /// Next callback ID
     next_callback_id: Arc<Mutex<CallbackId>>,
-
-    /// Command topic
-    cmd_topic: String,
-
-    /// Last received value
-    last_value: Arc<Mutex<Option<B>>>,
 }
 
-impl<B: PzaBuffer> StdMsgAttribute<B> {
+impl<B: PzaBuffer> RoStreamAttribute<B> {
     // ------------------------------------------------------------------------
     /// Create a new instance
     ///
@@ -40,7 +33,10 @@ impl<B: PzaBuffer> StdMsgAttribute<B> {
 
         // Trigger the callback mechanism on message reception
         let att_topic = format!("{}/att", &metadata.topic);
-        let subscriber = session.declare_subscriber(&att_topic).await.unwrap();
+        let subscriber = session
+            .declare_subscriber(&att_topic)
+            .await
+            .expect("Failed to declare subscriber for attribute topic");
         let last_value = Arc::new(Mutex::new(None));
 
         tokio::spawn({
@@ -83,74 +79,13 @@ impl<B: PzaBuffer> StdMsgAttribute<B> {
             }
         });
 
-        // Wait for the first message if mode is not WriteOnly
-        if metadata.mode != AttributeMode::WriteOnly {
-            let query = session.get(&att_topic).await.unwrap();
-            let result = query.recv_async().await.unwrap();
-            let buffer = B::from_zbytes(result.result().unwrap().payload().clone());
-            let mut last = last_value.lock().await;
-            *last = Some(buffer);
-        }
-
-        // Create the command topic
-        let cmd_topic = format!("{}/cmd", &metadata.topic);
-
         // Return attribute
         Self {
             session,
             metadata,
             callbacks,
             next_callback_id: Arc::new(Mutex::new(0)),
-            cmd_topic,
-            last_value,
         }
-    }
-
-    // ------------------------------------------------------------------------
-
-    /// Send command and do not wait for validation
-    ///
-    pub async fn shoot(&mut self, buffer: B) {
-        let publisher = self
-            .session
-            .declare_publisher(&self.cmd_topic)
-            .await
-            .expect("Failed to declare publisher");
-        publisher
-            .put(buffer.to_zbytes())
-            .await
-            .expect("Failed to send command");
-    }
-
-    // ------------------------------------------------------------------------
-
-    /// Send command and wait for validation
-    ///
-    pub async fn set(&mut self, buffer: B) -> Result<(), String> {
-        let expected_buffer = buffer.clone();
-
-        self.shoot(buffer).await;
-
-        //
-        if self.metadata.mode == AttributeMode::ReadWrite {
-            self.wait_for_value(
-                move |received_buffer| {
-                    expected_buffer.has_value_equal_to_message_value(&received_buffer.as_message())
-                },
-                Some(std::time::Duration::from_secs(5)),
-            )
-            .await?;
-        }
-
-        Ok(())
-    }
-
-    // ------------------------------------------------------------------------
-
-    /// Get last received value
-    pub async fn get(&self) -> Option<B> {
-        let last = self.last_value.lock().await;
-        last.clone()
     }
 
     // ------------------------------------------------------------------------
@@ -164,16 +99,6 @@ impl<B: PzaBuffer> StdMsgAttribute<B> {
     where
         F: Fn(&B) -> bool + Send + Sync + 'static,
     {
-        // Check if the last_value already satisfies the condition
-        {
-            let last = self.last_value.lock().await;
-            if let Some(ref buffer) = *last {
-                if condition(buffer) {
-                    return Ok(buffer.clone());
-                }
-            }
-        }
-
         // Use a broadcast channel to avoid the move issue
         let (tx, mut rx) = tokio::sync::broadcast::channel(1);
 
@@ -266,11 +191,5 @@ impl<B: PzaBuffer> StdMsgAttribute<B> {
         &self.metadata
     }
 
-    // ------------------------------------------------------------------------
-
-    /// Get the command topic
-    pub fn cmd_topic(&self) -> &str {
-        &self.cmd_topic
-    }
     // ------------------------------------------------------------------------
 }
