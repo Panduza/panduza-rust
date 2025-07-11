@@ -1,332 +1,139 @@
-use super::common::generate_timestamp;
-use super::generic::PanduzaBuffer;
-use super::panduza_generated::panduza::{
-    Header, HeaderArgs, Message, MessageArgs, Number, NumberArgs, NumberRange, NumberRangeArgs,
-    Payload, SIPrefix, SIUnit, Unit, UnitArgs,
+use crate::fbs::generate_timestamp;
+use crate::fbs::{
+    panduza_generated::panduza::{
+        Header, HeaderArgs, Message, MessageArgs, Number as FbNumber, NumberArgs, Payload,
+    },
+    PzaBuffer,
 };
 use bytes::Bytes;
 use rand::Rng;
 use zenoh::bytes::ZBytes;
 
 #[derive(Default, Clone, Debug, PartialEq)]
-/// NumberBuffer is a wrapper around a flatbuffer serialized Message with a Number payload.
-/// It provides methods to create, access, and manipulate numeric data.
-pub struct NumberBuffer {
-    ///
+pub struct NumberBufferBuilder {
     value: Option<f64>,
-
-    ///
-    unit_prefix: Option<SIPrefix>,
-
-    ///
-    unit_type: Option<SIUnit>,
-
-    ///
-    decimals: Option<u8>,
-
-    ///
-    range_min: Option<f64>,
-
-    ///
-    range_max: Option<f64>,
-
-    ///
-    whitelist: Option<Vec<f64>>,
-
-    ///
     source: Option<u16>,
-
-    ///
     sequence: Option<u16>,
-
-    ///
-    raw_data: Option<Bytes>,
 }
 
-/// Implementation of GenericBuffer for NumberBuffer
-///
-impl PanduzaBuffer for NumberBuffer {
-    fn new() -> Self {
-        Self {
-            value: None,
-            unit_prefix: None,
-            unit_type: None,
-            decimals: None,
-            range_min: None,
-            range_max: None,
-            whitelist: None,
-            source: None,
-            sequence: None,
-            raw_data: None,
-        }
+impl NumberBufferBuilder {
+    pub fn with_value(mut self, value: f64) -> Self {
+        self.value = Some(value);
+        self
     }
 
-    fn with_value<T>(self, value: T) -> Self
-    where
-        T: Into<Self>,
-    {
-        Self {
-            value: value.into().value,
-            ..self
-        }
+    pub fn with_source(mut self, source: u16) -> Self {
+        self.source = Some(source);
+        self
     }
 
-    fn with_source(self, source: u16) -> Self {
-        Self {
-            source: Some(source),
-            ..self
-        }
+    pub fn with_sequence(mut self, sequence: u16) -> Self {
+        self.sequence = Some(sequence);
+        self
     }
 
-    fn with_sequence(self, sequence: u16) -> Self {
-        Self {
-            sequence: Some(sequence),
-            ..self
-        }
-    }
-
-    fn with_random_sequence(self) -> Self {
+    pub fn with_random_sequence(mut self) -> Self {
         let mut rng = rand::thread_rng();
-        Self {
-            sequence: Some(rng.gen::<u16>()),
-            ..self
-        }
+        self.sequence = Some(rng.gen());
+        self
     }
 
-    fn build(self) -> Result<Self, String> {
+    pub fn build(self) -> Result<NumberBuffer, String> {
         let mut builder = flatbuffers::FlatBufferBuilder::new();
-
-        // Create Unit if specified
-        let unit = if self.unit_prefix.is_some() || self.unit_type.is_some() {
-            let unit_args = UnitArgs {
-                prefix: self.unit_prefix.unwrap_or(SIPrefix::NONE),
-                unit: self.unit_type.unwrap_or(SIUnit::NONE),
-            };
-            Some(Unit::create(&mut builder, &unit_args))
-        } else {
-            None
-        };
-
-        // Create NumberRange if specified
-        let range = if self.range_min.is_some() || self.range_max.is_some() {
-            let range_args = NumberRangeArgs {
-                min: self.range_min.unwrap_or(0.0),
-                max: self.range_max.unwrap_or(0.0),
-            };
-            Some(NumberRange::create(&mut builder, &range_args))
-        } else {
-            None
-        };
-
-        // Create whitelist vector if specified
-        let whitelist = if let Some(ref wl) = self.whitelist {
-            Some(builder.create_vector(wl))
-        } else {
-            None
-        };
-
-        // Create the number payload
-        let number_args = NumberArgs {
-            value: self.value.ok_or("value not provided".to_string())?,
-            unit,
-            decimals: self.decimals.unwrap_or(0),
-            range,
-            whitelist,
-        };
-        let number = Number::create(&mut builder, &number_args);
-
-        // Create header with timestamp
         let timestamp = generate_timestamp();
-        let source = self.source.ok_or("source not provided".to_string())?;
+
+        let value = self.value.ok_or("value not provided".to_string())?;
+        let number_args = NumberArgs {
+            value,
+            unit: None,
+            decimals: 0,
+            range: None,
+            whitelist: None,
+        };
+        let fb_number = FbNumber::create(&mut builder, &number_args);
+
+        let header_source = self
+            .source
+            .ok_or("header_source not provided".to_string())?;
         let sequence = self.sequence.ok_or("sequence not provided".to_string())?;
 
         let header_args = HeaderArgs {
             timestamp: Some(&timestamp),
-            source,
+            source: header_source,
             sequence,
         };
         let header = Header::create(&mut builder, &header_args);
 
-        // Create the message with the number payload
         let message_args = MessageArgs {
             header: Some(header),
             payload_type: Payload::Number,
-            payload: Some(number.as_union_value()),
+            payload: Some(fb_number.as_union_value()),
         };
         let message = Message::create(&mut builder, &message_args);
 
         builder.finish(message, None);
 
-        Ok(Self {
-            raw_data: Some(Bytes::from(builder.finished_data().to_vec())),
-            value: self.value,
-            unit_prefix: self.unit_prefix,
-            unit_type: self.unit_type,
-            decimals: self.decimals,
-            range_min: self.range_min,
-            range_max: self.range_max,
-            whitelist: self.whitelist,
-            source: self.source,
-            sequence: self.sequence,
+        Ok(NumberBuffer {
+            raw_data: Bytes::from(builder.finished_data().to_vec()),
         })
     }
+}
 
-    fn build_from_zbytes(zbytes: ZBytes) -> Self {
+#[derive(Default, Clone, Debug, PartialEq)]
+pub struct NumberBuffer {
+    raw_data: Bytes,
+}
+
+impl PzaBuffer for NumberBuffer {
+    fn from_zbytes(zbytes: ZBytes) -> Self {
         let bytes = Bytes::copy_from_slice(&zbytes.to_bytes());
-        Self {
-            raw_data: Some(bytes),
-            value: None,
-            unit_prefix: None,
-            unit_type: None,
-            decimals: None,
-            range_min: None,
-            range_max: None,
-            whitelist: None,
-            source: None,
-            sequence: None,
-        }
-    }
-
-    ///
-    fn is_builded(&self) -> bool {
-        self.raw_data.is_some()
-    }
-
-    ///
-    fn sequence(&self) -> u16 {
-        self.sequence
-            .expect("Sequence must be set before accessing it")
+        NumberBuffer { raw_data: bytes }
     }
 
     fn to_zbytes(self) -> ZBytes {
-        ZBytes::from(
-            self.raw_data
-                .expect("Raw data must be set before converting to ZBytes"),
-        )
+        ZBytes::from(self.raw_data)
+    }
+
+    fn source(&self) -> u16 {
+        let msg = self.as_message();
+        msg.header().map(|h| h.source()).unwrap_or(0)
+    }
+
+    fn sequence(&self) -> u16 {
+        let msg = self.as_message();
+        msg.header().map(|h| h.sequence()).unwrap_or(0)
     }
 
     fn as_message(&self) -> Message {
-        let data = self
-            .raw_data
-            .as_ref()
-            .expect("Buffer must be built to access the message");
-        flatbuffers::root::<Message>(data).expect("Failed to deserialize Message from raw_data")
+        flatbuffers::root::<Message>(&self.raw_data)
+            .expect("Failed to deserialize Message from raw_data")
     }
 
-    ///
-    ///
-    fn has_value_equal_to_message_value(&self, message: &Message) -> bool {
-        if let Some(payload) = message.payload_as_number() {
-            if let Some(value) = self.value {
-                return (payload.value() - value).abs() < f64::EPSILON;
-            }
+    fn has_same_message_value<B: PzaBuffer>(&self, other_buffer: &B) -> bool {
+        let self_msg = self.as_message();
+        let other_msg = other_buffer.as_message();
+
+        if self_msg.payload_type() != other_msg.payload_type() {
+            return false;
         }
-        false
-    }
-}
 
-impl From<f64> for NumberBuffer {
-    fn from(value: f64) -> Self {
-        let mut obj = Self::new();
-        obj.value = Some(value);
-        obj
-    }
-}
-
-impl From<NumberBuffer> for f64 {
-    fn from(buffer: NumberBuffer) -> Self {
-        match buffer.value {
-            Some(v) => v,
-            None => buffer.value(),
+        if let (Some(self_number), Some(other_number)) =
+            (self_msg.payload_as_number(), other_msg.payload_as_number())
+        {
+            self_number.value() == other_number.value()
+        } else {
+            false
         }
     }
 }
 
 impl NumberBuffer {
-    /// Extracts the Number payload from the Message
-    ///
-    /// # Returns
-    /// The deserialized Number object, or None if the payload is not a Number
-    pub fn number(&self) -> Option<Number> {
-        self.as_message().payload_as_number()
+    pub fn builder() -> NumberBufferBuilder {
+        NumberBufferBuilder::default()
     }
 
-    /// Gets the numeric value from the payload
-    ///
-    /// # Returns
-    /// The numeric value, or 0.0 if the payload is not a valid Number
-    pub fn value(&self) -> f64 {
-        self.number().map_or(0.0, |n| n.value())
-    }
-
-    /// Sets the unit for this number
-    pub fn with_unit(self, prefix: SIPrefix, unit: SIUnit) -> Self {
-        Self {
-            unit_prefix: Some(prefix),
-            unit_type: Some(unit),
-            ..self
-        }
-    }
-
-    /// Sets the number of decimal places
-    pub fn with_decimals(self, decimals: u8) -> Self {
-        Self {
-            decimals: Some(decimals),
-            ..self
-        }
-    }
-
-    /// Sets the range for this number
-    pub fn with_range(self, min: f64, max: f64) -> Self {
-        Self {
-            range_min: Some(min),
-            range_max: Some(max),
-            ..self
-        }
-    }
-
-    /// Sets the whitelist of allowed values
-    pub fn with_whitelist(self, whitelist: Vec<f64>) -> Self {
-        Self {
-            whitelist: Some(whitelist),
-            ..self
-        }
-    }
-
-    /// Gets the unit from the payload
-    ///
-    /// # Returns
-    /// The unit, or None if no unit is set
-    pub fn unit(&self) -> Option<(SIPrefix, SIUnit)> {
-        self.number()
-            .and_then(|n| n.unit().map(|u| (u.prefix(), u.unit())))
-    }
-
-    /// Gets the number of decimals from the payload
-    ///
-    /// # Returns
-    /// The number of decimals, or 0 if not set
-    pub fn decimals(&self) -> u8 {
-        self.number().map_or(0, |n| n.decimals())
-    }
-
-    /// Gets the range from the payload
-    ///
-    /// # Returns
-    /// The range as (min, max), or None if no range is set
-    pub fn range(&self) -> Option<(f64, f64)> {
-        self.number()
-            .and_then(|n| n.range().map(|r| (r.min(), r.max())))
-    }
-
-    /// Gets the whitelist from the payload
-    ///
-    /// # Returns
-    /// The whitelist of allowed values, or None if no whitelist is set
-    pub fn whitelist(&self) -> Option<Vec<f64>> {
-        self.number().and_then(|n| {
-            n.whitelist()
-                .map(|wl| (0..wl.len()).map(|i| wl.get(i)).collect())
-        })
+    /// Retourne la valeur du buffer sous forme de f64, si présente.
+    pub fn value(&self) -> Option<f64> {
+        self.as_message().payload_as_number().map(|n| n.value())
     }
 }

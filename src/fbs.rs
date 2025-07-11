@@ -3,8 +3,6 @@ pub mod panduza_generated;
 use panduza_generated::panduza::Message;
 use panduza_generated::panduza::Timestamp;
 
-pub mod common;
-
 ///
 mod boolean_buffer;
 pub use boolean_buffer::BooleanBuffer;
@@ -31,9 +29,6 @@ pub mod status_buffer;
 pub use status_buffer::InstanceStatusBuffer;
 pub use status_buffer::StatusBuffer;
 pub use status_buffer::StatusBufferBuilder;
-
-mod generic;
-pub use generic::PanduzaBuffer;
 
 use std::time::{SystemTime, UNIX_EPOCH};
 use thiserror::Error;

@@ -1,4 +1,5 @@
 pub mod notification_type;
+use crate::fbs::generate_timestamp;
 use crate::fbs::{
     panduza_generated::panduza::{Message, Notification},
     PzaBuffer,
@@ -43,7 +44,6 @@ impl NotificationBufferBuilder {
     }
 
     pub fn build(self) -> Result<NotificationBuffer, String> {
-        use crate::fbs::common::generate_timestamp;
         use crate::fbs::panduza_generated::panduza::{
             Header, HeaderArgs, Message, MessageArgs, Notification as FbNotification,
             NotificationArgs, Payload,

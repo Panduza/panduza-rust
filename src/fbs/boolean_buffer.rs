@@ -1,4 +1,4 @@
-use crate::fbs::common::generate_timestamp;
+use crate::fbs::generate_timestamp;
 use crate::fbs::{
     panduza_generated::panduza::{
         Boolean, BooleanArgs, Header, HeaderArgs, Message, MessageArgs, Payload,

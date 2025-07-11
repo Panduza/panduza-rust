@@ -1,3 +1,4 @@
+use crate::fbs::generate_timestamp;
 use crate::fbs::{
     panduza_generated::panduza::{
         Header, HeaderArgs, Message, MessageArgs, Payload, String as FbString, StringArgs,
@@ -38,7 +39,6 @@ impl StringBufferBuilder {
     }
 
     pub fn build(self) -> Result<StringBuffer, String> {
-        use crate::fbs::common::generate_timestamp;
         let mut builder = flatbuffers::FlatBufferBuilder::new();
         let timestamp = generate_timestamp();
 

@@ -1,5 +1,5 @@
 mod instance_status_buffer;
-use super::common::generate_timestamp;
+use super::generate_timestamp;
 use super::panduza_generated::panduza::Header;
 use super::panduza_generated::panduza::HeaderArgs;
 use super::panduza_generated::panduza::InstanceStatus as FbInstanceStatus;

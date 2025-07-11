@@ -1,6 +1,6 @@
-use std::time::Duration;
 use super::BasicsWorld;
 use cucumber::{given, then, when};
+use std::time::Duration;
 
 // ----------------------------------------------------------------------------
 
@@ -51,14 +51,28 @@ async fn the_number_attribute_ro(world: &mut BasicsWorld, attribute_name: String
 
 #[when(expr = "I set rw number to {float}")]
 async fn i_set_rw_number_to(world: &mut BasicsWorld, f: f32) {
-    world.number.att_rw.as_mut().unwrap().set(f as f64).await.unwrap();
+    world
+        .number
+        .att_rw
+        .as_mut()
+        .unwrap()
+        .set(f as f64)
+        .await
+        .unwrap();
 }
 
 // ----------------------------------------------------------------------------
 
 #[when(expr = "I set wo number to {float}")]
 async fn i_set_wo_number_to(world: &mut BasicsWorld, f: f32) {
-    world.number.att_wo.as_mut().unwrap().set(f as f64).await.unwrap();
+    world
+        .number
+        .att_wo
+        .as_mut()
+        .unwrap()
+        .set(f as f64)
+        .await
+        .unwrap();
 }
 
 // ----------------------------------------------------------------------------
@@ -66,7 +80,13 @@ async fn i_set_wo_number_to(world: &mut BasicsWorld, f: f32) {
 #[then(expr = "the rw number value is {float}")]
 async fn the_rw_number_value_is(world: &mut BasicsWorld, f: f32) {
     let read_value = world.number.att_rw.as_mut().unwrap().get().await.unwrap();
-    assert_eq!(read_value.value() as f32, f, "read '{:?}' != expected '{:?}'", read_value, f );
+    assert_eq!(
+        read_value.value().unwrap() as f32,
+        f,
+        "read '{:?}' != expected '{:?}'",
+        read_value,
+        f
+    );
 }
 
 // ----------------------------------------------------------------------------
@@ -83,7 +103,7 @@ async fn the_ro_number_value_is(world: &mut BasicsWorld, expected_value: f32) {
         .unwrap();
     let read_value = world.number.att_ro.as_mut().unwrap().get().await.unwrap();
     assert_eq!(
-        read_value.value(),
+        read_value.value().unwrap(),
         expected_value as f64,
         "read '{:?}' != expected '{:?}'",
         read_value,

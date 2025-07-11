@@ -189,7 +189,7 @@ async fn the_counter_attribute_must_indicate(world: &mut BasicsWorld, expected_c
             .expect("Failed to get counter value");
 
         // Convert to i32 for comparison
-        counter_value_i32 = counter_value.value() as i32;
+        counter_value_i32 = counter_value.value().unwrap() as i32;
 
         // Small delay to avoid busy waiting
         tokio::time::sleep(Duration::from_millis(1)).await;

@@ -1,7 +1,6 @@
 pub mod boolean;
 pub mod bytes;
 pub mod data_pack;
-pub mod generic;
 pub mod json;
 pub mod notification;
 pub mod number;
@@ -31,9 +30,6 @@ pub struct CallbackEntry<T> {
     pub callback: CallbackFn<T>,
     pub condition: Option<ConditionFn<T>>,
 }
-
-// Export the async generic attribute for easier access
-pub use generic::GenericAttribute;
 
 impl<T> std::fmt::Debug for CallbackEntry<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

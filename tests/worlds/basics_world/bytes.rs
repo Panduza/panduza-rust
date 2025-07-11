@@ -75,9 +75,11 @@ async fn the_rw_bytes_value_is(world: &mut BasicsWorld, b: String) {
     let bytes: Bytes = Bytes::from(b);
     let read_value = world.bytes.att_rw.as_mut().unwrap().get().await.unwrap();
     assert_eq!(
-        read_value.value(), bytes,
+        read_value.value().unwrap(),
+        bytes,
         "read '{:?}' != expected '{:?}'",
-        read_value, bytes
+        read_value,
+        bytes
     );
 }
 
@@ -94,7 +96,7 @@ async fn the_ro_bytes_value_is(world: &mut BasicsWorld, expected_value: String) 
         .unwrap();
     let read_value = world.bytes.att_ro.as_mut().unwrap().get().await.unwrap();
     assert_eq!(
-        read_value.value(),
+        read_value.value().unwrap(),
         bytes,
         "read '{:?}' != expected '{:?}'",
         read_value,
