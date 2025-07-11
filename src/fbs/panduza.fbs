@@ -34,6 +34,18 @@ table Message {
 
 // ----------------------------------------------
 
+table UserEntry {
+    id: uint16; // 0 for request
+    name: string; // unique name of the user
+}
+
+table Users {
+    // The users are stored as a vector of UserEntry
+    entries: [UserEntry];
+}
+
+// ----------------------------------------------
+
 table InstanceStatus {
     instance: string;
     state: uint16;
