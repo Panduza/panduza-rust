@@ -1,18 +1,37 @@
 use crate::fbs::generate_timestamp;
-use crate::fbs::{
-    panduza_generated::panduza::{
-        Boolean, BooleanArgs, Header, HeaderArgs, Message, MessageArgs, Payload,
-    },
-    PzaBuffer,
-};
+use crate::fbs::panduza_generated::panduza::Boolean;
+use crate::fbs::panduza_generated::panduza::BooleanArgs;
+use crate::fbs::panduza_generated::panduza::Header;
+use crate::fbs::panduza_generated::panduza::HeaderArgs;
+use crate::fbs::panduza_generated::panduza::Message;
+use crate::fbs::panduza_generated::panduza::MessageArgs;
+use crate::fbs::panduza_generated::panduza::Payload;
+use crate::fbs::PzaBuffer;
 use bytes::Bytes;
 use rand::Rng;
 use zenoh::bytes::ZBytes;
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+/// A builder for creating a BooleanBuffer
+///
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct BooleanBufferBuilder {
-    value: Option<bool>,
+    /// The source of the message, typically a u16 identifier.
+    ///
     source: Option<u16>,
+
+    /// The sequence number of the message, typically a u16 identifier.
+    ///
     sequence: Option<u16>,
+
+    /// The value of the boolean message, if present.
+    ///
+    value: Option<bool>,
 }
 
 impl BooleanBufferBuilder {
@@ -29,26 +48,34 @@ impl BooleanBufferBuilder {
 
     // ------------------------------------------------------------------------
 
-    pub fn with_value(mut self, value: bool) -> Self {
-        self.value = Some(value);
-        self
-    }
-
     pub fn with_source(mut self, source: u16) -> Self {
         self.source = Some(source);
         self
     }
+
+    // ------------------------------------------------------------------------
 
     pub fn with_sequence(mut self, sequence: u16) -> Self {
         self.sequence = Some(sequence);
         self
     }
 
+    // ------------------------------------------------------------------------
+
     pub fn with_random_sequence(mut self) -> Self {
         let mut rng = rand::thread_rng();
         self.sequence = Some(rng.gen());
         self
     }
+
+    // ------------------------------------------------------------------------
+
+    pub fn with_value(mut self, value: bool) -> Self {
+        self.value = Some(value);
+        self
+    }
+
+    // ------------------------------------------------------------------------
 
     pub fn build(self) -> Result<BooleanBuffer, String> {
         let mut builder = flatbuffers::FlatBufferBuilder::new();
@@ -86,35 +113,57 @@ impl BooleanBufferBuilder {
     }
 }
 
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+/// A buffer that contains a boolean value, along with metadata such as source and sequence.
+///
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct BooleanBuffer {
+    /// The raw data of the buffer, serialized as bytes.
+    ///
     raw_data: Bytes,
 }
 
 impl PzaBuffer for BooleanBuffer {
+    // ------------------------------------------------------------------------
+
     fn from_zbytes(zbytes: ZBytes) -> Self {
         let bytes = Bytes::copy_from_slice(&zbytes.to_bytes());
         BooleanBuffer { raw_data: bytes }
     }
 
+    // ------------------------------------------------------------------------
+
     fn to_zbytes(self) -> ZBytes {
         ZBytes::from(self.raw_data)
     }
+
+    // ------------------------------------------------------------------------
 
     fn source(&self) -> Option<u16> {
         let msg = self.as_message();
         msg.header().map(|h| h.source())
     }
 
+    // ------------------------------------------------------------------------
+
     fn sequence(&self) -> Option<u16> {
         let msg = self.as_message();
         msg.header().map(|h| h.sequence())
     }
 
+    // ------------------------------------------------------------------------
+
     fn as_message(&self) -> Message {
         flatbuffers::root::<Message>(&self.raw_data)
             .expect("Failed to deserialize Message from raw_data")
     }
+
+    // ------------------------------------------------------------------------
 
     fn has_same_message_value<B: PzaBuffer>(&self, other_buffer: &B) -> bool {
         let self_msg = self.as_message();
@@ -133,6 +182,8 @@ impl PzaBuffer for BooleanBuffer {
             false
         }
     }
+
+    // ------------------------------------------------------------------------
 }
 
 impl BooleanBuffer {
