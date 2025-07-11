@@ -6,14 +6,12 @@ mod string;
 
 use cucumber::Parameter;
 use cucumber::{given, then, World};
-use futures::FutureExt;
 use panduza::attribute::notification::notification_pack::NotificationPack;
 use panduza::{
     reactor::ReactorOptions, AttributeBuilder, BooleanAttribute, BytesAttribute, JsonAttribute,
     Reactor, StringAttribute,
 };
 use panduza::{NotificationAttribute, NumberAttribute, StatusAttribute};
-use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use std::{fmt::Debug, str::FromStr};
 
@@ -132,10 +130,6 @@ pub struct BasicsWorld {
     /// Fifo to store incoming platform notifications
     ///
     pub platform_notifications_pack: Option<NotificationPack>,
-
-    ///
-    ///
-    pub att_instance_status: Option<JsonAttribute>,
 
     /// Reactor sub world data
     ///
