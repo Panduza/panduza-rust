@@ -92,11 +92,11 @@ pub trait PzaBuffer: Clone + Default + Send + Sync + 'static {
 
     /// Returns the source of the buffer
     ///
-    fn source(&self) -> u16;
+    fn source(&self) -> Option<u16>;
 
     /// Returns the sequence number of the buffer
     ///
-    fn sequence(&self) -> u16;
+    fn sequence(&self) -> Option<u16>;
 
     ///
     ///

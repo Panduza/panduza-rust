@@ -8,8 +8,8 @@ use cucumber::Parameter;
 use cucumber::{given, then, World};
 use panduza::attribute::notification::notification_pack::NotificationPack;
 use panduza::{
-    reactor::ReactorOptions, AttributeBuilder, BooleanAttribute, BytesAttribute, JsonAttribute,
-    Reactor, StringAttribute,
+    reactor::ReactorOptions, AttributeBuilder, BooleanAttribute, BytesAttribute, Reactor,
+    StringAttribute,
 };
 use panduza::{NotificationAttribute, NumberAttribute, StatusAttribute};
 use std::time::Duration;

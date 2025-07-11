@@ -16,6 +16,19 @@ pub struct BooleanBufferBuilder {
 }
 
 impl BooleanBufferBuilder {
+    // ------------------------------------------------------------------------
+
+    /// Prepare a buffer as an answer to another BooleanBuffer.
+    ///
+    pub fn as_answer_to(mut self, other: &BooleanBuffer) -> Self {
+        if let Some(sequence) = other.sequence() {
+            self = self.with_sequence(sequence);
+        }
+        self
+    }
+
+    // ------------------------------------------------------------------------
+
     pub fn with_value(mut self, value: bool) -> Self {
         self.value = Some(value);
         self
@@ -88,14 +101,14 @@ impl PzaBuffer for BooleanBuffer {
         ZBytes::from(self.raw_data)
     }
 
-    fn source(&self) -> u16 {
+    fn source(&self) -> Option<u16> {
         let msg = self.as_message();
-        msg.header().map(|h| h.source()).unwrap_or(0)
+        msg.header().map(|h| h.source())
     }
 
-    fn sequence(&self) -> u16 {
+    fn sequence(&self) -> Option<u16> {
         let msg = self.as_message();
-        msg.header().map(|h| h.sequence()).unwrap_or(0)
+        msg.header().map(|h| h.sequence())
     }
 
     fn as_message(&self) -> Message {
