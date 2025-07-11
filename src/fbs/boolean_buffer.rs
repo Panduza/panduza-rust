@@ -48,6 +48,8 @@ impl BooleanBufferBuilder {
 
     // ------------------------------------------------------------------------
 
+    /// Set the source of the message.
+    ///
     pub fn with_source(mut self, source: u16) -> Self {
         self.source = Some(source);
         self
@@ -55,6 +57,8 @@ impl BooleanBufferBuilder {
 
     // ------------------------------------------------------------------------
 
+    /// Set the sequence number of the message.
+    ///
     pub fn with_sequence(mut self, sequence: u16) -> Self {
         self.sequence = Some(sequence);
         self
@@ -62,6 +66,8 @@ impl BooleanBufferBuilder {
 
     // ------------------------------------------------------------------------
 
+    /// Set a random sequence number for the message.
+    ///
     pub fn with_random_sequence(mut self) -> Self {
         let mut rng = rand::thread_rng();
         self.sequence = Some(rng.gen());
@@ -70,6 +76,8 @@ impl BooleanBufferBuilder {
 
     // ------------------------------------------------------------------------
 
+    /// Set the value of the boolean message.
+    ///
     pub fn with_value(mut self, value: bool) -> Self {
         self.value = Some(value);
         self
@@ -77,6 +85,8 @@ impl BooleanBufferBuilder {
 
     // ------------------------------------------------------------------------
 
+    /// Build the BooleanBuffer with the provided parameters.
+    ///
     pub fn build(self) -> Result<BooleanBuffer, String> {
         let mut builder = flatbuffers::FlatBufferBuilder::new();
         let timestamp = generate_timestamp();
@@ -187,12 +197,14 @@ impl PzaBuffer for BooleanBuffer {
 }
 
 impl BooleanBuffer {
+    /// Create a new BooleanBufferBuilder instance.
     ///
     pub fn builder() -> BooleanBufferBuilder {
         BooleanBufferBuilder::default()
     }
 
-    /// Retourne la valeur booléenne du buffer, si présente.
+    /// Get the raw data of the buffer.
+    ///
     pub fn value(&self) -> Option<bool> {
         self.as_message().payload_as_boolean().map(|b| b.value())
     }
