@@ -6,6 +6,7 @@ pub mod notification;
 pub mod number;
 pub mod status;
 pub mod string;
+pub mod structure;
 
 /// Standard message attribute for sending messages
 /// The attribute manages a value than change over time
