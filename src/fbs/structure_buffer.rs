@@ -1,6 +1,7 @@
 ///
 ///
 mod attribute_entry;
+pub use attribute_entry::AttributeEntryBuffer;
 pub use attribute_entry::AttributeEntryBufferBuilder;
 
 use super::generate_timestamp;
