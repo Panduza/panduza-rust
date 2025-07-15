@@ -47,8 +47,8 @@ table AttributeEntry {
 table StructureNode {
     name: string;
     tags: [string];
+    children: [StructureNode];
     attributes: [AttributeEntry];
-    classes: [StructureNode];
 }
 
 // ----------------------------------------------
