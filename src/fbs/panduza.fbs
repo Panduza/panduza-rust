@@ -16,6 +16,8 @@ table Header {
 
 // The Payload union allows for different types of messages to be encapsulated in a single structure.
 union Payload {
+    Structure,
+    Context,
     Status,
     Notification,
     Boolean,
@@ -60,7 +62,7 @@ table Structure {
 // cmd => attribute or class topic
 // att => context
 
-table ContextEntry {
+table Context {
     topic: string;
     context: string; // empty on command
 }

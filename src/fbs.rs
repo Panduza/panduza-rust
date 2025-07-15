@@ -3,6 +3,14 @@ pub mod panduza_generated;
 use panduza_generated::panduza::Message;
 use panduza_generated::panduza::Timestamp;
 
+/// Structure buffer
+///
+mod structure_buffer;
+pub use structure_buffer::AttributeEntry;
+pub use structure_buffer::ClassEntry;
+pub use structure_buffer::StructureBuffer;
+pub use structure_buffer::StructureBufferBuilder;
+
 ///
 mod boolean_buffer;
 pub use boolean_buffer::BooleanBuffer;
