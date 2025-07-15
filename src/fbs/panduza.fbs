@@ -34,6 +34,41 @@ table Message {
 
 // ----------------------------------------------
 
+// Attribute Topic: "$NS/pza/_/structure"
+
+table AttributeEntry {
+    name: string;
+    type: string;
+    mode: string;
+}
+
+table ClassEntry {
+    name: string;
+    tags: [string];
+    attributes: [AttributeEntry];
+    classes: [ClassEntry];
+}
+
+table Structure {
+    attributes: [AttributeEntry];
+    classes: [ClassEntry];
+}
+
+// ----------------------------------------------
+
+// Attribute Topic: "$NS/pza/_/context"
+// cmd => attribute or class topic
+// att => context
+
+table ContextEntry {
+    topic: string;
+    context: string; // empty on command
+}
+
+// ----------------------------------------------
+
+// Attribute Topic: "$NS/pza/_/users"
+
 table UserEntry {
     id: uint16; // 0 for request
     name: string; // unique name of the user

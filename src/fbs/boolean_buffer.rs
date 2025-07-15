@@ -197,15 +197,21 @@ impl PzaBuffer for BooleanBuffer {
 }
 
 impl BooleanBuffer {
+    // ------------------------------------------------------------------------
+
     /// Create a new BooleanBufferBuilder instance.
     ///
     pub fn builder() -> BooleanBufferBuilder {
         BooleanBufferBuilder::default()
     }
 
+    // ------------------------------------------------------------------------
+
     /// Get the raw data of the buffer.
     ///
     pub fn value(&self) -> Option<bool> {
         self.as_message().payload_as_boolean().map(|b| b.value())
     }
+
+    // ------------------------------------------------------------------------
 }

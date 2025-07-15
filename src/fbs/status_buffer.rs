@@ -65,7 +65,6 @@ impl PzaBufferBuilder<StatusBuffer> for StatusBufferBuilder {
 
         let status_args = StatusArgs {
             instances: Some(instances_vector),
-            timestamp: Some(&timestamp),
         };
         let status = FbStatus::create(&mut builder, &status_args);
 
