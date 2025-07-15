@@ -1,23 +1,15 @@
 ///
 ///
 mod attribute_entry;
-pub use attribute_entry::AttributeEntry;
-pub use attribute_entry::AttributeEntryBuilder;
-
-///
-///
-mod class_entry;
-pub use class_entry::ClassEntry;
-pub use class_entry::ClassEntryBuilder;
+pub use attribute_entry::AttributeEntryBufferBuilder;
 
 use super::generate_timestamp;
-use super::panduza_generated::panduza::Header;
-use super::panduza_generated::panduza::HeaderArgs;
 use super::panduza_generated::panduza::Message;
-use super::panduza_generated::panduza::MessageArgs;
-use super::panduza_generated::panduza::Payload;
-use super::panduza_generated::panduza::Structure as FbStructure;
-use super::panduza_generated::panduza::StructureArgs;
+use crate::fbs::panduza_generated::panduza::Header;
+use crate::fbs::panduza_generated::panduza::HeaderArgs;
+use crate::fbs::panduza_generated::panduza::MessageArgs;
+use crate::fbs::panduza_generated::panduza::Payload;
+use crate::fbs::panduza_generated::panduza::StructureNode;
 use crate::fbs::PzaBuffer;
 use crate::fbs::PzaBufferBuilder;
 use bytes::Bytes;
@@ -26,16 +18,23 @@ use zenoh::bytes::ZBytes;
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct StructureBufferBuilder {
     ///
-    attributes: Option<Vec<AttributeEntryBuilder>>,
+    pub name: Option<String>,
 
     ///
-    classes: Option<Vec<ClassEntryBuilder>>,
+    pub tags: Vec<String>,
+
+    /// Attribute entries for this node
+    ///
+    pub attributes: Option<Vec<AttributeEntryBufferBuilder>>,
 
     ///
-    source: Option<u16>,
+    pub classes: Option<Vec<StructureBufferBuilder>>,
 
     ///
-    sequence: Option<u16>,
+    pub source: Option<u16>,
+
+    ///
+    pub sequence: Option<u16>,
 }
 
 impl PzaBufferBuilder<StructureBuffer> for StructureBufferBuilder {
@@ -66,26 +65,86 @@ impl PzaBufferBuilder<StructureBuffer> for StructureBufferBuilder {
         let mut builder = flatbuffers::FlatBufferBuilder::new();
         let timestamp = generate_timestamp();
 
-        let structure_args = StructureArgs {
-            attributes: None,
-            classes: None,
+        // Serialize name
+        let name_offset = if let Some(name) = self.name {
+            Some(builder.create_string(&name))
+        } else {
+            None
         };
-        let structure = FbStructure::create(&mut builder, &structure_args);
 
-        let source = self.source.ok_or("source not provided".to_string())?;
+        // Serialize tags
+        let tags_offsets: Vec<_> = self
+            .tags
+            .iter()
+            .map(|tag| builder.create_string(tag))
+            .collect();
+        let tags_vec = if !tags_offsets.is_empty() {
+            Some(builder.create_vector(&tags_offsets))
+        } else {
+            None
+        };
+
+        // Serialize attributes (optionnel, à adapter selon ta structure FlatBuffers)
+        // Ici, on suppose que AttributeEntryBufferBuilder a une méthode build_flatbuffer(&mut builder) qui retourne un WIPOffset
+        let attributes_vec = if let Some(attributes) = &self.attributes {
+            let attr_offsets: Vec<_> = attributes
+                .iter()
+                .map(|attr| attr.build_wip_offset(&mut builder))
+                .collect();
+            if !attr_offsets.is_empty() {
+                Some(builder.create_vector(&attr_offsets))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        // Serialize classes (récursif, à adapter selon ta structure FlatBuffers)
+        let classes_vec = if let Some(classes) = &self.classes {
+            let class_offsets: Vec<_> = classes
+                .iter()
+                .map(|class| class.build_wip_offset(&mut builder))
+                .collect();
+            if !class_offsets.is_empty() {
+                Some(builder.create_vector(&class_offsets))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        // Créer le node de structure (adapter selon le schéma FlatBuffers)
+        // Supposons que StructureNodeArgs existe dans panduza_generated
+        let structure_node_args = crate::fbs::panduza_generated::panduza::StructureNodeArgs {
+            name: name_offset,
+            tags: tags_vec,
+            attributes: attributes_vec,
+            classes: classes_vec,
+        };
+        let structure_node_offset = crate::fbs::panduza_generated::panduza::StructureNode::create(
+            &mut builder,
+            &structure_node_args,
+        );
+
+        // Create the header
+        let header_source = self
+            .source
+            .ok_or("header_source not provided".to_string())?;
         let sequence = self.sequence.ok_or("sequence not provided".to_string())?;
-
         let header_args = HeaderArgs {
             timestamp: Some(&timestamp),
-            source,
+            source: header_source,
             sequence,
         };
         let header = Header::create(&mut builder, &header_args);
 
+        // Create the message avec payload
         let message_args = MessageArgs {
             header: Some(header),
-            payload_type: Payload::Structure,
-            payload: Some(structure.as_union_value()),
+            payload_type: Payload::StructureNode,
+            payload: Some(structure_node_offset.as_union_value()),
         };
         let message = Message::create(&mut builder, &message_args);
 
@@ -102,16 +161,67 @@ impl PzaBufferBuilder<StructureBuffer> for StructureBufferBuilder {
 impl StructureBufferBuilder {
     // ------------------------------------------------------------------------
 
-    pub fn with_attributes(mut self, attributes: Vec<AttributeEntryBuilder>) -> Self {
-        self.attributes = Some(attributes);
+    pub fn with_name(mut self, name: String) -> Self {
+        self.name = Some(name);
         self
     }
 
     // ------------------------------------------------------------------------
 
-    pub fn with_classes(mut self, classes: Vec<ClassEntryBuilder>) -> Self {
-        self.classes = Some(classes);
+    pub fn with_tag(mut self, tag: String) -> Self {
+        self.tags.push(tag);
         self
+    }
+
+    // ------------------------------------------------------------------------
+
+    pub fn with_tags(mut self, tags: Vec<String>) -> Self {
+        self.tags = tags;
+        self
+    }
+
+    // ------------------------------------------------------------------------
+
+    pub fn build_wip_offset<'a>(
+        &self,
+        builder: &mut flatbuffers::FlatBufferBuilder<'a>,
+    ) -> flatbuffers::WIPOffset<StructureNode<'a>> {
+        // Serialize tags
+        let tags_offsets: Vec<_> = self
+            .tags
+            .iter()
+            .map(|tag| builder.create_string(tag))
+            .collect();
+        let tags_vec = if !tags_offsets.is_empty() {
+            Some(builder.create_vector(&tags_offsets))
+        } else {
+            None
+        };
+
+        //
+        let args = crate::fbs::panduza_generated::panduza::StructureNodeArgs {
+            name: self.name.as_ref().map(|s| builder.create_string(s)),
+            tags: tags_vec,
+            attributes: if let Some(attributes) = &self.attributes {
+                let attr_offsets: Vec<_> = attributes
+                    .iter()
+                    .map(|attr| attr.build_wip_offset(builder))
+                    .collect();
+                Some(builder.create_vector(&attr_offsets))
+            } else {
+                None
+            },
+            classes: if let Some(classes) = &self.classes {
+                let class_offsets: Vec<_> = classes
+                    .iter()
+                    .map(|class| class.build_wip_offset(builder))
+                    .collect();
+                Some(builder.create_vector(&class_offsets))
+            } else {
+                None
+            },
+        };
+        crate::fbs::panduza_generated::panduza::StructureNode::create(builder, &args)
     }
 
     // ------------------------------------------------------------------------

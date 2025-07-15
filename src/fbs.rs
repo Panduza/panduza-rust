@@ -6,10 +6,6 @@ use panduza_generated::panduza::Timestamp;
 /// Structure buffer
 ///
 mod structure_buffer;
-pub use structure_buffer::AttributeEntry;
-pub use structure_buffer::AttributeEntryBuilder;
-pub use structure_buffer::ClassEntry;
-pub use structure_buffer::ClassEntryBuilder;
 pub use structure_buffer::StructureBuffer;
 pub use structure_buffer::StructureBufferBuilder;
 

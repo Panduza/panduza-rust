@@ -16,7 +16,7 @@ table Header {
 
 // The Payload union allows for different types of messages to be encapsulated in a single structure.
 union Payload {
-    Structure,
+    StructureNode,
     Context,
     Status,
     Notification,
@@ -44,16 +44,11 @@ table AttributeEntry {
     mode: string;
 }
 
-table ClassEntry {
+table StructureNode {
     name: string;
     tags: [string];
     attributes: [AttributeEntry];
-    classes: [ClassEntry];
-}
-
-table Structure {
-    attributes: [AttributeEntry];
-    classes: [ClassEntry];
+    classes: [StructureNode];
 }
 
 // ----------------------------------------------
