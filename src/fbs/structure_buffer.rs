@@ -2,11 +2,13 @@
 ///
 mod attribute_entry;
 pub use attribute_entry::AttributeEntry;
+pub use attribute_entry::AttributeEntryBuilder;
 
 ///
 ///
 mod class_entry;
 pub use class_entry::ClassEntry;
+pub use class_entry::ClassEntryBuilder;
 
 use super::generate_timestamp;
 use super::panduza_generated::panduza::Header;
@@ -24,29 +26,41 @@ use zenoh::bytes::ZBytes;
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct StructureBufferBuilder {
     ///
-    attributes: Option<Vec<AttributeEntry>>,
+    attributes: Option<Vec<AttributeEntryBuilder>>,
 
     ///
-    classes: Option<Vec<ClassEntry>>,
+    classes: Option<Vec<ClassEntryBuilder>>,
+
+    ///
     source: Option<u16>,
+
+    ///
     sequence: Option<u16>,
 }
 
 impl PzaBufferBuilder<StructureBuffer> for StructureBufferBuilder {
+    // ------------------------------------------------------------------------
+
     fn with_source(mut self, source: u16) -> Self {
         self.source = Some(source);
         self
     }
+
+    // ------------------------------------------------------------------------
 
     fn with_sequence(mut self, sequence: u16) -> Self {
         self.sequence = Some(sequence);
         self
     }
 
+    // ------------------------------------------------------------------------
+
     fn with_random_sequence(mut self) -> Self {
         self.sequence = Some(rand::random());
         self
     }
+
+    // ------------------------------------------------------------------------
 
     fn build(self) -> Result<StructureBuffer, String> {
         let mut builder = flatbuffers::FlatBufferBuilder::new();
@@ -81,9 +95,27 @@ impl PzaBufferBuilder<StructureBuffer> for StructureBufferBuilder {
             raw_data: Bytes::from(builder.finished_data().to_vec()),
         })
     }
+
+    // ------------------------------------------------------------------------
 }
 
-impl StructureBufferBuilder {}
+impl StructureBufferBuilder {
+    // ------------------------------------------------------------------------
+
+    pub fn with_attributes(mut self, attributes: Vec<AttributeEntryBuilder>) -> Self {
+        self.attributes = Some(attributes);
+        self
+    }
+
+    // ------------------------------------------------------------------------
+
+    pub fn with_classes(mut self, classes: Vec<ClassEntryBuilder>) -> Self {
+        self.classes = Some(classes);
+        self
+    }
+
+    // ------------------------------------------------------------------------
+}
 
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct StructureBuffer {
@@ -120,4 +152,8 @@ impl PzaBuffer for StructureBuffer {
     }
 }
 
-impl StructureBuffer {}
+impl StructureBuffer {
+    pub fn builder() -> StructureBufferBuilder {
+        StructureBufferBuilder::default()
+    }
+}
