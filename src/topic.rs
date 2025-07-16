@@ -112,6 +112,18 @@ impl Topic {
     pub fn last_layer(&self) -> String {
         self.layers.last().unwrap().clone()
     }
+
+    // ------------------------------------------------------------------------
+
+    /// Returns the full path as a vector of strings
+    ///
+    pub fn vector_path(&self) -> Vec<String> {
+        let mut r = vec![self.instance.clone()];
+        r.extend(self.layers.iter().cloned());
+        r
+    }
+
+    // ------------------------------------------------------------------------
 }
 
 #[cfg(test)]

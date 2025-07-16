@@ -32,7 +32,7 @@ pub struct StructureBufferBuilder {
     pub attributes: Option<Vec<AttributeEntryBufferBuilder>>,
 
     ///
-    pub classes: Option<Vec<StructureBufferBuilder>>,
+    pub children: Option<Vec<StructureBufferBuilder>>,
 
     ///
     pub source: Option<u16>,
@@ -105,7 +105,7 @@ impl PzaBufferBuilder<StructureBuffer> for StructureBufferBuilder {
         };
 
         // Serialize classes (récursif, à adapter selon ta structure FlatBuffers)
-        let classes_vec = if let Some(classes) = &self.classes {
+        let classes_vec = if let Some(classes) = &self.children {
             let class_offsets: Vec<_> = classes
                 .iter()
                 .map(|class| class.build_wip_offset(&mut builder))
@@ -215,7 +215,7 @@ impl StructureBufferBuilder {
             } else {
                 None
             },
-            children: if let Some(classes) = &self.classes {
+            children: if let Some(classes) = &self.children {
                 let class_offsets: Vec<_> = classes
                     .iter()
                     .map(|class| class.build_wip_offset(builder))
@@ -229,6 +229,68 @@ impl StructureBufferBuilder {
     }
 
     // -------------------------------------------------------------------------
+
+    /// Insert an attribute entry into this node
+    ///
+    pub fn insert_child(&mut self, child: StructureBufferBuilder) {
+        if self.children.is_none() {
+            self.children = Some(Vec::new());
+        }
+        if let Some(children) = &mut self.children {
+            children.push(child);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+
+    /// Check if this node has attributes
+    ///
+    pub fn is_children_exists_with_name(&self, name: &str) -> bool {
+        if let Some(children) = &self.children {
+            children
+                .iter()
+                .any(|child| child.name.as_deref() == Some(name))
+        } else {
+            false
+        }
+    }
+
+    // -------------------------------------------------------------------------
+
+    /// Insert an attribute entry into this node tree at the specified path
+    ///
+    pub fn insert_node(&mut self, path: Vec<String>, node: StructureBufferBuilder) {
+        // If children is None, we initialize it
+        if self.children.is_none() {
+            self.children = Some(Vec::new());
+        }
+
+        // Insert the node at the specified path
+        if let Some(children) = &mut self.children {
+            // If the path is empty, we insert the node directly
+            if path.is_empty() {
+                children.push(node);
+                return;
+            } else {
+                let next = path.first().expect("Path should not be empty");
+                // find children with the 'next' name
+                if let Some(child) = children
+                    .iter_mut()
+                    .find(|c| c.name.as_deref() == Some(next))
+                {
+                    // If the child exists, we continue down the path
+                    child.insert_node(path[1..].to_vec(), node);
+                } else {
+                    // If the child doesn't exist, we create a new one
+                    let mut new_child = StructureBufferBuilder::default().with_name(next.clone());
+                    new_child.insert_node(path[1..].to_vec(), node);
+                    children.push(new_child);
+                }
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------------
 }
 
 impl Debug for StructureBufferBuilder {
@@ -237,7 +299,7 @@ impl Debug for StructureBufferBuilder {
             .field("name", &self.name)
             .field("tags", &self.tags)
             .field("attributes", &self.attributes)
-            .field("classes", &self.classes)
+            .field("classes", &self.children)
             .field("source", &self.source)
             .field("sequence", &self.sequence)
             .finish()
