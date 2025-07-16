@@ -122,7 +122,7 @@ impl PzaBufferBuilder<StructureBuffer> for StructureBufferBuilder {
             name: name_offset,
             tags: tags_vec,
             attributes: attributes_vec,
-            classes: classes_vec,
+            children: classes_vec,
         };
         let structure_node_offset = crate::fbs::panduza_generated::panduza::StructureNode::create(
             &mut builder,
@@ -212,7 +212,7 @@ impl StructureBufferBuilder {
             } else {
                 None
             },
-            classes: if let Some(classes) = &self.classes {
+            children: if let Some(classes) = &self.classes {
                 let class_offsets: Vec<_> = classes
                     .iter()
                     .map(|class| class.build_wip_offset(builder))
