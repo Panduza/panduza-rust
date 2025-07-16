@@ -38,12 +38,14 @@ table Message {
 
 // Attribute Topic: "$NS/pza/_/structure"
 
+// Leaf
 table AttributeEntry {
     name: string;
     type: string;
     mode: string;
 }
 
+// Node
 table StructureNode {
     name: string;
     tags: [string];
