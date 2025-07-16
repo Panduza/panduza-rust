@@ -1,6 +1,8 @@
 ///
 ///
 mod attribute_entry;
+use std::fmt::Debug;
+
 pub use attribute_entry::AttributeEntryBuffer;
 pub use attribute_entry::AttributeEntryBufferBuilder;
 
@@ -16,8 +18,9 @@ use crate::fbs::PzaBufferBuilder;
 use bytes::Bytes;
 use zenoh::bytes::ZBytes;
 
-#[derive(Default, Clone, Debug, PartialEq)]
+#[derive(Default, Clone, PartialEq)]
 pub struct StructureBufferBuilder {
+    /// Name of this node
     ///
     pub name: Option<String>,
 
@@ -225,8 +228,27 @@ impl StructureBufferBuilder {
         crate::fbs::panduza_generated::panduza::StructureNode::create(builder, &args)
     }
 
-    // ------------------------------------------------------------------------
+    // -------------------------------------------------------------------------
 }
+
+impl Debug for StructureBufferBuilder {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("StructureBufferBuilder")
+            .field("name", &self.name)
+            .field("tags", &self.tags)
+            .field("attributes", &self.attributes)
+            .field("classes", &self.classes)
+            .field("source", &self.source)
+            .field("sequence", &self.sequence)
+            .finish()
+    }
+}
+
+// ------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct StructureBuffer {
