@@ -291,6 +291,20 @@ impl StructureBufferBuilder {
     }
 
     // -------------------------------------------------------------------------
+
+    /// Insert an attribute entry into this node tree at the specified path
+    ///
+    pub fn insert_attribute(&mut self, path: Vec<String>, att: AttributeEntryBufferBuilder) {
+        // If children is None, we initialize it
+        if self.children.is_none() {
+            self.children = Some(Vec::new());
+        }
+
+        // Insert the node at the specified path
+        if let Some(children) = &mut self.children {}
+    }
+
+    // -------------------------------------------------------------------------
 }
 
 impl Debug for StructureBufferBuilder {
