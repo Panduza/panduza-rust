@@ -214,7 +214,7 @@ pub async fn new_reactor(options: ReactorOptions) -> Result<Reactor, String> {
             )
         ))
         .await
-        .unwrap();
+        .expect("Failed to get structure attribute");
 
     let structure = Structure::new(struct_query).await;
 

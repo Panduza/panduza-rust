@@ -174,7 +174,9 @@ async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
     // No additional setup required before connecting to the test platform
     {
         print!("Connecting to {}:{}...", PLAFORM_LOCALHOST, PLAFORM_PORT);
-        let reactor = panduza::new_reactor(options).await.unwrap();
+        let reactor = panduza::new_reactor(options)
+            .await
+            .expect("Failed to create reactor");
         world.r = Some(reactor);
         println!(" ok!");
     }

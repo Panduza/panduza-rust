@@ -1,6 +1,8 @@
+use core::fmt;
+
 use crate::fbs::panduza_generated::panduza::{AttributeEntry, AttributeEntryArgs};
 
-#[derive(Default, Clone, Debug, PartialEq)]
+#[derive(Default, Clone, PartialEq)]
 pub struct AttributeEntryBufferBuilder {
     /// Name of the attribute
     ///
@@ -52,6 +54,16 @@ impl AttributeEntryBufferBuilder {
     }
 
     // ------------------------------------------------------------------------
+}
+
+impl fmt::Debug for AttributeEntryBufferBuilder {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ATT")
+            .field("name", &self.name)
+            .field("type", &self.type_)
+            .field("mode", &self.mode)
+            .finish()
+    }
 }
 
 // ----------------------------------------------------------------------------

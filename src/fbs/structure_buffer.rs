@@ -293,15 +293,44 @@ impl StructureBufferBuilder {
     // -------------------------------------------------------------------------
 
     /// Insert an attribute entry into this node tree at the specified path
+    /// It works like 'insert_node' but when the path is empty, it inserts the
+    /// attribute entry in attributes list instead of children.
     ///
     pub fn insert_attribute(&mut self, path: Vec<String>, att: AttributeEntryBufferBuilder) {
+        // If the path is empty, we insert the attribute directly into this node's attributes
+        if path.is_empty() {
+            if self.attributes.is_none() {
+                self.attributes = Some(Vec::new());
+            }
+            if let Some(attributes) = &mut self.attributes {
+                attributes.push(att);
+            }
+            return;
+        }
+
+        // If path is not empty, navigate through children
         // If children is None, we initialize it
         if self.children.is_none() {
             self.children = Some(Vec::new());
         }
 
-        // Insert the node at the specified path
-        if let Some(children) = &mut self.children {}
+        // Insert the attribute at the specified path
+        if let Some(children) = &mut self.children {
+            let next = path.first().expect("Path should not be empty");
+            // find children with the 'next' name
+            if let Some(child) = children
+                .iter_mut()
+                .find(|c| c.name.as_deref() == Some(next))
+            {
+                // If the child exists, we continue down the path
+                child.insert_attribute(path[1..].to_vec(), att);
+            } else {
+                // If the child doesn't exist, we create a new one
+                let mut new_child = StructureBufferBuilder::default().with_name(next.clone());
+                new_child.insert_attribute(path[1..].to_vec(), att);
+                children.push(new_child);
+            }
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -309,11 +338,11 @@ impl StructureBufferBuilder {
 
 impl Debug for StructureBufferBuilder {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("StructureBufferBuilder")
+        f.debug_struct("node")
             .field("name", &self.name)
             .field("tags", &self.tags)
             .field("attributes", &self.attributes)
-            .field("classes", &self.children)
+            .field("children", &self.children)
             .field("source", &self.source)
             .field("sequence", &self.sequence)
             .finish()
