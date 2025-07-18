@@ -103,7 +103,7 @@ impl PzaBuffer for BytesBuffer {
 
     fn as_message(&self) -> Message {
         flatbuffers::root::<Message>(&self.raw_data)
-            .expect("Failed to deserialize Message from raw_data")
+            .expect("BYTES: Failed to deserialize Message from raw_data")
     }
 
     fn has_same_message_value<B: PzaBuffer>(&self, other_buffer: &B) -> bool {

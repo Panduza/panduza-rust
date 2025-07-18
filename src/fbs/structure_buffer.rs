@@ -382,7 +382,7 @@ impl PzaBuffer for StructureBuffer {
 
     fn as_message(&self) -> Message {
         flatbuffers::root::<Message>(&self.raw_data)
-            .expect("Failed to deserialize Message from raw_data")
+            .expect("STRUCTURE: Failed to deserialize Message from raw_data")
     }
 
     fn has_same_message_value<B: PzaBuffer>(&self, _other_buffer: &B) -> bool {
@@ -393,5 +393,9 @@ impl PzaBuffer for StructureBuffer {
 impl StructureBuffer {
     pub fn builder() -> StructureBufferBuilder {
         StructureBufferBuilder::default()
+    }
+
+    pub fn size(&self) -> usize {
+        self.raw_data.len()
     }
 }

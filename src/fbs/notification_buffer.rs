@@ -129,7 +129,7 @@ impl PzaBuffer for NotificationBuffer {
 
     fn as_message(&self) -> Message {
         flatbuffers::root::<Message>(&self.raw_data)
-            .expect("Failed to deserialize Message from raw_data")
+            .expect("NOTIFICATION: Failed to deserialize Message from raw_data")
     }
 
     // ------------------------------------------------------------------------

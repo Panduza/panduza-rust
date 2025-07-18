@@ -63,4 +63,26 @@ impl AttributeMetadata {
             mode,
         })
     }
+
+    /// Create AttributeMetadata from StructureBuffer attribute data
+    ///
+    pub fn from_structure_buffer_attribute(
+        topic: String,
+        attr_type: &str,
+        attr_mode: &str,
+    ) -> Result<Self, String> {
+        let mode = match attr_mode {
+            "RO" => AttributeMode::ReadOnly,
+            "WO" => AttributeMode::WriteOnly,
+            "RW" => AttributeMode::ReadWrite,
+            _ => AttributeMode::ReadOnly,
+        };
+
+        Ok(Self {
+            topic,
+            r#type: attr_type.to_string(),
+            info: None,
+            mode,
+        })
+    }
 }

@@ -143,7 +143,7 @@ impl PzaBuffer for StatusBuffer {
 
     fn as_message(&self) -> Message {
         flatbuffers::root::<Message>(&self.raw_data)
-            .expect("Failed to deserialize Message from raw_data")
+            .expect("STATUS: Failed to deserialize Message from raw_data")
     }
 
     // ------------------------------------------------------------------------
