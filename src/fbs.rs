@@ -14,6 +14,7 @@ pub use structure_buffer::StructureBufferBuilder;
 ///
 mod boolean_buffer;
 pub use boolean_buffer::BooleanBuffer;
+pub use boolean_buffer::BooleanBufferBuilder;
 
 ///
 mod string_buffer;
@@ -87,7 +88,9 @@ pub trait PzaBufferBuilder<B: PzaBuffer>: Clone + Default + Send + Sync + 'stati
     fn build(self) -> Result<B, String>;
 }
 
-/// Trait that defines the interface for generic buffer types that can be used with GenericAttribute
+/// Trait that defines the interface for generic buffer types that can be used with
+/// [StdObjAttribute](crate::attribute::std_obj::StdObjAttribute) and
+/// [RoStreamAttribute](crate::attribute::ro_stream::RoStreamAttribute)
 ///
 pub trait PzaBuffer: Clone + Default + Send + Sync + 'static {
     /// Create a buffer instance from ZBytes (Zenoh bytes)

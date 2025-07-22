@@ -60,9 +60,16 @@ pub use task_monitor::TaskMonitor;
 pub mod topic;
 pub use topic::Topic;
 
-/// FlatBuffers serialization and deserialization
+/// FlatBuffers: Serialization and Deserialization
+///
+/// Define and manage all the network payload for Panduza.
+///
+/// - *panduza.fbs*: contains flatbuffer definitions
+/// - The other source files are buffers helper to handle payloads.
 ///
 pub mod fbs;
+pub use fbs::BooleanBuffer;
+pub use fbs::BooleanBufferBuilder;
 pub use fbs::PzaBuffer;
 
 ///
