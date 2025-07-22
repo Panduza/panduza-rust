@@ -16,6 +16,8 @@ pub use instance_status_buffer::InstanceStatusBuffer;
 use rand::Rng;
 use zenoh::bytes::ZBytes;
 
+///
+///
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct StatusBufferBuilder {
     instances: Option<Vec<InstanceStatusBuffer>>,
@@ -100,6 +102,31 @@ impl StatusBufferBuilder {
         self.instances = Some(instances);
         self
     }
+
+    // ------------------------------------------------------------------------
+
+    /// Change the status of an instance if it exists in 'instances'.
+    /// If it does not exist, it will be created.
+    pub fn change_instance_status(&mut self, instance_id: &String, new_state: InstanceState) {
+        // Get or create the instances vector
+        let instances = self.instances.get_or_insert_with(Vec::new);
+
+        // Try to find the instance by id
+        if let Some(instance) = instances
+            .iter_mut()
+            .find(|inst| inst.instance() == Some(instance_id))
+        {
+            instance.set_state(new_state);
+        } else {
+            // If not found, create a new InstanceStatusBuffer and add it
+            let mut new_instance = InstanceStatusBuffer::default();
+            new_instance.set_instance(instance_id.to_string());
+            new_instance.set_state(new_state);
+            instances.push(new_instance);
+        }
+    }
+
+    // ------------------------------------------------------------------------
 }
 
 // ----------------------------------------------------------------------------
@@ -123,6 +150,12 @@ impl PzaBuffer for StatusBuffer {
 
     fn to_zbytes(self) -> ZBytes {
         ZBytes::from(self.raw_data)
+    }
+
+    // ------------------------------------------------------------------------
+
+    fn size(&self) -> usize {
+        self.raw_data.len()
     }
 
     // ------------------------------------------------------------------------

@@ -111,6 +111,13 @@ impl PzaBuffer for NotificationBuffer {
     fn to_zbytes(self) -> ZBytes {
         ZBytes::from(self.raw_data)
     }
+
+    // ------------------------------------------------------------------------
+
+    fn size(&self) -> usize {
+        self.raw_data.len()
+    }
+
     // ------------------------------------------------------------------------
 
     fn source(&self) -> Option<u16> {

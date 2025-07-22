@@ -1,4 +1,4 @@
-use crate::fbs::panduza_generated::panduza::InstanceStatusArgs;
+use crate::{fbs::panduza_generated::panduza::InstanceStatusArgs, InstanceState};
 use flatbuffers::FlatBufferBuilder;
 
 #[derive(Default, Clone, Debug, PartialEq)]
@@ -29,6 +29,34 @@ impl InstanceStatusBuffer {
             // raw_data: None,
         }
     }
+
+    // ------------------------------------------------------------------------
+
+    pub fn set_instance(&mut self, instance: String) {
+        self.instance = Some(instance);
+    }
+
+    // ------------------------------------------------------------------------
+
+    /// Method to get the instance name
+    ///
+    pub fn instance(&self) -> Option<&String> {
+        self.instance.as_ref()
+    }
+
+    // ------------------------------------------------------------------------
+
+    /// Method to set the instance state
+    ///
+    /// # Arguments
+    ///
+    /// * `state` - A InstanceState representing the new state of the instance.
+    ///
+    pub fn set_state(&mut self, state: InstanceState) {
+        self.state = Some(state as u16);
+    }
+
+    // ------------------------------------------------------------------------
 
     pub fn from_args(instance: String, state: u16, error_string: Option<String>) -> Self {
         Self {

@@ -154,6 +154,12 @@ impl PzaBuffer for BooleanBuffer {
 
     // ------------------------------------------------------------------------
 
+    fn size(&self) -> usize {
+        self.raw_data.len()
+    }
+
+    // ------------------------------------------------------------------------
+
     fn source(&self) -> Option<u16> {
         let msg = self.as_message();
         msg.header().map(|h| h.source())

@@ -370,6 +370,10 @@ impl PzaBuffer for StructureBuffer {
         ZBytes::from(self.raw_data)
     }
 
+    fn size(&self) -> usize {
+        self.raw_data.len()
+    }
+
     fn source(&self) -> Option<u16> {
         let msg = self.as_message();
         msg.header().map(|h| h.source())
@@ -393,9 +397,5 @@ impl PzaBuffer for StructureBuffer {
 impl StructureBuffer {
     pub fn builder() -> StructureBufferBuilder {
         StructureBufferBuilder::default()
-    }
-
-    pub fn size(&self) -> usize {
-        self.raw_data.len()
     }
 }

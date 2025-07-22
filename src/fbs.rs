@@ -101,6 +101,10 @@ pub trait PzaBuffer: Clone + Default + Send + Sync + 'static {
     /// Convert the buffer to ZBytes for transmission over Zenoh
     fn to_zbytes(self) -> ZBytes;
 
+    /// Returns the size in bytes
+    ///
+    fn size(&self) -> usize;
+
     /// Returns the source of the buffer
     ///
     fn source(&self) -> Option<u16>;
