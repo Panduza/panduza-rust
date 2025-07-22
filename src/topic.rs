@@ -35,7 +35,7 @@
 ///
 /// 6. **`[cmd|att]`**:
 ///    - **Description**: This segment indicates that the topic must end with either a command (`cmd`) or an attribute (`att`). This means the "topic" must provide either a command or an attribute to complete the topic.
-///    - **Example**: `cmd=start`, `att=value`
+///    - **Example**: `cmd`, `att`
 ///
 /// ### Example topic
 ///
