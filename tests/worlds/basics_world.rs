@@ -160,10 +160,14 @@ impl Debug for BasicsWorld {
     }
 }
 
-///
+/// Main entry point for most scenarios
+/// 
+/// This keyword create a reactor for the all scenario
+/// and connect it to the test platform.
 ///
 #[given(expr = "a reactor connected on a test platform")]
 async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
+    // Create reactor options
     let options = ReactorOptions::new(
         PLAFORM_LOCALHOST,
         PLAFORM_PORT,
