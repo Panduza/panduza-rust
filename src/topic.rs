@@ -1,11 +1,7 @@
 #[derive(Debug)]
 /// Helper to decompose Panduza topics into a structured object
 ///
-/// ## Path Format Documentation
-///
-/// This document describes the structure and components of a specific path format used within our system to access resources or services in a hierarchical manner.
-///
-/// ### Topic Format
+/// ## Topic Format
 ///
 /// The topic format is structured as follows:
 ///
