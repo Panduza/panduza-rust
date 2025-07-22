@@ -55,10 +55,11 @@ pub use attribute::string::StringAttribute;
 pub mod task_monitor;
 pub use task_monitor::TaskMonitor;
 
+/// Module to manage topic helper
 ///
-///
-pub mod topic;
+mod topic;
 pub use topic::Topic;
+
 
 /// FlatBuffers: Serialization and Deserialization
 ///

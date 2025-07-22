@@ -1,4 +1,5 @@
 #[derive(Debug)]
+
 /// Helper to decompose Panduza topics into a structured object
 ///
 /// ## Topic Format
