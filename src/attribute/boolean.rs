@@ -15,8 +15,9 @@ impl BooleanAttribute {
     /// Create a new instance
     ///
     pub async fn new(session: Session, metadata: AttributeMetadata) -> Self {
-        let inner = StdObjAttribute::<BooleanBuffer>::new(session, metadata).await;
-        Self { inner }
+        Self {
+            inner: StdObjAttribute::<BooleanBuffer>::new(session, metadata).await,
+        }
     }
 
     /// Send command and do not wait for validation

@@ -42,7 +42,7 @@ impl StructureData {
         let brut = StructureBuffer::from_zbytes(payload);
 
         // trace
-        println!("StructureBuffer size: {}", brut.size());
+        // println!("StructureBuffer size: {}", brut.size());
 
         // Extract and flatten the structure
         self.flatten_structure_buffer(&brut)?;
@@ -87,9 +87,8 @@ impl StructureData {
         if let Some(attributes) = node.attributes() {
             for i in 0..attributes.len() {
                 let attr = attributes.get(i);
-                if let Some(attr_name) = attr.name() {
-                    let full_path = format!("{}/{}", level, attr_name);
-                    self.register_flat_entry_from_attribute(full_path, &attr)?;
+                if let Some(_attr_name) = attr.name() {
+                    self.register_flat_entry_from_attribute(level.clone(), &attr)?;
                 }
             }
         }
@@ -165,11 +164,15 @@ impl StructureData {
         self.initialized.clone()
     }
 
+    // ------------------------------------------------------------------------
+
     /// Debug fonction to list all the received topics
     ///
     pub fn list_of_registered_topics(&self) -> Vec<String> {
         self.flat.keys().cloned().collect()
     }
+
+    // ------------------------------------------------------------------------
 }
 
 #[derive(Clone, Debug)]

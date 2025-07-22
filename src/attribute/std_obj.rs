@@ -32,6 +32,7 @@ pub struct StdObjAttribute<B: PzaBuffer> {
 
 impl<B: PzaBuffer> StdObjAttribute<B> {
     // ------------------------------------------------------------------------
+
     /// Create a new instance
     ///
     pub async fn new(session: Session, metadata: AttributeMetadata) -> Self {
@@ -40,6 +41,7 @@ impl<B: PzaBuffer> StdObjAttribute<B> {
 
         // Trigger the callback mechanism on message reception
         let att_topic = format!("{}/att", &metadata.topic);
+
         let subscriber = session
             .declare_subscriber(&att_topic)
             .await

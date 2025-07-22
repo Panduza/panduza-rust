@@ -64,6 +64,13 @@ impl Reactor {
         let n: String = name.into();
         let meta = self.structure.find_attribute(&n);
 
+        // println!("found metadata: {:?} for attribute '{}'", meta, &n);
+
+        // self.structure
+        //     .list_of_registered_topics()
+        //     .iter()
+        //     .for_each(|topic| println!("Registered topic: {}", topic));
+
         if meta.is_none() {
             return None;
         }
