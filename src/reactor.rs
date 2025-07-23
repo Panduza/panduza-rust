@@ -47,6 +47,12 @@ pub struct Reactor {
     pub namespace: Option<String>,
 }
 
+impl PartialEq for Reactor {
+    fn eq(&self, other: &Self) -> bool {
+        self.session.zid() == other.session.zid()
+    }
+}
+
 impl Reactor {
     ///
     ///
