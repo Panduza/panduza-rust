@@ -1,9 +1,6 @@
-mod boolean;
-mod bytes;
-mod r#enum;
-mod reactor;
-mod si;
-mod string;
+mod default;
+mod logger;
+mod writer;
 
 use cucumber::Parameter;
 use cucumber::{given, then, World};
@@ -19,8 +16,12 @@ use std::{fmt::Debug, str::FromStr};
 const PLAFORM_LOCALHOST: &str = "127.0.0.1";
 const PLAFORM_PORT: u16 = 7447;
 const ROOT_CA_CERTIFICATE: &str = "credentials/certificates/root_ca_certificate.pem";
-const CLIENT_PRIVATE_KEY: &str = "credentials/keys/writer_private_key.pem";
-const CLIENT_CERTIFICATE: &str = "credentials/certificates/writer_certificate.pem";
+const WRITER_PRIVATE_KEY: &str = "credentials/keys/writer_private_key.pem";
+const WRITER_CERTIFICATE: &str = "credentials/certificates/writer_certificate.pem";
+const DEFAULT_PRIVATE_KEY: &str = "credentials/keys/default_private_key.pem";
+const DEFAULT_CERTIFICATE: &str = "credentials/certificates/default_certificate.pem";
+const LOGGER_PRIVATE_KEY: &str = "credentials/keys/logger_private_key.pem";
+const LOGGER_CERTIFICATE: &str = "credentials/certificates/logger_certificate.pem";
 const NAMESPACE: &str = "";
 // -----------------------
 
@@ -125,8 +126,18 @@ pub struct BytesSubWorld {
     // pub topic_ro: Option<String>,
 }
 
+#[derive(Default)]
+pub struct JsonSubWorld {
+    pub att_rw: Option<JsonAttribute>,
+    pub att_wo: Option<JsonAttribute>,
+    pub att_ro: Option<JsonAttribute>,
+    // pub topic_rw: Option<String>,
+    // pub topic_wo: Option<String>,
+    // pub topic_ro: Option<String>,
+}
+
 #[derive(Default, World)]
-pub struct BasicsWorld {
+pub struct SecurityWorld {
     /// Reactor object
     ///
     pub r: Option<Reactor>,
@@ -166,9 +177,13 @@ pub struct BasicsWorld {
     /// Bytes sub world data
     ///
     pub bytes: BytesSubWorld,
+
+    /// Json sub world data
+    ///
+    pub json: JsonSubWorld,
 }
 
-impl Debug for BasicsWorld {
+impl Debug for SecurityWorld {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BooleanWorld")
             // .field("r", &self.r)
@@ -178,14 +193,14 @@ impl Debug for BasicsWorld {
 
 ///
 ///
-#[given(expr = "a reactor connected on a test platform")]
-async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
+#[given(expr = "a writer reactor connected on a test platform")]
+async fn a_writer_connected_on_a_test_platform(world: &mut SecurityWorld) {
     let options = ReactorOptions::new(
         PLAFORM_LOCALHOST,
         PLAFORM_PORT,
         ROOT_CA_CERTIFICATE,
-        CLIENT_CERTIFICATE,
-        CLIENT_PRIVATE_KEY,
+        WRITER_CERTIFICATE,
+        WRITER_PRIVATE_KEY,
         Some(NAMESPACE),
     );
 
@@ -219,10 +234,58 @@ async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
     println!("reactor ready");
 }
 
+
 ///
 ///
-#[then(expr = "the status attribute must indicate running for all instances")]
-async fn the_status_attribute_must_be(world: &mut BasicsWorld) {
+#[given(expr = "a default user connecting to the platform without getting notifications and status")]
+async fn a_default_user_connecting_to_the_platform(world: &mut SecurityWorld) {
+    let options = ReactorOptions::new(
+        PLAFORM_LOCALHOST,
+        PLAFORM_PORT,
+        ROOT_CA_CERTIFICATE,
+        DEFAULT_CERTIFICATE,
+        DEFAULT_PRIVATE_KEY,
+        Some(NAMESPACE),
+    );
+
+    // No additional setup required before connecting to the test platform
+    println!("Connecting to {}:{}...", PLAFORM_LOCALHOST, PLAFORM_PORT);
+    let reactor = panduza::new_reactor(options).await.unwrap();
+    println!("ok");
+}
+
+///
+///
+#[given(expr = "a logger reactor connected on a test platform")]
+async fn a_logger_connected_on_a_test_platform(world: &mut SecurityWorld) {
+    let options = ReactorOptions::new(
+        PLAFORM_LOCALHOST,
+        PLAFORM_PORT,
+        ROOT_CA_CERTIFICATE,
+        LOGGER_CERTIFICATE,
+        LOGGER_PRIVATE_KEY,
+        Some(NAMESPACE),
+    );
+
+    // No additional setup required before connecting to the test platform
+    println!("Connecting to {}:{}...", PLAFORM_LOCALHOST, PLAFORM_PORT);
+    let reactor = panduza::new_reactor(options).await.unwrap();
+    println!("ok");
+
+    println!("Getting status attribute...");
+
+    world.r = Some(reactor);
+
+    world.platform_status = Some(world.r.as_ref().unwrap().new_status_attribute().await);
+
+    println!("ok");
+
+    // Get the notification attribute from the reactor and store it in the world
+    println!("Getting notification attribute...");
+    world.platform_notifications =
+        Some(world.r.as_ref().unwrap().new_notification_attribute().await);
+    println!("ok");
+
     world
         .platform_status
         .as_mut()
@@ -230,40 +293,6 @@ async fn the_status_attribute_must_be(world: &mut BasicsWorld) {
         .wait_for_all_instances_to_be_running(Duration::from_secs(15))
         .await
         .expect("Error while waiting for instance to be in running state");
-}
 
-#[then(expr = "the status attribute must indicate an error for one instance")]
-async fn the_status_attribute_must_indicate_for_one_instance(world: &mut BasicsWorld) {
-    world
-        .platform_status
-        .as_mut()
-        .unwrap()
-        .wait_for_at_least_one_instance_to_be_not_running(Duration::from_secs(15))
-        .await
-        .expect("Error while waiting for instance to be in error state");
-
-    world
-        .platform_status
-        .as_mut()
-        .unwrap()
-        .wait_for_all_instances_to_be_running(Duration::from_secs(15))
-        .await
-        .expect("Error while waiting for instance to be in running state");
-}
-
-#[then(expr = "the notification attribute must indicate no alert")]
-fn the_notification_attribute_must_indicate_no_alert(world: &mut BasicsWorld) {
-    // clear all notifications
-    world.platform_notifications.as_mut().unwrap().pop_all();
-}
-
-#[then(expr = "the notification attribute must indicate an alert for this instance")]
-fn the_notification_attribute_must_indicate_an_alert_for_this_instance(world: &mut BasicsWorld) {
-    // check that the notification attribute is not empty
-    assert!(!world
-        .platform_notifications
-        .as_mut()
-        .unwrap()
-        .pop_all()
-        .has_alert());
+    println!("reactor ready");
 }

@@ -25,7 +25,9 @@ pub enum Error {
 pub struct Options {
     pub ip: String,
     pub port: u16,
-    pub ca_certificate: String,
+    pub root_ca_certificate: String,
+    pub connect_certificate: String,
+    pub connect_private_key: String,
     pub namespace: Option<String>,
 }
 
@@ -34,18 +36,29 @@ impl Default for Options {
         Options {
             ip: "127.0.0.1".to_string(),
             port: 7447,
-            ca_certificate: "./minica.pem".to_string(),
+            root_ca_certificate: "./credentials/certificates/root_ca_certificate.pem".to_string(),
+            connect_certificate: "./credentials/certificates/writer_certificate.pem".to_string(),
+            connect_private_key: "./credentials/keys/writer_private_key.pem".to_string(),
             namespace: None,
         }
     }
 }
 
 impl Options {
-    pub fn new<T: Into<String>>(ip: T, port: u16, ca_certificate: T, namespace: Option<T>) -> Self {
+    pub fn new<T: Into<String>>(
+        ip: T,
+        port: u16,
+        root_ca_certificate: T,
+        connect_certificate: T,
+        connect_private_key: T,
+        namespace: Option<T>,
+    ) -> Self {
         Self {
             ip: ip.into(),
             port,
-            ca_certificate: ca_certificate.into(),
+            root_ca_certificate: root_ca_certificate.into(),
+            connect_certificate: connect_certificate.into(),
+            connect_private_key: connect_private_key.into(),
             namespace: namespace.map(|n| n.into()),
         }
     }
