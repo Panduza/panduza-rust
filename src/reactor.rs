@@ -47,6 +47,7 @@ pub struct Reactor {
     pub namespace: Option<String>,
 }
 
+/// Very important to implement to ease Dioxus usage
 impl PartialEq for Reactor {
     fn eq(&self, other: &Self) -> bool {
         self.session.zid() == other.session.zid()
