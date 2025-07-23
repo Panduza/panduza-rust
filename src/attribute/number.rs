@@ -1,111 +1,82 @@
-use super::data_pack::AttributeDataPack;
-
-use crate::AttributeMode;
-use bytes::Bytes;
-use std::sync::{Arc, Mutex};
-use tokio::sync::Notify;
-use zenoh::handlers::FifoChannelHandler;
-use zenoh::pubsub::Subscriber;
-use zenoh::sample::Sample;
+use super::std_obj::StdObjAttribute;
+use super::CallbackId;
+use crate::fbs::NumberBuffer;
+use crate::AttributeMetadata;
 use zenoh::Session;
 
-#[derive(Debug)]
-/// Object to manage the BytesAttribute
-///
+#[derive(Clone, Debug)]
+/// Object to manage the NumberAttribute
 pub struct NumberAttribute {
-    /// Object that all the attribute to publish
-    ///
-    session: Session,
-
-    /// Initial data
-    ///
-    pack: Arc<Mutex<AttributeDataPack<u32>>>,
-
-    /// Update notifier
-    ///
-    update_notifier: Arc<Notify>,
-
-    topic: String,
-
-    mode: AttributeMode,
+    pub inner: StdObjAttribute<NumberBuffer>,
 }
 
 impl NumberAttribute {
     /// Create a new instance
-    ///
-    pub async fn new(
-        session: Session,
-        mode: AttributeMode,
-        mut att_receiver: Subscriber<FifoChannelHandler<Sample>>,
-        topic: String,
-    ) -> Self {
-        //
-        // Create data pack
-        let pack = Arc::new(Mutex::new(AttributeDataPack::<u32>::default()));
-
-        //
-        //
-        let update_1 = pack.lock().unwrap().update_notifier();
-
-        //
-        // Create the recv task
-        let pack_2 = pack.clone();
-        tokio::spawn(async move {
-            while let Ok(sample) = att_receiver.recv_async().await {
-                let value: u32 = sample.payload().try_to_string().unwrap().parse().unwrap();
-                // Push into pack
-                pack_2.lock().unwrap().push(value);
-            }
-        });
-
-        //
-        // Return attribute
-        Self {
-            session,
-            pack: pack,
-            update_notifier: update_1,
-            topic,
-            mode,
-        }
+    pub async fn new(session: Session, metadata: AttributeMetadata) -> Self {
+        let inner = StdObjAttribute::<NumberBuffer>::new(session, metadata).await;
+        Self { inner }
     }
 
-    /// Send command and do not wait for validation
-    ///
-    pub async fn shoot(&mut self, value: u32) {
-        // Wrap value into payload
-        let pyl = Bytes::from(serde_json::to_string(&value).unwrap());
-
-        // Send the command
-        self.session.put(self.topic.clone(), pyl).await.unwrap();
+    /// Set the value and wait for validation
+    #[inline]
+    pub async fn set(&mut self, value: f64) -> Result<(), String> {
+        self.inner
+            .set(
+                NumberBuffer::builder()
+                    .with_random_sequence()
+                    .with_source(0)
+                    .with_value(value)
+                    .build()
+                    .expect("Failed to build NumberBuffer"),
+            )
+            .await
     }
 
-    /// Notify when new data have been received
-    ///
-    pub fn update_notifier(&self) -> Arc<Notify> {
-        self.update_notifier.clone()
+    /// Get the last received value
+    #[inline]
+    pub async fn get(&self) -> Option<NumberBuffer> {
+        self.inner.get().await
     }
 
-    ///
-    ///
-    pub async fn set(&mut self, value: u32) {
-        //
-        self.shoot(value).await;
-
-        // Wait for change in the data pack
-        self.update_notifier.notified().await;
-
-        // get last // if same as value ok else wait or error ?
+    /// Wait for a specific number value to be received
+    #[inline]
+    pub async fn wait_for_value(
+        &self,
+        value: f64,
+        timeout: Option<std::time::Duration>,
+    ) -> Result<(), String> {
+        self.inner
+            .wait_for_value(
+                move |buf: &NumberBuffer| buf.value() == Some(value),
+                timeout,
+            )
+            .await
+            .map(|_| ())
     }
 
-    ///
-    ///
-    pub fn get(&self) -> Option<u32> {
-        self.pack.lock().unwrap().last()
+    /// Add a callback that will be triggered when receiving NumberBuffer messages
+    /// Optionally, a condition can be provided to filter when the callback is triggered
+    #[inline]
+    pub async fn add_callback<F, C>(&self, callback: F, condition: Option<C>) -> CallbackId
+    where
+        F: Fn(NumberBuffer) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>
+            + Send
+            + Sync
+            + 'static,
+        C: Fn(&NumberBuffer) -> bool + Send + Sync + 'static,
+    {
+        self.inner.add_callback(callback, condition).await
     }
 
-    ///
-    ///
-    pub fn pop(&self) -> Option<u32> {
-        self.pack.lock().unwrap().pop()
+    /// Remove a callback by its ID
+    #[inline]
+    pub async fn remove_callback(&self, callback_id: CallbackId) -> bool {
+        self.inner.remove_callback(callback_id).await
+    }
+
+    /// Get attribute metadata
+    #[inline]
+    pub fn metadata(&self) -> &AttributeMetadata {
+        self.inner.metadata()
     }
 }

@@ -6,7 +6,7 @@ async fn main() {
     println!("Running free run test");
 
     // Créer les options pour se connecter à localhost sur le port MQTT par défaut (1883)
-    let options = ReactorOptions::new("127.0.0.1", 7447, "minica.pem");
+    let options = ReactorOptions::new("127.0.0.1", 7447, "minica.pem", None);
 
     // Créer et initialiser le réacteur
     match new_reactor(options).await {
@@ -60,13 +60,13 @@ async fn main() {
 
             // Attendre indéfiniment pour recevoir des notifications
             // En production, vous pourriez vouloir ajouter une condition d'arrêt
-            loop {
-                notification_attr.update_notifier().notified().await;
+            // loop {
+            //     notification_attr.update_notifier().notified().await;
 
-                // Afficher le compteur total après chaque cycle de notifications
-                let total_count = shared_counter.lock().unwrap();
-                println!(">>> Total notifications traitées: {} <<<", *total_count);
-            }
+            //     // Afficher le compteur total après chaque cycle de notifications
+            //     let total_count = shared_counter.lock().unwrap();
+            //     println!(">>> Total notifications traitées: {} <<<", *total_count);
+            // }
         }
         Err(e) => {
             eprintln!("Erreur lors de la création du reactor: {}", e);

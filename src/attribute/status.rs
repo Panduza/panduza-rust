@@ -1,190 +1,101 @@
-use crate::fbs::status_v0::StatusBuffer;
-use crate::reactor::DataReceiver;
-use bytes::Bytes;
-use std::sync::Arc;
-use std::sync::Mutex;
-use std::time::Duration;
-use tokio::sync::Notify;
-use tokio::time::timeout;
-use zenoh::handlers::FifoChannelHandler;
-use zenoh::pubsub::Subscriber;
-use zenoh::query::Reply;
-use zenoh::sample::Sample;
+use super::std_obj::StdObjAttribute;
+use super::CallbackId;
+use crate::fbs::status_buffer::StatusBuffer;
+use crate::AttributeMetadata;
 use zenoh::Session;
 
-use super::data_pack::AttributeDataPack;
-
 #[derive(Clone, Debug)]
-/// Object to manage the StatusAttribute
-///
+/// Objet pour gérer StatusAttribute
 pub struct StatusAttribute {
+    /// Internal implementation
     ///
-    /// TODO: maybe add this into the data pack
-    topic: String,
-
-    /// Global Session
-    ///
-    session: Session,
-
-    /// Initial data
-    ///
-    pack: Arc<Mutex<AttributeDataPack<StatusBuffer>>>,
-
-    /// Update notifier
-    ///
-    update_notifier: Arc<Notify>,
+    pub inner: StdObjAttribute<StatusBuffer>,
 }
 
 impl StatusAttribute {
-    /// Create a new instance
+    /// New instance
     ///
-    pub async fn new(
-        session: Session,
-        topic: String,
-        mut att_receiver: Subscriber<FifoChannelHandler<Sample>>,
-    ) -> Self {
-        // Create data pack
-        let pack = Arc::new(Mutex::new(AttributeDataPack::<StatusBuffer>::default()));
-        let update_1 = pack.lock().unwrap().update_notifier();
+    pub async fn new(session: Session, metadata: AttributeMetadata) -> Self {
+        // Create inner implementation
+        let inner = StdObjAttribute::<StatusBuffer>::new(session, metadata).await;
 
-        // Create the recv task
-        let pack_2 = pack.clone();
-
-        tokio::spawn(async move {
-            while let Ok(sample) = att_receiver.recv_async().await {
-                let value = StatusBuffer::from_raw_data(Bytes::copy_from_slice(
-                    &sample.payload().to_bytes(),
-                ));
-                // Push into pack
-                pack_2.lock().unwrap().push(value);
-            }
-        });
-
-        let query = session.get(topic.clone()).await.unwrap();
-        let result = query.recv_async().await.unwrap();
-        let value: StatusBuffer = StatusBuffer::from_raw_data(Bytes::copy_from_slice(
-            &result.result().unwrap().payload().to_bytes(),
-        ));
-        pack.lock().unwrap().push(value);
-
-        // Return attribute
-        Self {
-            topic: topic,
-            session: session,
-            pack: pack,
-            update_notifier: update_1,
-        }
+        // Return the new StatusAttribute instance
+        Self { inner }
     }
 
-    // /// Send command and do not wait for validation
-    // ///
-    // pub async fn shoot(&mut self, value: StatusBuffer) {
-    //     // Wrap value into payload
-    //     let pyl = value.raw_data().clone();
-
-    //     // Send the command
-    //     self.cmd_publisher.publish(pyl).await.unwrap();
-    // }
-
-    /// Notify when new data have been received
-    ///
-    pub fn update_notifier(&self) -> Arc<Notify> {
-        self.update_notifier.clone()
+    /// Attend une valeur spécifique de StatusBuffer (via un prédicat)
+    #[inline]
+    pub async fn wait_for_value<F>(
+        &self,
+        predicate: F,
+        timeout: Option<std::time::Duration>,
+    ) -> Result<(), String>
+    where
+        F: Fn(&StatusBuffer) -> bool + Send + Sync + 'static,
+    {
+        self.inner
+            .wait_for_value(predicate, timeout)
+            .await
+            .map(|_| ())
     }
 
-    ///
-    ///
-    pub fn get(&self) -> Option<StatusBuffer> {
-        self.pack.lock().unwrap().last()
+    /// Ajoute un callback déclenché à la réception de StatusBuffer
+    #[inline]
+    pub async fn add_callback<F, C>(&self, callback: F, condition: Option<C>) -> CallbackId
+    where
+        F: Fn(StatusBuffer) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>
+            + Send
+            + Sync
+            + 'static,
+        C: Fn(&StatusBuffer) -> bool + Send + Sync + 'static,
+    {
+        self.inner.add_callback(callback, condition).await
     }
 
-    ///
-    ///
-    pub fn pop(&self) -> Option<StatusBuffer> {
-        self.pack.lock().unwrap().pop()
+    /// Supprime un callback par son ID
+    #[inline]
+    pub async fn remove_callback(&self, callback_id: CallbackId) -> bool {
+        self.inner.remove_callback(callback_id).await
     }
 
-    /// Control that all instances are in running state
-    ///
-    pub fn all_instances_are_running(&self) -> Result<bool, &'static str> {
-        // Get the last value
-        let value = self.get();
-
-        // Check if we have a value
-        if let Some(value) = value {
-            let result = value.all_instances_are_running();
-            return result;
-        }
-
-        // Return an error if no buffer is available
-        Err("No buffer available")
+    /// Récupère les métadonnées de l'attribut
+    #[inline]
+    pub fn metadata(&self) -> &AttributeMetadata {
+        self.inner.metadata()
     }
 
-    ///
-    ///
-    pub fn at_least_one_instance_is_not_running(&self) -> Result<bool, &'static str> {
-        // Get the last value
-        let value = self.get();
+    // ------------------------------------------------------------------------
 
-        // Check if we have a value
-        if let Some(value) = value {
-            return value.at_least_one_instance_is_not_running();
-        }
-
-        // Return an error if no buffer is available
-        Err("No buffer available")
-    }
-
-    /// Wait for all instances to be in running state
+    /// Waits until all instances of StatusBuffer are in the "running" state
     ///
     pub async fn wait_for_all_instances_to_be_running(
         &self,
-        timeout_duration: Duration,
-    ) -> Result<(), &'static str> {
-        loop {
-            // Check if all instances are running
-            match self.all_instances_are_running() {
-                Ok(flag) => {
-                    if flag {
-                        return Ok(());
-                    }
-                }
-                Err(e) => println!("Error checking instances status: {}", e),
-            }
-
-            // Wait for a notification or timeout
-            if timeout(timeout_duration, self.update_notifier.notified())
-                .await
-                .is_err()
-            {
-                return Err("Timeout while waiting for all instances to be running");
-            }
-        }
+        timeout: std::time::Duration,
+    ) -> Result<(), String> {
+        self.inner
+            .wait_for_value(
+                |status_buffer| status_buffer.all_instances_are_running(),
+                Some(timeout),
+            )
+            .await
+            .map(|_| ())
     }
 
-    /// Wait for at least one instance to be not running
-    ///
+    // ------------------------------------------------------------------------
+
+    /// Waits until at least one instance of StatusBuffer is not in the "running" state
     pub async fn wait_for_at_least_one_instance_to_be_not_running(
         &self,
-        timeout_duration: Duration,
-    ) -> Result<(), &'static str> {
-        loop {
-            // Check if at least one instance is not running
-            if let Ok(true) = self.at_least_one_instance_is_not_running() {
-                return Ok(());
-            }
-
-            // Wait for a notification or timeout
-            if timeout(timeout_duration, self.update_notifier.notified())
-                .await
-                .is_err()
-            {
-                return Err("Timeout while waiting for at least one instance to be not running");
-            }
-        }
+        timeout: std::time::Duration,
+    ) -> Result<(), String> {
+        self.inner
+            .wait_for_value(
+                |status_buffer| !status_buffer.all_instances_are_running(),
+                Some(timeout),
+            )
+            .await
+            .map(|_| ())
     }
 
-    //
-    // get_list_of_instance_in_error
-    //
+    // ------------------------------------------------------------------------
 }

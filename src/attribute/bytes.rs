@@ -1,137 +1,83 @@
-use super::data_pack::AttributeDataPack;
-
-use crate::AttributeMode;
+use super::std_obj::StdObjAttribute;
+use super::CallbackId;
+use crate::fbs::BytesBuffer;
+use crate::AttributeMetadata;
 use bytes::Bytes;
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
-use tokio::sync::Notify;
-use tokio::time::timeout;
-use zenoh::handlers::FifoChannelHandler;
-use zenoh::pubsub::Subscriber;
-use zenoh::sample::Sample;
 use zenoh::Session;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 /// Object to manage the BytesAttribute
-///
 pub struct BytesAttribute {
-    /// Object that all the attribute to publish
-    ///
-    session: Session,
-
-    /// Initial data
-    ///
-    pack: Arc<Mutex<AttributeDataPack<Bytes>>>,
-
-    /// Update notifier
-    ///
-    update_notifier: Arc<Notify>,
-
-    topic: String,
-
-    mode: AttributeMode,
+    pub inner: StdObjAttribute<BytesBuffer>,
 }
 
 impl BytesAttribute {
     /// Create a new instance
-    ///
-    pub async fn new(
-        session: Session,
-        mode: AttributeMode,
-        mut att_receiver: Subscriber<FifoChannelHandler<Sample>>,
-        topic_cmd: String,
-        topic_att: String,
-    ) -> Self {
-        //
-        // Create data pack
-        let pack = Arc::new(Mutex::new(AttributeDataPack::<Bytes>::default()));
-
-        //
-        //
-        let update_1 = pack.lock().unwrap().update_notifier();
-
-        //
-        // Create the recv task
-        let pack_2 = pack.clone();
-        tokio::spawn(async move {
-            tokio::spawn(async move {
-                while let Ok(sample) = att_receiver.recv_async().await {
-                    let value: Bytes = Bytes::copy_from_slice(&sample.payload().to_bytes());
-                    // Push into pack
-                    pack_2.lock().unwrap().push(value);
-                }
-            });
-        });
-
-        // Wait for the first message if mode is not writeonly
-        if mode != AttributeMode::WriteOnly {
-            let query = session.get(topic_att.clone()).await.unwrap();
-            let result = query.recv_async().await.unwrap();
-            let value: Bytes =
-                Bytes::copy_from_slice(&result.result().unwrap().payload().to_bytes());
-            pack.lock().unwrap().push(value);
-        }
-
-        //
-        // Return attribute
-        Self {
-            session,
-            pack: pack,
-            update_notifier: update_1,
-            topic: topic_cmd,
-            mode,
-        }
+    pub async fn new(session: Session, metadata: AttributeMetadata) -> Self {
+        let inner = StdObjAttribute::<BytesBuffer>::new(session, metadata).await;
+        Self { inner }
     }
 
-    /// Send command and do not wait for validation
-    ///
-    pub async fn shoot(&mut self, value: Bytes) {
-        // Send the command
-        self.session.put(self.topic.clone(), value).await.unwrap();
-    }
-
-    /// Notify when new data have been received
-    ///
-    pub fn update_notifier(&self) -> Arc<Notify> {
-        self.update_notifier.clone()
-    }
-
-    ///
-    ///
+    /// Set the value and wait for validation
+    #[inline]
     pub async fn set(&mut self, value: Bytes) -> Result<(), String> {
-        //
-        self.shoot(value.clone()).await;
-
-        if self.mode == AttributeMode::ReadWrite {
-            let delay = Duration::from_secs(5);
-
-            // Wait for change in the data pack
-            timeout(delay, self.update_notifier.notified())
-                .await
-                .map_err(|e| e.to_string())?;
-
-            while value != self.get().unwrap() {
-                // append 3 retry before failling if update received but not good
-                timeout(delay, self.update_notifier.notified())
-                    .await
-                    .map_err(|e| e.to_string())?;
-            }
-        }
-
-        Ok(())
-
-        // get last // if same as value ok else wait or error ?
+        self.inner
+            .set(
+                BytesBuffer::builder()
+                    .with_random_sequence()
+                    .with_source(0)
+                    .with_value(value)
+                    .build()
+                    .expect("Failed to build BytesBuffer"),
+            )
+            .await
     }
 
-    ///
-    ///
-    pub fn get(&self) -> Option<Bytes> {
-        self.pack.lock().unwrap().last()
+    /// Get the last received value
+    #[inline]
+    pub async fn get(&self) -> Option<BytesBuffer> {
+        self.inner.get().await
     }
 
-    ///
-    ///
-    pub fn pop(&self) -> Option<Bytes> {
-        self.pack.lock().unwrap().pop()
+    /// Wait for a specific bytes value to be received
+    #[inline]
+    pub async fn wait_for_value(
+        &self,
+        value: Bytes,
+        timeout: Option<std::time::Duration>,
+    ) -> Result<(), String> {
+        self.inner
+            .wait_for_value(
+                move |buf: &BytesBuffer| buf.value().as_ref().map(|v| v == &value).unwrap_or(false),
+                timeout,
+            )
+            .await
+            .map(|_| ())
+    }
+
+    /// Add a callback that will be triggered when receiving BytesBuffer messages
+    /// Optionally, a condition can be provided to filter when the callback is triggered
+    #[inline]
+    pub async fn add_callback<F, C>(&self, callback: F, condition: Option<C>) -> CallbackId
+    where
+        F: Fn(BytesBuffer) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>
+            + Send
+            + Sync
+            + 'static,
+        C: Fn(&BytesBuffer) -> bool + Send + Sync + 'static,
+    {
+        self.inner.add_callback(callback, condition).await
+    }
+
+    /// Remove a callback by its ID
+    #[inline]
+    pub async fn remove_callback(&self, callback_id: CallbackId) -> bool {
+        self.inner.remove_callback(callback_id).await
+    }
+
+    /// Get attribute metadata
+    #[inline]
+    pub fn metadata(&self) -> &AttributeMetadata {
+        self.inner.metadata()
     }
 }

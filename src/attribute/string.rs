@@ -1,154 +1,89 @@
-// use crate::pubsub::Publisher;
-use crate::reactor::DataReceiver;
-use crate::AttributeMode;
-use crate::Topic;
-use bytes::Bytes;
-use std::sync::Arc;
-use std::sync::Mutex;
-use std::time::Duration;
-use tokio::sync::Notify;
-use tokio::time::timeout;
-use zenoh::handlers::FifoChannelHandler;
-use zenoh::pubsub::Subscriber;
-use zenoh::sample::Sample;
+use super::std_obj::StdObjAttribute;
+use super::CallbackId;
+use crate::fbs::StringBuffer;
+use crate::AttributeMetadata;
 use zenoh::Session;
-
-use super::data_pack::AttributeDataPack;
 
 #[derive(Clone, Debug)]
 /// Object to manage the StringAttribute
 ///
 pub struct StringAttribute {
-    ///
-    /// TODO: maybe add this into the data pack
-    topic: String,
-
-    mode: AttributeMode,
-
-    /// Global Session
-    ///
-    session: Session,
-
-    /// Initial data
-    ///
-    pack: Arc<Mutex<AttributeDataPack<String>>>,
-
-    /// Update notifier
-    ///
-    update_notifier: Arc<Notify>,
+    pub inner: StdObjAttribute<StringBuffer>,
 }
 
 impl StringAttribute {
     /// Create a new instance
     ///
-    pub async fn new(
-        session: Session,
-        topic_cmd: String,
-        topic_att: String,
-        mode: AttributeMode,
-        mut att_receiver: Subscriber<FifoChannelHandler<Sample>>,
-    ) -> Self {
-        //
-        // Create data pack
-        let pack = Arc::new(Mutex::new(AttributeDataPack::<String>::default()));
-
-        //
-        //
-        let update_1 = pack.lock().unwrap().update_notifier();
-
-        //
-        // Create the recv task
-        let pack_2 = pack.clone();
-        tokio::spawn(async move {
-            while let Ok(sample) = att_receiver.recv_async().await {
-                let value: String = sample.payload().try_to_string().unwrap().to_string();
-                // Push into pack
-                pack_2.lock().unwrap().push(value);
-            }
-        });
-
-        // Wait for the first message if mode is not readonly
-        if mode != AttributeMode::WriteOnly {
-            let query = session.get(topic_att.clone()).await.unwrap();
-            let result = query.recv_async().await.unwrap();
-            let value: String = result
-                .result()
-                .unwrap()
-                .payload()
-                .try_to_string()
-                .unwrap()
-                .to_string();
-            pack.lock().unwrap().push(value);
-        }
-
-        //
-        // Return attribute
-        Self {
-            topic: topic_cmd,
-            session: session,
-            pack: pack,
-            update_notifier: update_1,
-            mode: mode,
-        }
+    pub async fn new(session: Session, metadata: AttributeMetadata) -> Self {
+        let inner = StdObjAttribute::<StringBuffer>::new(session, metadata).await;
+        Self { inner }
     }
 
-    /// Send command and do not wait for validation
+    /// Set the value and wait for validation
     ///
-    pub async fn shoot(&mut self, value: String) {
-        // Wrap value into payload
-        let pyl = Bytes::from(serde_json::to_string(&value).unwrap());
-
-        // Send the command
-        self.session.put(self.topic.clone(), pyl).await.unwrap();
-    }
-
-    /// Notify when new data have been received
-    ///
-    pub fn update_notifier(&self) -> Arc<Notify> {
-        self.update_notifier.clone()
-    }
-
-    ///
-    ///
+    #[inline]
     pub async fn set(&mut self, value: String) -> Result<(), String> {
-        //
-        self.shoot(value.clone()).await;
-
-        if self.mode == AttributeMode::ReadWrite {
-            let delay = Duration::from_secs(5);
-
-            // Wait for change in the data pack
-            timeout(delay, self.update_notifier.notified())
-                .await
-                .map_err(|e| e.to_string())?;
-
-            while value != self.get().unwrap() {
-                // append 3 retry before failling if update received but not good
-                timeout(delay, self.update_notifier.notified())
-                    .await
-                    .map_err(|e| e.to_string())?;
-            }
-        }
-
-        Ok(())
+        self.inner
+            .set(
+                StringBuffer::builder()
+                    .with_random_sequence()
+                    .with_source(0)
+                    .with_value(value)
+                    .build()
+                    .expect("Failed to build StringBuffer"),
+            )
+            .await
     }
 
+    /// Get the last received value
     ///
-    ///
-    pub fn get(&self) -> Option<String> {
-        self.pack.lock().unwrap().last()
+    #[inline]
+    pub async fn get(&self) -> Option<StringBuffer> {
+        self.inner.get().await
     }
 
+    /// Wait for a specific string value to be received
     ///
-    ///
-    pub fn pop(&self) -> Option<String> {
-        self.pack.lock().unwrap().pop()
+    #[inline]
+    pub async fn wait_for_value(
+        &self,
+        value: String,
+        timeout: Option<std::time::Duration>,
+    ) -> Result<(), String> {
+        self.inner
+            .wait_for_value(
+                move |buf: &StringBuffer| buf.value() == Some(value.as_str()),
+                timeout,
+            )
+            .await
+            .map(|_| ())
     }
 
-    pub fn get_instance_status_topic(&self) -> String {
-        format!(
-            "pza/_/devices/{}",
-            Topic::from_string(self.topic.clone(), true).instance_name()
-        )
+    /// Add a callback that will be triggered when receiving StringBuffer messages
+    /// Optionally, a condition can be provided to filter when the callback is triggered
+    #[inline]
+    pub async fn add_callback<F, C>(&self, callback: F, condition: Option<C>) -> CallbackId
+    where
+        F: Fn(StringBuffer) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>
+            + Send
+            + Sync
+            + 'static,
+        C: Fn(&StringBuffer) -> bool + Send + Sync + 'static,
+    {
+        self.inner.add_callback(callback, condition).await
+    }
+
+    /// Remove a callback by its ID
+    ///
+    #[inline]
+    pub async fn remove_callback(&self, callback_id: CallbackId) -> bool {
+        self.inner.remove_callback(callback_id).await
+    }
+
+    /// Get attribute metadata
+    ///
+    #[inline]
+    pub fn metadata(&self) -> &AttributeMetadata {
+        self.inner.metadata()
     }
 }

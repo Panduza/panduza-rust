@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use bytes::Bytes;
 use cucumber::{given, then, when};
 
@@ -11,7 +13,7 @@ async fn the_bytes_attribute_rw(world: &mut BasicsWorld, attribute_name: String)
         .unwrap()
         .find_attribute(attribute_name)
         .expect("Attribute not found");
-    let attribute = attribute_builder.expect_bytes().await.unwrap();
+    let attribute = attribute_builder.try_into_bytes().await.unwrap();
 
     world.bytes.att_rw = Some(attribute);
 }
@@ -24,7 +26,7 @@ async fn the_bytes_attribute_ro(world: &mut BasicsWorld, attribute_name: String)
         .unwrap()
         .find_attribute(attribute_name)
         .expect("Attribute not found");
-    let attribute = attribute_builder.expect_bytes().await.unwrap();
+    let attribute = attribute_builder.try_into_bytes().await.unwrap();
 
     world.bytes.att_ro = Some(attribute);
 }
@@ -37,7 +39,7 @@ async fn the_bytes_attribute_wo(world: &mut BasicsWorld, attribute_name: String)
         .unwrap()
         .find_attribute(attribute_name)
         .expect("Attribute not found");
-    let attribute = attribute_builder.expect_bytes().await.unwrap();
+    let attribute = attribute_builder.try_into_bytes().await.unwrap();
 
     world.bytes.att_wo = Some(attribute);
 }
@@ -71,37 +73,33 @@ async fn i_set_wo_bytes_to(world: &mut BasicsWorld, b: String) {
 #[then(expr = "the rw bytes value is {string}")]
 async fn the_rw_bytes_value_is(world: &mut BasicsWorld, b: String) {
     let bytes: Bytes = Bytes::from(b);
-    let read_value = world.bytes.att_rw.as_mut().unwrap().get().unwrap();
+    let read_value = world.bytes.att_rw.as_mut().unwrap().get().await.unwrap();
     assert_eq!(
-        read_value, bytes,
+        read_value.value().unwrap(),
+        bytes,
         "read '{:?}' != expected '{:?}'",
-        read_value, bytes
+        read_value,
+        bytes
     );
 }
 
 #[then(expr = "the ro bytes value is {string}")]
-async fn the_ro_bytes_value_is(world: &mut BasicsWorld, b: String) {
-    let timeout = std::time::Duration::from_secs(3);
-    let start_time = std::time::Instant::now();
-    let expected_value = Bytes::from(b);
-
-    loop {
-        let read_value = world.bytes.att_ro.as_ref().unwrap().get().unwrap();
-        if read_value == expected_value {
-            break;
-        }
-        if start_time.elapsed() >= timeout {
-            panic!(
-                "Timeout reached: read '{:?}' != expected '{:?}'",
-                read_value, expected_value
-            );
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-    }
-    let read_value = world.bytes.att_ro.as_ref().unwrap().get().unwrap();
+async fn the_ro_bytes_value_is(world: &mut BasicsWorld, expected_value: String) {
+    let bytes: Bytes = Bytes::from(expected_value.clone());
+    world
+        .bytes
+        .att_ro
+        .as_mut()
+        .unwrap()
+        .wait_for_value(bytes.clone(), Some(Duration::from_secs(5)))
+        .await
+        .unwrap();
+    let read_value = world.bytes.att_ro.as_mut().unwrap().get().await.unwrap();
     assert_eq!(
-        read_value, expected_value,
+        read_value.value().unwrap(),
+        bytes,
         "read '{:?}' != expected '{:?}'",
-        read_value, expected_value
+        read_value,
+        expected_value
     );
 }

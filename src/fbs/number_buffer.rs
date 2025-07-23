@@ -1,7 +1,7 @@
 use crate::fbs::generate_timestamp;
 use crate::fbs::{
     panduza_generated::panduza::{
-        Header, HeaderArgs, Message, MessageArgs, Payload, String as FbString, StringArgs,
+        Header, HeaderArgs, Message, MessageArgs, Number as FbNumber, NumberArgs, Payload,
     },
     PzaBuffer,
 };
@@ -10,15 +10,15 @@ use rand::Rng;
 use zenoh::bytes::ZBytes;
 
 #[derive(Default, Clone, Debug, PartialEq)]
-pub struct StringBufferBuilder {
-    value: Option<String>,
+pub struct NumberBufferBuilder {
+    value: Option<f64>,
     source: Option<u16>,
     sequence: Option<u16>,
 }
 
-impl StringBufferBuilder {
-    pub fn with_value<S: Into<String>>(mut self, value: S) -> Self {
-        self.value = Some(value.into());
+impl NumberBufferBuilder {
+    pub fn with_value(mut self, value: f64) -> Self {
+        self.value = Some(value);
         self
     }
 
@@ -38,22 +38,19 @@ impl StringBufferBuilder {
         self
     }
 
-    pub fn build(self) -> Result<StringBuffer, String> {
+    pub fn build(self) -> Result<NumberBuffer, String> {
         let mut builder = flatbuffers::FlatBufferBuilder::new();
         let timestamp = generate_timestamp();
 
-        let value = self
-            .value
-            .as_deref()
-            .ok_or("value not provided".to_string())?;
-        let value_fb = builder.create_string(value);
-
-        // whitelist est optionnel, on ne le gère pas ici (None)
-        let string_args = StringArgs {
-            value: Some(value_fb),
+        let value = self.value.ok_or("value not provided".to_string())?;
+        let number_args = NumberArgs {
+            value,
+            unit: None,
+            decimals: 0,
+            range: None,
             whitelist: None,
         };
-        let fb_string = FbString::create(&mut builder, &string_args);
+        let fb_number = FbNumber::create(&mut builder, &number_args);
 
         let header_source = self
             .source
@@ -69,36 +66,42 @@ impl StringBufferBuilder {
 
         let message_args = MessageArgs {
             header: Some(header),
-            payload_type: Payload::String,
-            payload: Some(fb_string.as_union_value()),
+            payload_type: Payload::Number,
+            payload: Some(fb_number.as_union_value()),
         };
         let message = Message::create(&mut builder, &message_args);
 
         builder.finish(message, None);
 
-        Ok(StringBuffer {
+        Ok(NumberBuffer {
             raw_data: Bytes::from(builder.finished_data().to_vec()),
         })
     }
 }
 
 #[derive(Default, Clone, Debug, PartialEq)]
-pub struct StringBuffer {
+pub struct NumberBuffer {
     raw_data: Bytes,
 }
 
-impl PzaBuffer for StringBuffer {
+impl PzaBuffer for NumberBuffer {
     fn from_zbytes(zbytes: ZBytes) -> Self {
         let bytes = Bytes::copy_from_slice(&zbytes.to_bytes());
-        StringBuffer { raw_data: bytes }
+        NumberBuffer { raw_data: bytes }
     }
 
     fn to_zbytes(self) -> ZBytes {
         ZBytes::from(self.raw_data)
     }
+
+    // ------------------------------------------------------------------------
+
     fn size(&self) -> usize {
         self.raw_data.len()
     }
+
+    // ------------------------------------------------------------------------
+
     fn source(&self) -> Option<u16> {
         let msg = self.as_message();
         msg.header().map(|h| h.source())
@@ -111,7 +114,7 @@ impl PzaBuffer for StringBuffer {
 
     fn as_message(&self) -> Message {
         flatbuffers::root::<Message>(&self.raw_data)
-            .expect("STRING: Failed to deserialize Message from raw_data")
+            .expect("NUMBER: Failed to deserialize Message from raw_data")
     }
 
     fn has_same_message_value<B: PzaBuffer>(&self, other_buffer: &B) -> bool {
@@ -122,25 +125,23 @@ impl PzaBuffer for StringBuffer {
             return false;
         }
 
-        if let (Some(self_str), Some(other_str)) =
-            (self_msg.payload_as_string(), other_msg.payload_as_string())
+        if let (Some(self_number), Some(other_number)) =
+            (self_msg.payload_as_number(), other_msg.payload_as_number())
         {
-            self_str.value() == other_str.value()
+            self_number.value() == other_number.value()
         } else {
             false
         }
     }
 }
 
-impl StringBuffer {
-    pub fn builder() -> StringBufferBuilder {
-        StringBufferBuilder::default()
+impl NumberBuffer {
+    pub fn builder() -> NumberBufferBuilder {
+        NumberBufferBuilder::default()
     }
 
-    /// Retourne la valeur String du buffer, si présente.
-    pub fn value(&self) -> Option<&str> {
-        self.as_message()
-            .payload_as_string()
-            .and_then(|s| s.value())
+    /// Retourne la valeur du buffer sous forme de f64, si présente.
+    pub fn value(&self) -> Option<f64> {
+        self.as_message().payload_as_number().map(|n| n.value())
     }
 }

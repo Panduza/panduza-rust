@@ -1,4 +1,0 @@
-// ./flatc.exe --rust sample.fbs
-table Sample {
-   values:[float];
-}

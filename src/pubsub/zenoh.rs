@@ -1,13 +1,6 @@
-use std::clone;
-use std::time::Duration;
-use tokio::time::sleep;
-
-use super::{Error, IncomingUpdate, Options, PubSubEvent};
-use bytes::Bytes;
+use super::Options;
 use thiserror::Error as ThisError;
-use zenoh::pubsub::Subscriber as ZenohSubscriber;
-use zenoh::{handlers::DefaultHandler, open, sample::Sample, Config, Session};
-use zenoh::{handlers::FifoChannelHandler, Result as ZenohResult};
+use zenoh::{open, Config, Session};
 
 #[derive(ThisError, Debug, Clone)]
 pub enum SessionError {

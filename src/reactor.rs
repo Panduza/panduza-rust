@@ -2,7 +2,6 @@ use crate::attribute::notification::NotificationAttribute;
 use crate::attribute::status::StatusAttribute;
 use crate::pubsub::Error;
 use crate::structure::Structure;
-use std::sync::Arc;
 
 use crate::{
     pubsub::{new_connection, Options},
@@ -62,6 +61,13 @@ pub struct Reactor {
     pub namespace: Option<String>,
 }
 
+/// Very important to implement to ease Dioxus usage
+impl PartialEq for Reactor {
+    fn eq(&self, other: &Self) -> bool {
+        self.session.zid() == other.session.zid()
+    }
+}
+
 impl Reactor {
     ///
     ///
@@ -78,6 +84,13 @@ impl Reactor {
     pub fn find_attribute<A: Into<String>>(&self, name: A) -> Option<AttributeBuilder> {
         let n: String = name.into();
         let meta = self.structure.find_attribute(&n);
+
+        // println!("found metadata: {:?} for attribute '{}'", meta, &n);
+
+        // self.structure
+        //     .list_of_registered_topics()
+        //     .iter()
+        //     .for_each(|topic| println!("Registered topic: {}", topic));
 
         if meta.is_none() {
             return None;
@@ -135,17 +148,17 @@ impl Reactor {
                     }),
                 "pza/_/status"
             ),
-            Some("status-v0".to_string()),
+            Some("status".to_string()),
             AttributeMode::ReadOnly,
         );
 
         let builder = AttributeBuilder::new(self.clone(), Some(meta));
 
         builder
-            .expect_status()
+            .try_into_status()
             .await
             .map_err(|e| e.to_string())
-            .unwrap()
+            .expect("Failed to create status attribute")
     }
 
     /// Attribute to get access to the streaming notification system of the platform
@@ -161,16 +174,16 @@ impl Reactor {
                     } else {
                         format!("{}/", ns)
                     }),
-                "pza/_/notification"
+                "pza/_/notifications"
             ),
-            Some("notification-v0".to_string()),
+            Some("notification".to_string()),
             AttributeMode::ReadOnly,
         );
 
         let builder = AttributeBuilder::new(self.clone(), Some(meta));
 
         builder
-            .expect_notification()
+            .try_into_notification()
             .await
             .map_err(|e| e.to_string())
             .unwrap()
@@ -229,7 +242,7 @@ pub async fn new_reactor(options: ReactorOptions) -> Result<Reactor, String> {
             )
         ))
         .await
-        .unwrap();
+        .expect("Failed to get structure attribute");
 
     let structure = Structure::new(struct_query).await;
 

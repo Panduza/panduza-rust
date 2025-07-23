@@ -16,6 +16,8 @@ table Header {
 
 // The Payload union allows for different types of messages to be encapsulated in a single structure.
 union Payload {
+    StructureNode,
+    Context,
     Status,
     Notification,
     Boolean,
@@ -34,6 +36,50 @@ table Message {
 
 // ----------------------------------------------
 
+// Attribute Topic: "$NS/pza/_/structure"
+
+// Leaf
+table AttributeEntry {
+    name: string;
+    type: string;
+    mode: string;
+}
+
+// Node
+table StructureNode {
+    name: string;
+    tags: [string];
+    children: [StructureNode];
+    attributes: [AttributeEntry];
+}
+
+// ----------------------------------------------
+
+// Attribute Topic: "$NS/pza/_/context"
+// cmd => attribute or class topic
+// att => context
+
+table Context {
+    topic: string;
+    context: string; // empty on command
+}
+
+// ----------------------------------------------
+
+// Attribute Topic: "$NS/pza/_/users"
+
+table UserEntry {
+    id: uint16; // 0 for request
+    name: string; // unique name of the user
+}
+
+table Users {
+    // The users are stored as a vector of UserEntry
+    entries: [UserEntry];
+}
+
+// ----------------------------------------------
+
 table InstanceStatus {
     instance: string;
     state: uint16;
@@ -42,7 +88,6 @@ table InstanceStatus {
 
 table Status {
     instances:[InstanceStatus];
-    timestamp: Timestamp;
 }
 
 // ----------------------------------------------

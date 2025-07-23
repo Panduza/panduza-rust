@@ -1,6 +1,5 @@
 use crate::attribute_metadata::AttributeMetadata;
-use bytes::Bytes;
-use serde_json::{Map, Value as JsonValue};
+use crate::fbs::{PzaBuffer, StructureBuffer};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -8,15 +7,13 @@ use std::{
 use tokio::sync::Notify;
 use yash_fnmatch::{without_escape, Pattern};
 use zenoh::handlers::FifoChannelHandler;
-use zenoh::pubsub::Subscriber;
 use zenoh::query::Reply;
-use zenoh::sample::Sample;
 
 #[derive(Debug)]
 struct StructureData {
     ///
     ///
-    brut: JsonValue,
+    brut: StructureBuffer,
 
     /// Structure extracted and prepared for easy access
     ///
@@ -32,7 +29,7 @@ impl StructureData {
     ///
     pub fn new() -> StructureData {
         Self {
-            brut: JsonValue::Null,
+            brut: StructureBuffer::default(),
             flat: HashMap::new(),
             initialized: Arc::new(Notify::new()),
         }
@@ -40,103 +37,99 @@ impl StructureData {
 
     ///
     ///
-    pub fn update(&mut self, payload: Bytes) -> Result<(), String> {
-        //
-        let brut: JsonValue = serde_json::from_slice(&payload).map_err(|e| e.to_string())?;
+    pub fn update(&mut self, payload: zenoh::bytes::ZBytes) -> Result<(), String> {
+        // Convert ZBytes to StructureBuffer
+        let brut = StructureBuffer::from_zbytes(payload);
 
-        //
-        if let Some(driver_instances) = brut.get("driver_instances") {
-            if let Some(driver_instances) = driver_instances.as_object() {
-                //
-                for (instance_names, body) in driver_instances.iter() {
-                    // println!("Key: {}, Value: {}", instance_names, body);
+        // trace
+        // println!("StructureBuffer size: {}", brut.size());
 
-                    self.flatten_value(format!("pza/{}", instance_names), body);
-                }
-            }
-        }
+        // Extract and flatten the structure
+        self.flatten_structure_buffer(&brut)?;
 
+        // Store the StructureBuffer
         self.brut = brut;
-
-        // println!("------- {:?}", self.brut);
-        // println!("******* {:?}", self.flat);
 
         self.initialized.notify_waiters();
 
         Ok(())
     }
 
+    /// Extract and flatten structure from StructureBuffer
     ///
-    ///
-    pub fn flatten_value(&mut self, level: String, data: &JsonValue) {
-        if let Some(data) = data.as_object() {
-            // println!("flatten_value: {:?} {:?}", level, data);
+    fn flatten_structure_buffer(
+        &mut self,
+        structure_buffer: &StructureBuffer,
+    ) -> Result<(), String> {
+        // Clear the existing flat structure
+        self.flat.clear();
 
-            self.flatten_object(level, data).unwrap();
+        // Get the message from the buffer
+        let message = structure_buffer.as_message();
+
+        // Extract the StructureNode from the payload
+        if let Some(structure_node) = message.payload_as_structure_node() {
+            // Start flattening from the root with "pza" prefix
+            self.flatten_structure_node("pza".to_string(), &structure_node)?;
         }
+
+        Ok(())
     }
 
+    /// Recursively flatten a StructureNode
     ///
-    ///
-    pub fn flatten_object(
+    fn flatten_structure_node(
         &mut self,
         level: String,
-        data: &Map<String, JsonValue>,
+        node: &crate::fbs::panduza_generated::panduza::StructureNode,
     ) -> Result<(), String> {
-        //
-        //
-        match data.get("attributes") {
-            Some(att_values) => {
-                let values = att_values
-                    .as_object()
-                    .ok_or("'attributes' is not an object")?;
-
-                // println!("flatten_object: {:?} {:?}", level, values);
-
-                for (att_name, att_data) in values.iter() {
-                    self.register_flat_entry(format!("{}/{}", level, att_name), att_data)?;
+        // Process attributes in this node
+        if let Some(attributes) = node.attributes() {
+            for i in 0..attributes.len() {
+                let attr = attributes.get(i);
+                if let Some(_attr_name) = attr.name() {
+                    self.register_flat_entry_from_attribute(level.clone(), &attr)?;
                 }
             }
-            None => {}
         }
 
-        //
-        //
-        match data.get("classes") {
-            Some(classes) => {
-                let values = classes.as_object().ok_or("'classes' is not an object")?;
-
-                // println!("flatten_object: {:?} {:?}", level, values);
-
-                for (att_name, att_data) in values.iter() {
-                    self.flatten_value(format!("{}/{}", level, att_name), att_data);
+        // Process children nodes recursively
+        if let Some(children) = node.children() {
+            for i in 0..children.len() {
+                let child = children.get(i);
+                if let Some(child_name) = child.name() {
+                    let child_level = format!("{}/{}", level, child_name);
+                    self.flatten_structure_node(child_level, &child)?;
                 }
             }
-            None => {}
         }
-        // for c_name, c_data in classes.items():
-        //     self.flatten_structure(f"{level}/{c_name}", c_data)
 
         Ok(())
     }
 
-    /// Register a entry inside the flat structure
+    /// Register an attribute entry from StructureBuffer AttributeEntry
     ///
-    pub fn register_flat_entry(&mut self, level: String, data: &JsonValue) -> Result<(), String> {
-        // ultra trace
-        // println!("register_flat_entry: {:?}", level);
+    fn register_flat_entry_from_attribute(
+        &mut self,
+        level: String,
+        attr: &crate::fbs::panduza_generated::panduza::AttributeEntry,
+    ) -> Result<(), String> {
+        // Extract attribute information
+        let attr_type = attr.type_().unwrap_or("unknown");
+        let attr_mode = attr.mode().unwrap_or("unknown");
 
-        // insert the element
-        self.flat.insert(
+        // Create AttributeMetadata from the attribute information
+        let metadata = AttributeMetadata::from_structure_buffer_attribute(
             level.clone(),
-            AttributeMetadata::from_json_value(level, &data)?,
-        );
+            attr_type,
+            attr_mode,
+        )?;
+
+        // Insert into flat structure
+        self.flat.insert(level, metadata);
 
         Ok(())
-        // .ok_or(format!("cannot insert entry {:?}", &level))
-        // .map(|_| ())
     }
-
     /// TODO REWORK THIS SERIOUSLY
     ///
     pub fn find_attribute<A: Into<String>>(&self, pattern: A) -> Option<AttributeMetadata> {
@@ -171,11 +164,15 @@ impl StructureData {
         self.initialized.clone()
     }
 
+    // ------------------------------------------------------------------------
+
     /// Debug fonction to list all the received topics
     ///
     pub fn list_of_registered_topics(&self) -> Vec<String> {
         self.flat.keys().cloned().collect()
     }
+
+    // ------------------------------------------------------------------------
 }
 
 #[derive(Clone, Debug)]
@@ -189,19 +186,23 @@ pub struct Structure {
 
 impl Structure {
     pub async fn new(query: FifoChannelHandler<Reply>) -> Self {
-        let json_value = Arc::new(Mutex::new(StructureData::new()));
+        let structure_data = Arc::new(Mutex::new(StructureData::new()));
 
-        let json_value_2 = json_value.clone();
+        let structure_data_clone = structure_data.clone();
 
         while let Ok(sample) = query.recv_async().await {
             // println!("LE SAMPLE : {:?}", sample.clone());
-            match json_value_2.lock() {
+            match structure_data_clone.lock() {
                 Ok(mut deref_value) => {
                     deref_value
-                        .update(Bytes::copy_from_slice(
-                            &sample.result().unwrap().payload().to_bytes(),
-                        ))
-                        .unwrap();
+                        .update(
+                            sample
+                                .result()
+                                .expect("Failed to get result from Zenoh sample")
+                                .payload()
+                                .clone(),
+                        )
+                        .expect("Failed to update structure data with new payload");
                 }
                 Err(e) => {
                     println!("Error = {:?}", e);
@@ -209,7 +210,9 @@ impl Structure {
             }
         }
 
-        Structure { value: json_value }
+        Structure {
+            value: structure_data,
+        }
     }
 
     /// Try to find the element in the structure
@@ -224,11 +227,14 @@ impl Structure {
     /// Debug fonction to list all the received topics
     ///
     pub fn list_of_registered_topics(&self) -> Vec<String> {
-        self.value.lock().unwrap().list_of_registered_topics()
+        self.value
+            .lock()
+            .expect("Failed to acquire lock on structure data for listing topics")
+            .list_of_registered_topics()
     }
 
-    // pub fn update(&mut self, json_value: JsonValue) {
-    //     self.json_value = json_value;
+    // pub fn update(&mut self, structure_buffer: StructureBuffer) {
+    //     self.brut = structure_buffer;
     // }
 
     // pub async fn run(&mut self) {
@@ -238,6 +244,9 @@ impl Structure {
     ///
     ///
     pub fn initialized_notifier(&self) -> Arc<Notify> {
-        self.value.lock().unwrap().initialized_notifier()
+        self.value
+            .lock()
+            .expect("Failed to acquire lock on structure data for getting notifier")
+            .initialized_notifier()
     }
 }
