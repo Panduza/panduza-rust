@@ -1,12 +1,19 @@
 use crate::attribute::bytes::BytesAttribute;
-use crate::attribute::json::JsonAttribute;
 use crate::attribute::notification::NotificationAttribute;
 use crate::attribute::number::NumberAttribute;
 use crate::attribute::status::StatusAttribute;
+use crate::attribute::AttributeError;
 use crate::attribute_metadata::AttributeMetadata;
 use crate::reactor::Reactor;
 use crate::BooleanAttribute;
 use crate::StringAttribute;
+
+/// Macro to create a metadata not found error
+macro_rules! meta_data_not_found {
+    ($msg:expr) => {
+        AttributeError::NotFound(format!("metadata - {}", $msg))
+    };
+}
 
 #[derive(Clone)]
 /// Metadata for an attribute
@@ -35,10 +42,21 @@ impl AttributeBuilder {
 
     /// BOOLEAN
     ///
-    pub async fn expect_boolean(self) -> Result<BooleanAttribute, String> {
+    pub async fn try_into_boolean(self) -> Result<BooleanAttribute, AttributeError> {
+        // Check if metadata is available
         let metadata = self
             .metadata
-            .ok_or_else(|| "Metadata is required".to_string())?;
+            .ok_or_else(|| meta_data_not_found!("boolean"))?;
+
+        // Check if the attribute is a boolean type
+        if metadata.r#type != "boolean" {
+            return Err(AttributeError::InvalidType(
+                "boolean".to_string(),
+                metadata.r#type.clone(),
+            ));
+        }
+
+        // Create and return the BooleanAttribute
         Ok(BooleanAttribute::new(self.reactor.session, metadata).await)
     }
 
@@ -46,10 +64,18 @@ impl AttributeBuilder {
 
     /// NUMBER
     ///
-    pub async fn expect_number(self) -> Result<NumberAttribute, String> {
+    pub async fn try_into_number(self) -> Result<NumberAttribute, AttributeError> {
         let metadata = self
             .metadata
-            .ok_or_else(|| "Metadata is required".to_string())?;
+            .ok_or_else(|| meta_data_not_found!("number"))?;
+
+        if metadata.r#type != "number" {
+            return Err(AttributeError::InvalidType(
+                "number".to_string(),
+                metadata.r#type.clone(),
+            ));
+        }
+
         Ok(NumberAttribute::new(self.reactor.session, metadata).await)
     }
 
@@ -57,10 +83,18 @@ impl AttributeBuilder {
 
     /// STRING
     ///
-    pub async fn expect_string(self) -> Result<StringAttribute, String> {
+    pub async fn try_into_string(self) -> Result<StringAttribute, AttributeError> {
         let metadata = self
             .metadata
-            .ok_or_else(|| "Metadata is required".to_string())?;
+            .ok_or_else(|| meta_data_not_found!("string"))?;
+
+        if metadata.r#type != "string" {
+            return Err(AttributeError::InvalidType(
+                "string".to_string(),
+                metadata.r#type.clone(),
+            ));
+        }
+
         Ok(StringAttribute::new(self.reactor.session, metadata).await)
     }
 
@@ -68,10 +102,18 @@ impl AttributeBuilder {
 
     /// BYTES
     ///
-    pub async fn expect_bytes(self) -> Result<BytesAttribute, String> {
+    pub async fn try_into_bytes(self) -> Result<BytesAttribute, AttributeError> {
         let metadata = self
             .metadata
-            .ok_or_else(|| "Metadata is required".to_string())?;
+            .ok_or_else(|| meta_data_not_found!("bytes"))?;
+
+        if metadata.r#type != "bytes" {
+            return Err(AttributeError::InvalidType(
+                "bytes".to_string(),
+                metadata.r#type.clone(),
+            ));
+        }
+
         Ok(BytesAttribute::new(self.reactor.session, metadata).await)
     }
 
@@ -79,10 +121,18 @@ impl AttributeBuilder {
 
     /// STATUS
     ///
-    pub async fn expect_status(self) -> Result<StatusAttribute, String> {
+    pub async fn try_into_status(self) -> Result<StatusAttribute, AttributeError> {
         let metadata = self
             .metadata
-            .ok_or_else(|| "Metadata is required".to_string())?;
+            .ok_or_else(|| meta_data_not_found!("status"))?;
+
+        if metadata.r#type != "status" {
+            return Err(AttributeError::InvalidType(
+                "status".to_string(),
+                metadata.r#type.clone(),
+            ));
+        }
+
         Ok(StatusAttribute::new(self.reactor.session, metadata).await)
     }
 
@@ -90,49 +140,20 @@ impl AttributeBuilder {
 
     /// NOTIFICATION
     ///
-    pub async fn expect_notification(self) -> Result<NotificationAttribute, String> {
+    pub async fn try_into_notification(self) -> Result<NotificationAttribute, AttributeError> {
         let metadata = self
             .metadata
-            .ok_or_else(|| "Metadata is required".to_string())?;
+            .ok_or_else(|| meta_data_not_found!("notification"))?;
+
+        if metadata.r#type != "notification" {
+            return Err(AttributeError::InvalidType(
+                "notification".to_string(),
+                metadata.r#type.clone(),
+            ));
+        }
+
         Ok(NotificationAttribute::new(self.reactor.session, metadata).await)
     }
 
     // ------------------------------------------------------------------------
-
-    pub async fn expect_json(&self) -> Result<JsonAttribute, String> {
-        let md = self.metadata.as_ref().unwrap();
-        let att_topic = format!(
-            "{}{}/att",
-            self.reactor
-                .namespace
-                .clone()
-                .map_or("".to_string(), |ns| format!("{}/", ns)),
-            md.topic
-        );
-        let cmd_topic = format!(
-            "{}{}/cmd",
-            self.reactor
-                .namespace
-                .clone()
-                .map_or("".to_string(), |ns| format!("{}/", ns)),
-            md.topic
-        );
-
-        let att_receiver = self.reactor.register_listener(att_topic.clone()).await;
-
-        // let cmd_publisher = self
-        //     .reactor
-        //     .register_publisher(cmd_topic.clone())
-        //     .await
-        //     .map_err(|e| e.to_string())?;
-
-        Ok(JsonAttribute::new(
-            self.reactor.session.clone(),
-            cmd_topic,
-            att_topic,
-            md.mode.clone(),
-            att_receiver,
-        )
-        .await)
-    }
 }

@@ -1,7 +1,8 @@
+use thiserror::Error;
+
 pub mod boolean;
 pub mod bytes;
 pub mod data_pack;
-pub mod json;
 pub mod notification;
 pub mod number;
 pub mod status;
@@ -15,6 +16,15 @@ pub mod std_obj;
 /// The attribute manages a RO stream of data
 ///
 pub mod ro_stream;
+
+/// Error type for attribute operations
+#[derive(Error, Debug)]
+pub enum AttributeError {
+    #[error("Element not found: {0}")]
+    NotFound(String),
+    #[error("Invalid type: expect:{0} found:{1}")]
+    InvalidType(String, String),
+}
 
 /// Unique identifier for callbacks
 pub type CallbackId = u64;

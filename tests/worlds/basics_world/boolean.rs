@@ -6,7 +6,8 @@ use super::{BasicsWorld, Boolean};
 
 // ----------------------------------------------------------------------------
 
-///
+/// Store attribute name provided for rw attribute
+/// Then try to find the attribute in the reactor and convert it to a BooleanAttribute
 ///
 #[given(expr = "the boolean attribute rw {string}")]
 async fn given_the_attribute_rw(world: &mut BasicsWorld, attribute_name: String) {
@@ -20,7 +21,7 @@ async fn given_the_attribute_rw(world: &mut BasicsWorld, attribute_name: String)
         .expect("Reactor not found")
         .find_attribute(attribute_name)
         .expect("Attribute not found")
-        .expect_boolean()
+        .try_into_boolean()
         .await
         .expect("Attribute is not boolean");
 
@@ -43,7 +44,7 @@ async fn given_the_attribute_wo(world: &mut BasicsWorld, attribute_name: String)
         .find_attribute(attribute_name)
         .expect("Attribute not found");
     let attribute =
-        tokio::time::timeout(Duration::from_secs(5), attribute_builder.expect_boolean())
+        tokio::time::timeout(Duration::from_secs(5), attribute_builder.try_into_boolean())
             .await
             .unwrap()
             .unwrap();
@@ -63,7 +64,7 @@ async fn given_the_attribute_ro(world: &mut BasicsWorld, attribute_name: String)
         .unwrap()
         .find_attribute(attribute_name)
         .expect("Attribute not found");
-    let attribute: panduza::BooleanAttribute = attribute_builder.expect_boolean().await.unwrap();
+    let attribute: panduza::BooleanAttribute = attribute_builder.try_into_boolean().await.unwrap();
 
     world.boolean.att_ro = Some(attribute);
 }
@@ -144,7 +145,7 @@ async fn the_boolean_attribute_wo_counter(world: &mut BasicsWorld, s: String) {
         .find_attribute(s)
         .expect("Attribute not found");
     let attribute = attribute_builder
-        .expect_number()
+        .try_into_number()
         .await
         .expect("Failed to get attribute as number");
 
@@ -161,7 +162,7 @@ async fn the_boolean_attribute_wo_counter_reset(world: &mut BasicsWorld, s: Stri
         .unwrap()
         .find_attribute(s)
         .expect("Attribute not found");
-    let attribute = attribute_builder.expect_boolean().await.unwrap();
+    let attribute = attribute_builder.try_into_boolean().await.unwrap();
 
     world.boolean.att_wo_counter_reset = Some(attribute);
 }

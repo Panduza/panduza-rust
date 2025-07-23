@@ -167,6 +167,9 @@ impl Debug for BasicsWorld {
 ///
 #[given(expr = "a reactor connected on a test platform")]
 async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
+    // Enable trace printing for debugging
+    let trace_print = false;
+
     // Create reactor options
     let options = ReactorOptions::new(
         PLAFORM_LOCALHOST,
@@ -177,17 +180,23 @@ async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
 
     // No additional setup required before connecting to the test platform
     {
-        print!("Connecting to {}:{}...", PLAFORM_LOCALHOST, PLAFORM_PORT);
+        if trace_print {
+            print!("Connecting to {}:{}...", PLAFORM_LOCALHOST, PLAFORM_PORT);
+        }
         let reactor = panduza::new_reactor(options)
             .await
             .expect("Failed to create reactor");
         world.r = Some(reactor);
-        println!(" ok!");
+        if trace_print {
+            println!(" ok!");
+        }
     }
 
     // Get the status attribute from the reactor and store it in the world
     {
-        print!("Getting status attribute...");
+        if trace_print {
+            print!("Getting status attribute...");
+        }
         world.platform_status = Some(
             world
                 .r
@@ -196,13 +205,17 @@ async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
                 .new_status_attribute()
                 .await,
         );
-        println!(" ok!");
+        if trace_print {
+            println!(" ok!");
+        }
     }
 
     // Get the notification attribute from the reactor and store it in the world
     {
         // Create a pack to store notifications
-        print!("Getting notification attribute...");
+        if trace_print {
+            print!("Getting notification attribute...");
+        }
         world.platform_notifications = Some(
             world
                 .r
@@ -211,7 +224,9 @@ async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
                 .new_notification_attribute()
                 .await,
         );
-        print!("!");
+        if trace_print {
+            print!("!");
+        }
         world.platform_notifications_pack = Some(
             world
                 .platform_notifications
@@ -220,7 +235,9 @@ async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
                 .new_pack()
                 .await,
         );
-        println!(" ok!");
+        if trace_print {
+            println!(" ok!");
+        }
     }
 
     world
@@ -231,7 +248,9 @@ async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
         .await
         .expect("Error while waiting for instance to be in running state");
 
-    println!("reactor ready");
+    if trace_print {
+        println!("reactor ready");
+    }
 }
 
 ///

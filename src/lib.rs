@@ -44,7 +44,6 @@ pub use attribute_metadata::AttributeMetadata;
 pub mod attribute;
 pub use attribute::boolean::BooleanAttribute;
 pub use attribute::bytes::BytesAttribute;
-pub use attribute::json::JsonAttribute;
 pub use attribute::notification::NotificationAttribute;
 pub use attribute::number::NumberAttribute;
 pub use attribute::status::StatusAttribute;

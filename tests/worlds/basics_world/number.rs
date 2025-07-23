@@ -12,7 +12,7 @@ async fn the_number_attribute_rw(world: &mut BasicsWorld, attribute_name: String
         .unwrap()
         .find_attribute(attribute_name)
         .expect("Attribute not found");
-    let attribute = attribute_builder.expect_number().await.unwrap();
+    let attribute = attribute_builder.try_into_number().await.unwrap();
 
     world.number.att_rw = Some(attribute);
 }
@@ -27,7 +27,7 @@ async fn the_number_attribute_wo(world: &mut BasicsWorld, attribute_name: String
         .unwrap()
         .find_attribute(attribute_name)
         .expect("Attribute not found");
-    let attribute = attribute_builder.expect_number().await.unwrap();
+    let attribute = attribute_builder.try_into_number().await.unwrap();
 
     world.number.att_wo = Some(attribute);
 }
@@ -42,7 +42,7 @@ async fn the_number_attribute_ro(world: &mut BasicsWorld, attribute_name: String
         .unwrap()
         .find_attribute(attribute_name)
         .expect("Attribute not found");
-    let attribute = attribute_builder.expect_number().await.unwrap();
+    let attribute = attribute_builder.try_into_number().await.unwrap();
 
     world.number.att_ro = Some(attribute);
 }

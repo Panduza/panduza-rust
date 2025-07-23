@@ -127,14 +127,14 @@ impl Reactor {
                     }),
                 "pza/_/status"
             ),
-            Some("status-v0".to_string()),
+            Some("status".to_string()),
             AttributeMode::ReadOnly,
         );
 
         let builder = AttributeBuilder::new(self.clone(), Some(meta));
 
         builder
-            .expect_status()
+            .try_into_status()
             .await
             .map_err(|e| e.to_string())
             .expect("Failed to create status attribute")
@@ -155,14 +155,14 @@ impl Reactor {
                     }),
                 "pza/_/notifications"
             ),
-            Some("notification-v0".to_string()),
+            Some("notification".to_string()),
             AttributeMode::ReadOnly,
         );
 
         let builder = AttributeBuilder::new(self.clone(), Some(meta));
 
         builder
-            .expect_notification()
+            .try_into_notification()
             .await
             .map_err(|e| e.to_string())
             .unwrap()
