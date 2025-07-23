@@ -4,7 +4,6 @@ Feature: Boolean Attributes
   Background:
     Given a reactor connected on a test platform
 
-  @focus
   Scenario: Manage RW boolean attribute
     Given the boolean attribute rw "boolean/rw"
     When I set rw boolean to true
@@ -21,6 +20,8 @@ Feature: Boolean Attributes
     Then the ro boolean value is false
 
   Scenario: Manage WO attribute is overload
+    # This scenario tests the overload of a write-only boolean attribute
+    # Overload is when a massive quantity of write operations are sent to the attribute
     Given the boolean attribute wo "boolean/wo"
     Given the number attribute wo_counter "boolean/wo_counter"
     Given the boolean attribute wo_counter_reset "boolean/wo_counter_reset"

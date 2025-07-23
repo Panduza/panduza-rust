@@ -4,22 +4,31 @@ use cucumber::{given, then, when};
 
 use super::{BasicsWorld, Boolean};
 
+// ----------------------------------------------------------------------------
+
 ///
 ///
 #[given(expr = "the boolean attribute rw {string}")]
 async fn given_the_attribute_rw(world: &mut BasicsWorld, attribute_name: String) {
+    // Save the topic name for later use
     world.boolean.topic_rw = Some(attribute_name.clone());
 
-    let attribute_builder = world
+    // Find the attribute builder in the reactor
+    let attribute = world
         .r
         .as_ref()
-        .unwrap()
+        .expect("Reactor not found")
         .find_attribute(attribute_name)
-        .expect("Attribute not found");
-    let attribute: panduza::BooleanAttribute = attribute_builder.expect_boolean().await.unwrap();
+        .expect("Attribute not found")
+        .expect_boolean()
+        .await
+        .expect("Attribute is not boolean");
 
+    // Initialize the last value to None
     world.boolean.att_rw = Some(attribute);
 }
+
+// ----------------------------------------------------------------------------
 
 ///
 ///
