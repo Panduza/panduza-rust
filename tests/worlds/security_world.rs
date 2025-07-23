@@ -5,8 +5,8 @@ mod writer;
 use cucumber::Parameter;
 use cucumber::{given, then, World};
 use panduza::{
-    attribute::si::SiAttribute, reactor::ReactorOptions, AttributeBuilder, BooleanAttribute,
-    BytesAttribute, JsonAttribute, Reactor, StringAttribute,
+    reactor::ReactorOptions, AttributeBuilder, BooleanAttribute,
+    BytesAttribute, Reactor, StringAttribute,
 };
 use panduza::{NotificationAttribute, StatusAttribute};
 use std::time::Duration;
@@ -76,7 +76,7 @@ pub struct BooleanSubWorld {
     pub att_wo: Option<BooleanAttribute>,
     pub att_ro: Option<BooleanAttribute>,
 
-    pub att_wo_counter: Option<SiAttribute>,
+    // pub att_wo_counter: Option<SiAttribute>,
     pub att_wo_counter_reset: Option<BooleanAttribute>,
 
     pub topic_rw: Option<String>,
@@ -88,9 +88,9 @@ pub struct BooleanSubWorld {
 
 #[derive(Default)]
 pub struct SiSubWorld {
-    pub att_rw: Option<SiAttribute>,
-    pub att_wo: Option<SiAttribute>,
-    pub att_ro: Option<SiAttribute>,
+    // pub att_rw: Option<SiAttribute>,
+    // pub att_wo: Option<SiAttribute>,
+    // pub att_ro: Option<SiAttribute>,
     // pub topic_rw: Option<String>,
     // pub topic_wo: Option<String>,
     // pub topic_ro: Option<String>,
@@ -126,15 +126,7 @@ pub struct BytesSubWorld {
     // pub topic_ro: Option<String>,
 }
 
-#[derive(Default)]
-pub struct JsonSubWorld {
-    pub att_rw: Option<JsonAttribute>,
-    pub att_wo: Option<JsonAttribute>,
-    pub att_ro: Option<JsonAttribute>,
-    // pub topic_rw: Option<String>,
-    // pub topic_wo: Option<String>,
-    // pub topic_ro: Option<String>,
-}
+
 
 #[derive(Default, World)]
 pub struct SecurityWorld {
@@ -152,7 +144,7 @@ pub struct SecurityWorld {
 
     ///
     ///
-    pub att_instance_status: Option<JsonAttribute>,
+    // pub att_instance_status: Option<JsonAttribute>,
 
     /// Reactor sub world data
     ///
@@ -178,9 +170,6 @@ pub struct SecurityWorld {
     ///
     pub bytes: BytesSubWorld,
 
-    /// Json sub world data
-    ///
-    pub json: JsonSubWorld,
 }
 
 impl Debug for SecurityWorld {

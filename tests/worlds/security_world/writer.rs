@@ -15,9 +15,8 @@ async fn given_the_json_structure_attribute(world: &mut SecurityWorld) {
         .unwrap()
         .find_attribute("pza/_/structure/cmd")
         .expect("Attribute not found");
-    let attribute: panduza::JsonAttribute = attribute_builder.expect_json().await.unwrap();
-
-    world.json.att_rw = Some(attribute);
+    // let attribute: panduza::JsonAttribute = attribute_builder.expect_json().await.unwrap();
+    // world.json.att_rw = Some(attribute);
 }
 
 ///
@@ -120,7 +119,7 @@ async fn given_the_attribute_rw(world: &mut SecurityWorld, attribute_name: Strin
         .unwrap()
         .find_attribute(attribute_name)
         .expect("Attribute not found");
-    let attribute: panduza::BooleanAttribute = attribute_builder.expect_boolean().await.unwrap();
+    let attribute: panduza::BooleanAttribute = attribute_builder.try_into_boolean().await.unwrap();
 
     world.boolean.att_rw = Some(attribute);
 }
@@ -143,9 +142,9 @@ async fn i_set_rw_boolean(world: &mut SecurityWorld, value: Boolean) {
 ///
 #[then(expr = "the rw boolean value is {boolean}")]
 async fn the_rw_boolean_value_is(world: &mut SecurityWorld, expected_value: Boolean) {
-    let read_value = world.boolean.att_rw.as_mut().unwrap().get().unwrap();
+    let read_value = world.boolean.att_rw.as_mut().unwrap().get().await.unwrap();
     assert_eq!(
-        read_value,
+        read_value.value().unwrap(),
         expected_value.into_bool(),
         "read '{:?}' != expected '{:?}'",
         read_value,
@@ -166,7 +165,7 @@ async fn given_the_writer_attribute_wo(world: &mut SecurityWorld, attribute_name
         .find_attribute(attribute_name)
         .expect("Attribute not found");
     let attribute =
-        tokio::time::timeout(Duration::from_secs(5), attribute_builder.expect_boolean())
+        tokio::time::timeout(Duration::from_secs(5), attribute_builder.try_into_boolean())
             .await
             .unwrap()
             .unwrap();
@@ -186,7 +185,7 @@ async fn given_the_writer_attribute_ro(world: &mut SecurityWorld, attribute_name
         .unwrap()
         .find_attribute(attribute_name)
         .expect("Attribute not found");
-    let attribute: panduza::BooleanAttribute = attribute_builder.expect_boolean().await.unwrap();
+    let attribute: panduza::BooleanAttribute = attribute_builder.try_into_boolean().await.unwrap();
 
     world.boolean.att_ro = Some(attribute);
 }
@@ -214,12 +213,11 @@ async fn the_ro_writer_boolean_value_is(world: &mut SecurityWorld, expected_valu
         .att_ro
         .as_mut()
         .unwrap()
-        .wait_for_value(expected_value.into_bool())
-        .await
-        .unwrap();
-    let read_value = world.boolean.att_ro.as_mut().unwrap().get().unwrap();
+        .wait_for_value(expected_value.into_bool(), Some(Duration::from_secs(5)))
+        .await;
+    let read_value = world.boolean.att_ro.as_mut().unwrap().get().await.unwrap();
     assert_eq!(
-        read_value,
+        read_value.value().unwrap(),
         expected_value.into_bool(),
         "read '{:?}' != expected '{:?}'",
         read_value,

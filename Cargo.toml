@@ -23,8 +23,6 @@ harness = false
 
 # Main async framework for the platform
 tokio = { version = "1.45.1", features = ["full"] }
-# MQTT async client
-# rumqttc = "0.24.0"
 # Base for serde
 serde = { version = "1.0", features = ["derive"] }
 # Json serialization & deserialization
@@ -43,19 +41,16 @@ async-trait = "0.1.81"
 rand = "0.8.5"
 #
 flatbuffers = "25.2.10"
-
-
+# 
 yash-fnmatch = "1.1.2"
+# 
 zenoh = { version = "1.4.0" }
-
 
 [dev-dependencies]
 
-
-# rumqttd = { git = "https://github.com/Panduza/rumqtt", branch = "pza_tests" }
-
+# Test framework for async code
 cucumber = { version = "0.21.1", features = ["tracing", "timestamps"] }
+#
 futures = "0.3"
-# tokio = { version = "1", features = ["full", "tracing"] }
-
+# 
 config = "0.14.0"
