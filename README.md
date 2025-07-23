@@ -1,4 +1,5 @@
 # panduza-rust
+
 Panduza Rust Client
 
 ## Tests
@@ -39,5 +40,10 @@ cargo test --test basics_focus
 # !!! Then I did some modification to erase warnings
 ```
 
+## Credentials and roles
 
 
+|       | writer_certificate.pem                   | logger_certificate.pem    | default_certificate.pem               | bad_client_certificate.pem | expired_client_certificate.pem |
+| ------- | ------------------------------------------ | --------------------------- | --------------------------------------- | ---------------------------- | -------------------------------- |
+| role  | writer                                   | logger/reader             | no role                               | no role                    | no role                        |
+| usage | able to pub/sub except on platform topic | able to sub to all topics | connect to platform but can't pub/sub | can't connect to platform  | can't connect to platform      |
