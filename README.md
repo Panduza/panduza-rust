@@ -42,8 +42,10 @@ cargo test --test basics_focus
 
 ## Credentials and roles
 
-
-|       | writer_certificate.pem                   | logger_certificate.pem    | default_certificate.pem               | bad_client_certificate.pem | expired_client_certificate.pem |
-| ------- | ------------------------------------------ | --------------------------- | --------------------------------------- | ---------------------------- | -------------------------------- |
-| role  | writer                                   | logger/reader             | no role                               | no role                    | no role                        |
-| usage | able to pub/sub except on platform topic | able to sub to all topics | connect to platform but can't pub/sub | can't connect to platform  | can't connect to platform      |
+| certificate                        | role           | usage                                     |
+| ---------------------------------- | -------------- | ----------------------------------------- |
+| writer_certificate.pem             | writer         | able to pub/sub except on platform topic  |
+| logger_certificate.pem             | logger/reader  | able to sub to all topics                 |
+| default_certificate.pem            | no role        | connect to platform but can't pub/sub     |
+| bad_client_certificate.pem         | no role        | can't connect to platform                 |
+| expired_client_certificate.pem     | no role        | can't connect to platform                 |
