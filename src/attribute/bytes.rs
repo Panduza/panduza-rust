@@ -1,152 +1,83 @@
-use crate::pubsub::Publisher;
-use crate::reactor::DataReceiver;
-use crate::AttributeMode;
-use crate::Topic;
+use super::std_obj::StdObjAttribute;
+use super::CallbackId;
+use crate::fbs::BytesBuffer;
+use crate::AttributeMetadata;
 use bytes::Bytes;
-use std::sync::Arc;
-use std::sync::Mutex;
-use std::time::Duration;
-use tokio::sync::Notify;
-use tokio::time::timeout;
-
-use super::data_pack::AttributeDataPack;
+use zenoh::Session;
 
 #[derive(Clone, Debug)]
-/// Object to manage the StringAttribute
-///
+/// Object to manage the BytesAttribute
 pub struct BytesAttribute {
-    ///
-    /// TODO: maybe add this into the data pack
-    topic: String,
-
-    mode: AttributeMode,
-
-    /// Object that all the attribute to publish
-    ///
-    cmd_publisher: Publisher,
-
-    /// Initial data
-    ///
-    pack: Arc<Mutex<AttributeDataPack<Bytes>>>,
-
-    /// Update notifier
-    ///
-    update_notifier: Arc<Notify>,
+    pub inner: StdObjAttribute<BytesBuffer>,
 }
 
 impl BytesAttribute {
     /// Create a new instance
-    ///
-    pub async fn new(
-        topic: String,
-        mode: AttributeMode,
-        cmd_publisher: Publisher,
-        mut att_receiver: DataReceiver,
-    ) -> Self {
-        //
-        // Create data pack
-        let pack = Arc::new(Mutex::new(AttributeDataPack::<Bytes>::default()));
-
-        //
-        //
-        let update_1 = pack.lock().unwrap().update_notifier();
-
-        //
-        // Create the recv task
-        let pack_2 = pack.clone();
-        tokio::spawn({
-            // let topic = topic.clone();
-            async move {
-                loop {
-                    //
-                    let message = att_receiver.recv().await;
-
-                    // println!("new message on topic {:?}: {:?}", &topic, message);
-
-                    // Manage message
-                    if let Some(message) = message {
-                        // Push into pack
-                        pack_2.lock().unwrap().push(message);
-                    }
-                    // None => no more message
-                    else {
-                        break;
-                    }
-                }
-            }
-        });
-
-        // Wait for the first message if mode is not readonly
-        if mode != AttributeMode::WriteOnly {
-            // Need a timeout here
-            update_1.notified().await;
-        }
-
-        //
-        // Return attribute
-        Self {
-            topic: topic,
-            cmd_publisher: cmd_publisher,
-            pack: pack,
-            update_notifier: update_1,
-            mode: mode,
-        }
+    pub async fn new(session: Session, metadata: AttributeMetadata) -> Self {
+        let inner = StdObjAttribute::<BytesBuffer>::new(session, metadata).await;
+        Self { inner }
     }
 
-    /// Send command and do not wait for validation
-    ///
-    pub async fn shoot(&mut self, pyl: Bytes) {
-        // Send the command
-        self.cmd_publisher.publish(pyl).await.unwrap();
+    /// Set the value and wait for validation
+    #[inline]
+    pub async fn set(&mut self, value: Bytes) -> Result<(), String> {
+        self.inner
+            .set(
+                BytesBuffer::builder()
+                    .with_random_sequence()
+                    .with_source(0)
+                    .with_value(value)
+                    .build()
+                    .expect("Failed to build BytesBuffer"),
+            )
+            .await
     }
 
-    /// Notify when new data have been received
-    ///
-    pub fn update_notifier(&self) -> Arc<Notify> {
-        self.update_notifier.clone()
+    /// Get the last received value
+    #[inline]
+    pub async fn get(&self) -> Option<BytesBuffer> {
+        self.inner.get().await
     }
 
-    ///
-    ///
-    pub async fn set(&mut self, pyl: Bytes) -> Result<(), String> {
-        //
-        self.shoot(pyl.clone()).await;
-
-        if self.mode == AttributeMode::ReadWrite {
-            let delay = Duration::from_secs(5);
-
-            // Wait for change in the data pack
-            timeout(delay, self.update_notifier.notified())
-                .await
-                .map_err(|e| e.to_string())?;
-
-            while pyl != self.get().unwrap() {
-                // append 3 retry before failling if update received but not good
-                timeout(delay, self.update_notifier.notified())
-                    .await
-                    .map_err(|e| e.to_string())?;
-            }
-        }
-
-        Ok(())
+    /// Wait for a specific bytes value to be received
+    #[inline]
+    pub async fn wait_for_value(
+        &self,
+        value: Bytes,
+        timeout: Option<std::time::Duration>,
+    ) -> Result<(), String> {
+        self.inner
+            .wait_for_value(
+                move |buf: &BytesBuffer| buf.value().as_ref().map(|v| v == &value).unwrap_or(false),
+                timeout,
+            )
+            .await
+            .map(|_| ())
     }
 
-    ///
-    ///
-    pub fn get(&self) -> Option<Bytes> {
-        self.pack.lock().unwrap().last()
+    /// Add a callback that will be triggered when receiving BytesBuffer messages
+    /// Optionally, a condition can be provided to filter when the callback is triggered
+    #[inline]
+    pub async fn add_callback<F, C>(&self, callback: F, condition: Option<C>) -> CallbackId
+    where
+        F: Fn(BytesBuffer) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>
+            + Send
+            + Sync
+            + 'static,
+        C: Fn(&BytesBuffer) -> bool + Send + Sync + 'static,
+    {
+        self.inner.add_callback(callback, condition).await
     }
 
-    ///
-    ///
-    pub fn pop(&self) -> Option<Bytes> {
-        self.pack.lock().unwrap().pop()
+    /// Remove a callback by its ID
+    #[inline]
+    pub async fn remove_callback(&self, callback_id: CallbackId) -> bool {
+        self.inner.remove_callback(callback_id).await
     }
 
-    pub fn get_instance_status_topic(&self) -> String {
-        format!(
-            "pza/_/devices/{}",
-            Topic::from_string(self.topic.clone(), true).instance_name()
-        )
+    /// Get attribute metadata
+    #[inline]
+    pub fn metadata(&self) -> &AttributeMetadata {
+        self.inner.metadata()
     }
 }

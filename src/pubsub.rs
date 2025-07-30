@@ -1,4 +1,5 @@
-mod mqtt;
+// mod mqtt;
+mod zenoh;
 
 use bytes::Bytes;
 use std::fmt::Debug;
@@ -18,31 +19,59 @@ pub enum Error {
     ListenError { cause: String },
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 ///1
 ///
 pub struct Options {
     pub ip: String,
     pub port: u16,
-}
-
-impl Options {
-    pub fn new<T: Into<String>>(ip: T, port: u16) -> Self {
-        Self {
-            ip: ip.into(),
-            port,
-        }
-    }
+    pub root_ca_certificate: String,
+    pub connect_certificate: String,
+    pub connect_private_key: String,
+    pub namespace: Option<String>,
 }
 
 impl Default for Options {
     fn default() -> Self {
-        Self {
-            ip: "localhost".to_string(),
-            port: 1883,
+        Options {
+            ip: "127.0.0.1".to_string(),
+            port: 7447,
+            root_ca_certificate: "./credentials/certificates/root_ca_certificate.pem".to_string(),
+            connect_certificate: "./credentials/certificates/writer_certificate.pem".to_string(),
+            connect_private_key: "./credentials/keys/writer_private_key.pem".to_string(),
+            namespace: None,
         }
     }
 }
+
+impl Options {
+    pub fn new<T: Into<String>>(
+        ip: T,
+        port: u16,
+        root_ca_certificate: T,
+        connect_certificate: T,
+        connect_private_key: T,
+        namespace: Option<T>,
+    ) -> Self {
+        Self {
+            ip: ip.into(),
+            port,
+            root_ca_certificate: root_ca_certificate.into(),
+            connect_certificate: connect_certificate.into(),
+            connect_private_key: connect_private_key.into(),
+            namespace: namespace.map(|n| n.into()),
+        }
+    }
+}
+
+// impl Default for Options {
+//     fn default() -> Self {
+//         Self {
+//             ip: "127.0.0.1".to_string(),
+//             port: 1883,
+//         }
+//     }
+// }
 
 #[derive(Debug)]
 ///
@@ -60,8 +89,14 @@ pub enum PubSubEvent {
 }
 
 // MQTT Implementation
-pub use mqtt::new_connection;
-pub use mqtt::Listener;
-pub use mqtt::Operator;
-pub use mqtt::Publisher;
-pub use mqtt::Subscriber;
+// pub use mqtt::new_connection;
+// pub use mqtt::Listener;
+// pub use mqtt::Operator;
+// pub use mqtt::Publisher;
+// pub use mqtt::Subscriber;
+
+pub use zenoh::new_connection;
+// pub use zenoh::Operator;
+// pub use zenoh::Publisher;
+// pub use zenoh::Subscriber;
+// pub use zenoh::ZenohListener;

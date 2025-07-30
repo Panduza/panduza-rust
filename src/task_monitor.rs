@@ -224,6 +224,9 @@ impl TaskMonitor {
     /// Cancel all tasks
     ///
     pub async fn cancel_all_monitored_tasks(&mut self) {
+        //
+        // println!("Cancelling all monitored tasks");
+
         // lock elements
         let mut hlock = self.handles.lock().await;
 

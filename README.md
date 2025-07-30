@@ -1,9 +1,6 @@
 # panduza-rust
+
 Panduza Rust Client
-
-
-
-
 
 ## Tests
 
@@ -38,15 +35,17 @@ cargo test --test basics_focus
 ```
 
 ```bash
-# 
-./flatc.exe --rust -o src/fbs/notification_v0/ src/fbs/notification_v0/notification_v0.fbs
-# 
-./flatc.exe --rust -o src/fbs/status_v0/ src/fbs/status_v0/status_v0.fbs
-# 
-./flatc.exe --rust -o src/fbs/trigger_v0 src/fbs/trigger_v0/trigger_v0.fbs
-# 
-./flatc.exe --rust -o src/fbs/vector_f32_v0 src/fbs/vector_f32_v0/vector_f32_v0.fbs
+# To rebuild flatbuffers
+./flatc.exe --rust -o src/fbs/ src/fbs/panduza.fbs
+# !!! Then I did some modification to erase warnings
 ```
 
+## Credentials and roles
 
-
+| certificate                        | role           | usage                                     |
+| ---------------------------------- | -------------- | ----------------------------------------- |
+| writer_certificate.pem             | writer         | able to pub/sub except on platform topic  |
+| logger_certificate.pem             | logger/reader  | able to sub to all topics                 |
+| default_certificate.pem            | no role        | connect to platform but can't pub/sub     |
+| bad_client_certificate.pem         | no role        | can't connect to platform                 |
+| expired_client_certificate.pem     | no role        | can't connect to platform                 |

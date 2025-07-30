@@ -1,8 +1,19 @@
-use crate::{
-    attribute::{notification::NotificationAttribute, status::StatusAttribute},
-    attribute_metadata::AttributeMetadata,
-    BooleanAttribute, BytesAttribute, JsonAttribute, Reactor, SiAttribute, StringAttribute,
-};
+use crate::attribute::bytes::BytesAttribute;
+use crate::attribute::notification::NotificationAttribute;
+use crate::attribute::number::NumberAttribute;
+use crate::attribute::status::StatusAttribute;
+use crate::attribute::AttributeError;
+use crate::attribute_metadata::AttributeMetadata;
+use crate::reactor::Reactor;
+use crate::BooleanAttribute;
+use crate::StringAttribute;
+
+/// Macro to create a metadata not found error
+macro_rules! meta_data_not_found {
+    ($msg:expr) => {
+        AttributeError::NotFound(format!("metadata - {}", $msg))
+    };
+}
 
 #[derive(Clone)]
 /// Metadata for an attribute
@@ -11,6 +22,7 @@ pub struct AttributeBuilder {
     ///
     ///
     reactor: Reactor,
+
     ///
     ///
     metadata: Option<AttributeMetadata>,
@@ -26,154 +38,122 @@ impl AttributeBuilder {
         }
     }
 
-    pub async fn expect_boolean(&self) -> Result<BooleanAttribute, String> {
-        let md = self.metadata.as_ref().unwrap();
-        let att_topic = format!("{}/att", md.topic);
-        let cmd_topic = format!("{}/cmd", md.topic);
+    // ------------------------------------------------------------------------
 
-        let att_receiver = self.reactor.register_listener(att_topic, 20).await?;
-
-        let cmd_publisher = self
-            .reactor
-            .register_publisher(cmd_topic, false)
-            .map_err(|e| e.to_string())?;
-
-        Ok(BooleanAttribute::new(
-            md.topic.clone(),
-            md.mode.clone(),
-            cmd_publisher,
-            att_receiver,
-        )
-        .await)
-    }
-
-    pub async fn expect_json(&self) -> Result<JsonAttribute, String> {
-        let md = self.metadata.as_ref().unwrap();
-        let att_topic = format!("{}/att", md.topic);
-        let cmd_topic = format!("{}/cmd", md.topic);
-
-        let att_receiver = self.reactor.register_listener(att_topic, 20).await?;
-
-        let cmd_publisher = self
-            .reactor
-            .register_publisher(cmd_topic, false)
-            .map_err(|e| e.to_string())?;
-
-        Ok(JsonAttribute::new(md.topic.clone(), cmd_publisher, att_receiver).await)
-    }
-
-    pub async fn expect_si(&self) -> Result<SiAttribute, String> {
-        let md = self.metadata.as_ref().unwrap();
-        let att_topic = format!("{}/att", md.topic);
-        let cmd_topic = format!("{}/cmd", md.topic);
-
-        let att_receiver = self.reactor.register_listener(att_topic, 20).await?;
-
-        let cmd_publisher = self
-            .reactor
-            .register_publisher(cmd_topic, false)
-            .map_err(|e| e.to_string())?;
-
-        Ok(SiAttribute::new(
-            md.topic.clone(),
-            md.mode.clone(),
-            cmd_publisher,
-            att_receiver,
-        )
-        .await)
-    }
-
-    pub async fn expect_string(&self) -> Result<StringAttribute, String> {
-        let md = self.metadata.as_ref().unwrap();
-        let att_topic = format!("{}/att", md.topic);
-        let cmd_topic = format!("{}/cmd", md.topic);
-
-        let att_receiver = self.reactor.register_listener(att_topic, 20).await?;
-
-        let cmd_publisher = self
-            .reactor
-            .register_publisher(cmd_topic, false)
-            .map_err(|e| e.to_string())?;
-
-        Ok(StringAttribute::new(
-            md.topic.clone(),
-            md.mode.clone(),
-            cmd_publisher,
-            att_receiver,
-        )
-        .await)
-    }
-
-    pub async fn expect_enum(&self) -> Result<StringAttribute, String> {
-        let md = self.metadata.as_ref().unwrap();
-        let att_topic = format!("{}/att", md.topic);
-        let cmd_topic = format!("{}/cmd", md.topic);
-
-        let att_receiver = self.reactor.register_listener(att_topic, 20).await?;
-
-        let cmd_publisher = self
-            .reactor
-            .register_publisher(cmd_topic, false)
-            .map_err(|e| e.to_string())?;
-
-        Ok(StringAttribute::new(
-            md.topic.clone(),
-            md.mode.clone(),
-            cmd_publisher,
-            att_receiver,
-        )
-        .await)
-    }
-
-    pub async fn expect_bytes(&self) -> Result<BytesAttribute, String> {
-        let md = self
+    /// BOOLEAN
+    ///
+    pub async fn try_into_boolean(self) -> Result<BooleanAttribute, AttributeError> {
+        // Check if metadata is available
+        let metadata = self
             .metadata
-            .as_ref()
-            .expect("Metadata is required but was not provided.");
-        let att_topic = format!("{}/att", md.topic);
-        let cmd_topic = format!("{}/cmd", md.topic);
+            .ok_or_else(|| meta_data_not_found!("boolean"))?;
 
-        let att_receiver = self.reactor.register_listener(att_topic, 20).await?;
-        let cmd_publisher = self
-            .reactor
-            .register_publisher(cmd_topic, false)
-            .map_err(|e| e.to_string())?;
-        Ok(BytesAttribute::new(
-            md.topic.clone(),
-            md.mode.clone(),
-            cmd_publisher,
-            att_receiver,
-        )
-        .await)
+        // Check if the attribute is a boolean type
+        if metadata.r#type != "boolean" {
+            return Err(AttributeError::InvalidType(
+                "boolean".to_string(),
+                metadata.r#type.clone(),
+            ));
+        }
+
+        // Create and return the BooleanAttribute
+        Ok(BooleanAttribute::new(self.reactor.session, metadata).await)
     }
 
-    pub async fn expect_status(&self) -> Result<StatusAttribute, String> {
-        let md = self.metadata.as_ref().unwrap();
-        let att_topic = format!("{}/att", md.topic);
+    // ------------------------------------------------------------------------
 
-        let att_receiver = self.reactor.register_listener(att_topic, 20).await?;
+    /// NUMBER
+    ///
+    pub async fn try_into_number(self) -> Result<NumberAttribute, AttributeError> {
+        let metadata = self
+            .metadata
+            .ok_or_else(|| meta_data_not_found!("number"))?;
 
-        Ok(StatusAttribute::new(md.topic.clone(), att_receiver).await)
+        if metadata.r#type != "number" {
+            return Err(AttributeError::InvalidType(
+                "number".to_string(),
+                metadata.r#type.clone(),
+            ));
+        }
+
+        Ok(NumberAttribute::new(self.reactor.session, metadata).await)
     }
 
-    pub async fn expect_notification(&self) -> Result<NotificationAttribute, String> {
-        let md = self.metadata.as_ref().unwrap();
-        let att_topic = format!("{}/att", md.topic);
-        let cmd_topic = format!("{}/cmd", md.topic);
+    // ------------------------------------------------------------------------
 
-        let att_receiver = self.reactor.register_listener(att_topic, 20).await?;
+    /// STRING
+    ///
+    pub async fn try_into_string(self) -> Result<StringAttribute, AttributeError> {
+        let metadata = self
+            .metadata
+            .ok_or_else(|| meta_data_not_found!("string"))?;
 
-        let cmd_publisher = self
-            .reactor
-            .register_publisher(cmd_topic, false)
-            .map_err(|e| e.to_string())?;
+        if metadata.r#type != "string" {
+            return Err(AttributeError::InvalidType(
+                "string".to_string(),
+                metadata.r#type.clone(),
+            ));
+        }
 
-        Ok(NotificationAttribute::new(
-            md.topic.clone(),
-            md.mode.clone(),
-            cmd_publisher,
-            att_receiver,
-        )
-        .await)
+        Ok(StringAttribute::new(self.reactor.session, metadata).await)
     }
+
+    // ------------------------------------------------------------------------
+
+    /// BYTES
+    ///
+    pub async fn try_into_bytes(self) -> Result<BytesAttribute, AttributeError> {
+        let metadata = self
+            .metadata
+            .ok_or_else(|| meta_data_not_found!("bytes"))?;
+
+        if metadata.r#type != "bytes" {
+            return Err(AttributeError::InvalidType(
+                "bytes".to_string(),
+                metadata.r#type.clone(),
+            ));
+        }
+
+        Ok(BytesAttribute::new(self.reactor.session, metadata).await)
+    }
+
+    // ------------------------------------------------------------------------
+
+    /// STATUS
+    ///
+    pub async fn try_into_status(self) -> Result<StatusAttribute, AttributeError> {
+        let metadata = self
+            .metadata
+            .ok_or_else(|| meta_data_not_found!("status"))?;
+
+        if metadata.r#type != "status" {
+            return Err(AttributeError::InvalidType(
+                "status".to_string(),
+                metadata.r#type.clone(),
+            ));
+        }
+
+        Ok(StatusAttribute::new(self.reactor.session, metadata).await)
+    }
+
+    // ------------------------------------------------------------------------
+
+    /// NOTIFICATION
+    ///
+    pub async fn try_into_notification(self) -> Result<NotificationAttribute, AttributeError> {
+        let metadata = self
+            .metadata
+            .ok_or_else(|| meta_data_not_found!("notification"))?;
+
+        if metadata.r#type != "notification" {
+            return Err(AttributeError::InvalidType(
+                "notification".to_string(),
+                metadata.r#type.clone(),
+            ));
+        }
+
+        Ok(NotificationAttribute::new(self.reactor.session, metadata).await)
+    }
+
+    // ------------------------------------------------------------------------
 }

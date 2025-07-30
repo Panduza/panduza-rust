@@ -1,24 +1,27 @@
 mod boolean;
 mod bytes;
-mod r#enum;
+mod number;
 mod reactor;
-mod si;
 mod string;
 
 use cucumber::Parameter;
 use cucumber::{given, then, World};
+use panduza::attribute::notification::notification_pack::NotificationPack;
 use panduza::{
-    attribute::si::SiAttribute, reactor::ReactorOptions, AttributeBuilder, BooleanAttribute,
-    BytesAttribute, JsonAttribute, Reactor, StringAttribute,
+    reactor::ReactorOptions, AttributeBuilder, BooleanAttribute, BytesAttribute, Reactor,
+    StringAttribute,
 };
-use panduza::{NotificationAttribute, StatusAttribute};
+use panduza::{NotificationAttribute, NumberAttribute, StatusAttribute};
 use std::time::Duration;
 use std::{fmt::Debug, str::FromStr};
 
 // --- TEST PARAMETERS ---
-// const PLAFORM_LOCALHOST: &str = "localhost";
 const PLAFORM_LOCALHOST: &str = "127.0.0.1";
-const PLAFORM_PORT: u16 = 1883;
+const PLAFORM_PORT: u16 = 7447;
+const ROOT_CA_CERTIFICATE: &str = "credentials/certificates/root_ca_certificate.pem";
+const CLIENT_PRIVATE_KEY: &str = "credentials/keys/writer_private_key.pem";
+const CLIENT_CERTIFICATE: &str = "credentials/certificates/writer_certificate.pem";
+const NAMESPACE: &str = "";
 // -----------------------
 
 #[derive(Debug, Default, Parameter)]
@@ -71,20 +74,22 @@ pub struct BooleanSubWorld {
     pub att_rw: Option<BooleanAttribute>,
     pub att_wo: Option<BooleanAttribute>,
     pub att_ro: Option<BooleanAttribute>,
-    
-    pub att_wo_counter: Option<SiAttribute>,
+
+    pub att_wo_counter: Option<NumberAttribute>,
     pub att_wo_counter_reset: Option<BooleanAttribute>,
 
     pub topic_rw: Option<String>,
     pub topic_wo: Option<String>,
     pub topic_ro: Option<String>,
+
+    pub toggle_start_time: Option<std::time::Instant>,
 }
 
 #[derive(Default)]
-pub struct SiSubWorld {
-    pub att_rw: Option<SiAttribute>,
-    pub att_wo: Option<SiAttribute>,
-    pub att_ro: Option<SiAttribute>,
+pub struct NumberSubWorld {
+    pub att_rw: Option<NumberAttribute>,
+    pub att_wo: Option<NumberAttribute>,
+    pub att_ro: Option<NumberAttribute>,
     // pub topic_rw: Option<String>,
     // pub topic_wo: Option<String>,
     // pub topic_ro: Option<String>,
@@ -92,16 +97,6 @@ pub struct SiSubWorld {
 
 #[derive(Default)]
 pub struct StringSubWorld {
-    pub att_rw: Option<StringAttribute>,
-    pub att_wo: Option<StringAttribute>,
-    pub att_ro: Option<StringAttribute>,
-    // pub topic_rw: Option<String>,
-    // pub topic_wo: Option<String>,
-    // pub topic_ro: Option<String>,
-}
-
-#[derive(Default)]
-pub struct EnumSubWorld {
     pub att_rw: Option<StringAttribute>,
     pub att_wo: Option<StringAttribute>,
     pub att_ro: Option<StringAttribute>,
@@ -134,9 +129,9 @@ pub struct BasicsWorld {
     ///
     pub platform_notifications: Option<NotificationAttribute>,
 
+    /// Fifo to store incoming platform notifications
     ///
-    ///
-    pub att_instance_status: Option<JsonAttribute>,
+    pub platform_notifications_pack: Option<NotificationPack>,
 
     /// Reactor sub world data
     ///
@@ -150,13 +145,9 @@ pub struct BasicsWorld {
     ///
     pub string: StringSubWorld,
 
-    /// Si sub world data
+    /// Number sub world data
     ///
-    pub si: SiSubWorld,
-
-    /// Enum sub world data
-    ///
-    pub r#enum: EnumSubWorld,
+    pub number: NumberSubWorld,
 
     /// Bytes sub world data
     ///
@@ -171,37 +162,99 @@ impl Debug for BasicsWorld {
     }
 }
 
-///
+/// Main entry point for most scenarios
+/// 
+/// This keyword create a reactor for the all scenario
+/// and connect it to the test platform.
 ///
 #[given(expr = "a reactor connected on a test platform")]
 async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
-    let options = ReactorOptions::new(PLAFORM_LOCALHOST, PLAFORM_PORT);
+    // Enable trace printing for debugging
+    let trace_print = false;
+
+    // Create reactor options
+    let options = ReactorOptions::new(
+        PLAFORM_LOCALHOST,
+        PLAFORM_PORT,
+        ROOT_CA_CERTIFICATE,
+        CLIENT_CERTIFICATE,
+        CLIENT_PRIVATE_KEY,
+        Some(NAMESPACE),
+    );
 
     // No additional setup required before connecting to the test platform
-    println!("Connecting to {}:{}...", PLAFORM_LOCALHOST, PLAFORM_PORT);
-    let reactor = panduza::new_reactor(options).await.unwrap();
-    println!("ok");
+    {
+        if trace_print {
+            print!("Connecting to {}:{}...", PLAFORM_LOCALHOST, PLAFORM_PORT);
+        }
+        let reactor = panduza::new_reactor(options)
+            .await
+            .expect("Failed to create reactor");
+        world.r = Some(reactor);
+        if trace_print {
+            println!(" ok!");
+        }
+    }
 
-    println!("Getting status attribute...");
-    world.r = Some(reactor);
-    world.platform_status = Some(world.r.as_ref().unwrap().new_status_attribute().await);
-    println!("ok");
+    // Get the status attribute from the reactor and store it in the world
+    {
+        if trace_print {
+            print!("Getting status attribute...");
+        }
+        world.platform_status = Some(
+            world
+                .r
+                .as_ref()
+                .expect("need reactor to get status attribute")
+                .new_status_attribute()
+                .await,
+        );
+        if trace_print {
+            println!(" ok!");
+        }
+    }
 
     // Get the notification attribute from the reactor and store it in the world
-    println!("Getting notification attribute...");
-    world.platform_notifications =
-        Some(world.r.as_ref().unwrap().new_notification_attribute().await);
-    println!("ok");
+    {
+        // Create a pack to store notifications
+        if trace_print {
+            print!("Getting notification attribute...");
+        }
+        world.platform_notifications = Some(
+            world
+                .r
+                .as_ref()
+                .expect("need reactor to get notification attribute")
+                .new_notification_attribute()
+                .await,
+        );
+        if trace_print {
+            print!("!");
+        }
+        world.platform_notifications_pack = Some(
+            world
+                .platform_notifications
+                .as_ref()
+                .expect("need notification attribute to create pack")
+                .new_pack()
+                .await,
+        );
+        if trace_print {
+            println!(" ok!");
+        }
+    }
 
     world
         .platform_status
         .as_mut()
-        .unwrap()
+        .expect("need status attribute to wait for instances")
         .wait_for_all_instances_to_be_running(Duration::from_secs(15))
         .await
         .expect("Error while waiting for instance to be in running state");
 
-    println!("reactor ready");
+    if trace_print {
+        println!("reactor ready");
+    }
 }
 
 ///
@@ -234,21 +287,24 @@ async fn the_status_attribute_must_indicate_for_one_instance(world: &mut BasicsW
         .wait_for_all_instances_to_be_running(Duration::from_secs(15))
         .await
         .expect("Error while waiting for instance to be in running state");
+
+    tokio::time::sleep(Duration::from_secs(3)).await;
 }
+
+// ----------------------------------------------------------------------------
 
 #[then(expr = "the notification attribute must indicate no alert")]
 fn the_notification_attribute_must_indicate_no_alert(world: &mut BasicsWorld) {
     // clear all notifications
-    world.platform_notifications.as_mut().unwrap().pop_all();
+    world.platform_notifications_pack.as_mut().unwrap().reset();
 }
 
 #[then(expr = "the notification attribute must indicate an alert for this instance")]
 fn the_notification_attribute_must_indicate_an_alert_for_this_instance(world: &mut BasicsWorld) {
     // check that the notification attribute is not empty
     assert!(!world
-        .platform_notifications
+        .platform_notifications_pack
         .as_mut()
         .unwrap()
-        .pop_all()
         .has_alert());
 }

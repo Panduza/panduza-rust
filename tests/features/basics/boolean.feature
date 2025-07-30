@@ -19,14 +19,16 @@ Feature: Boolean Attributes
     When I set wo boolean to false
     Then the ro boolean value is false
 
-  @focus
   Scenario: Manage WO attribute is overload
+    # This scenario tests the overload of a write-only boolean attribute
+    # Overload is when a massive quantity of write operations are sent to the attribute
     Given the boolean attribute wo "boolean/wo"
     Given the number attribute wo_counter "boolean/wo_counter"
     Given the boolean attribute wo_counter_reset "boolean/wo_counter_reset"
     Given the counter is reseted
     When wo boolean is toggled 1000 times
     Then the counter attribute must indicate 1000
+    Then the toggle and counter verification should take less than 500 milliseconds
 
   Scenario: Manage an instance alert during a boolean attribute operation
     Given the boolean attribute wo "boolean/alert"

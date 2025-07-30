@@ -1,24 +1,47 @@
 use crate::attribute::notification::NotificationAttribute;
 use crate::attribute::status::StatusAttribute;
-use crate::pubsub::Publisher;
-use crate::router::{new_router, RouterHandler};
+use crate::pubsub::Error;
 use crate::structure::Structure;
-use crate::{pubsub, pubsub::Options, AttributeBuilder};
-use crate::{AttributeMetadata, AttributeMode};
+
+use crate::{
+    pubsub::{new_connection, Options},
+    AttributeBuilder, AttributeMetadata, AttributeMode,
+};
 use bytes::Bytes;
+use zenoh::{
+    handlers::FifoChannelHandler,
+    pubsub::{Publisher, Subscriber},
+    sample::Sample,
+    Session,
+};
 
 /// Receiver of data payload
 ///
 pub type DataReceiver = tokio::sync::mpsc::Receiver<Bytes>;
 
+#[derive(Debug, Clone)]
 pub struct ReactorOptions {
     pubsub_options: Options,
 }
 
 impl ReactorOptions {
-    pub fn new<T: Into<String>>(ip: T, port: u16) -> Self {
+    pub fn new<T: Into<String>>(
+        ip: T,
+        port: u16,
+        ca_certificate: T,
+        connect_certificate: T,
+        connect_private_key: T,
+        namespace: Option<T>,
+    ) -> Self {
         Self {
-            pubsub_options: Options::new(ip, port),
+            pubsub_options: Options::new(
+                ip,
+                port,
+                ca_certificate,
+                connect_certificate,
+                connect_private_key,
+                namespace,
+            ),
         }
     }
 }
@@ -27,24 +50,32 @@ impl ReactorOptions {
 ///
 /// All the attribute and objects will be powered by the reactor
 ///
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Reactor {
     ///
     ///
+    pub session: Session,
+
     structure: Structure,
 
-    ///
-    ///
-    router: RouterHandler,
+    pub namespace: Option<String>,
+}
+
+/// Very important to implement to ease Dioxus usage
+impl PartialEq for Reactor {
+    fn eq(&self, other: &Self) -> bool {
+        self.session.zid() == other.session.zid()
+    }
 }
 
 impl Reactor {
     ///
     ///
-    pub fn new(structure: Structure, router: RouterHandler) -> Self {
+    pub fn new(session: Session, structure: Structure, namespace: Option<String>) -> Self {
         Self {
-            structure: structure,
-            router: router,
+            session,
+            structure,
+            namespace,
         }
     }
 
@@ -54,16 +85,16 @@ impl Reactor {
         let n: String = name.into();
         let meta = self.structure.find_attribute(&n);
 
+        // println!("found metadata: {:?} for attribute '{}'", meta, &n);
+
+        // self.structure
+        //     .list_of_registered_topics()
+        //     .iter()
+        //     .for_each(|topic| println!("Registered topic: {}", topic));
+
         if meta.is_none() {
-            println!(
-                "not found attribute {:?} vs {:?}",
-                &n,
-                self.structure.list_of_registered_topics()
-            );
             return None;
         }
-
-        println!("found attribute: name = {}, meta topic = {:?}", n, meta.as_ref().map(|m| m.topic.clone()));
 
         Some(AttributeBuilder::new(self.clone(), meta))
     }
@@ -72,7 +103,17 @@ impl Reactor {
     ///
     pub fn build_instance_status_attribute<A: Into<String>>(&self, topic: A) -> AttributeBuilder {
         let meta = Some(AttributeMetadata::from_topic(
-            topic.into(),
+            format!(
+                "{}{}",
+                self.namespace
+                    .clone()
+                    .map_or("".to_string(), |ns| if ns.is_empty() {
+                        "".to_string()
+                    } else {
+                        format!("{}/", ns)
+                    }),
+                topic.into()
+            ),
             Some("json".to_string()),
             AttributeMode::ReadOnly,
         ));
@@ -80,60 +121,87 @@ impl Reactor {
         return AttributeBuilder::new(self.clone(), meta);
     }
 
+    // fn format_topic(&self, topic: &str) -> String {
+    //     if let Some(namespace) = &self.namespace {
+    //         if topic.starts_with("pza/") {
+    //             format!("{}/{}", namespace, topic)
+    //         } else {
+    //             topic.to_string()
+    //         }
+    //     } else {
+    //         topic.to_string()
+    //     }
+    // }
+
     /// Attribute to get access to the status of the platform
     ///
     pub async fn new_status_attribute(&self) -> StatusAttribute {
         let meta = AttributeMetadata::from_topic(
-            "pza/_/status".to_string(),
-            Some("status-v0".to_string()),
+            format!(
+                "{}{}",
+                self.namespace
+                    .clone()
+                    .map_or("".to_string(), |ns| if ns.is_empty() {
+                        "".to_string()
+                    } else {
+                        format!("{}/", ns)
+                    }),
+                "pza/_/status"
+            ),
+            Some("status".to_string()),
             AttributeMode::ReadOnly,
         );
 
         let builder = AttributeBuilder::new(self.clone(), Some(meta));
 
         builder
-            .expect_status()
+            .try_into_status()
             .await
             .map_err(|e| e.to_string())
-            .unwrap()
+            .expect("Failed to create status attribute")
     }
 
     /// Attribute to get access to the streaming notification system of the platform
     ///
     pub async fn new_notification_attribute(&self) -> NotificationAttribute {
         let meta = AttributeMetadata::from_topic(
-            "pza/_/notification".to_string(),
-            Some("notification-v0".to_string()),
+            format!(
+                "{}{}",
+                self.namespace
+                    .clone()
+                    .map_or("".to_string(), |ns| if ns.is_empty() {
+                        "".to_string()
+                    } else {
+                        format!("{}/", ns)
+                    }),
+                "pza/_/notifications"
+            ),
+            Some("notification".to_string()),
             AttributeMode::ReadOnly,
         );
 
         let builder = AttributeBuilder::new(self.clone(), Some(meta));
 
         builder
-            .expect_notification()
+            .try_into_notification()
             .await
             .map_err(|e| e.to_string())
             .unwrap()
     }
 
-    // Register
+    // Listener
     //
-    pub fn register_listener<A: Into<String> + 'static>(
+    pub async fn register_listener<A: Into<String> + 'static>(
         &self,
         topic: A,
-        channel_size: usize,
-    ) -> impl std::future::Future<Output = Result<DataReceiver, String>> + '_ {
-        self.router.register_listener(topic, channel_size)
+    ) -> Subscriber<FifoChannelHandler<Sample>> {
+        self.session.declare_subscriber(topic.into()).await.unwrap()
     }
 
+    ///Publisher
     ///
-    ///
-    pub fn register_publisher<A: Into<String> + 'static>(
-        &self,
-        topic: A,
-        retain: bool,
-    ) -> Result<Publisher, pubsub::Error> {
-        self.router.register_publisher(topic.into(), retain)
+    pub async fn register_publisher<A: Into<String>>(&self, topic: A) -> Result<Publisher, Error> {
+        Ok(self.session.declare_publisher(topic.into()).await.unwrap())
     }
 }
 
@@ -142,20 +210,41 @@ impl Reactor {
 /// This function initializes the reactor and waits for the structure to be initialized.
 /// If the structure initialization times out after 3 seconds, it returns an error.
 pub async fn new_reactor(options: ReactorOptions) -> Result<Reactor, String> {
-    let router = new_router(options.pubsub_options).map_err(|e| e.to_string())?;
+    let session = match new_connection(options.pubsub_options.clone()).await {
+        Ok(session) => session,
+        Err(e) => return Err(format!("Connection failed: {}", e)),
+    };
 
-    let handler = router.start(None).unwrap();
+    let namespace = options.pubsub_options.namespace.clone();
 
-    let structure_data_receiver = handler.register_listener("pza/_/structure/att", 5).await?;
+    // println!(
+    //     "{}",
+    //     format!(
+    //         "{}pza/_/structure/att",
+    //         options
+    //             .pubsub_options
+    //             .namespace
+    //             .clone()
+    //             .map_or("".to_string(), |ns| format!("{}/", ns))
+    //     )
+    // );
 
-    let structure = Structure::new(structure_data_receiver);
-    let structure_initialized = structure.initialized_notifier();
+    let struct_query = session
+        .get(format!(
+            "{}pza/_/structure/att",
+            options.pubsub_options.namespace.clone().map_or(
+                "".to_string(),
+                |ns| if ns.is_empty() {
+                    "".to_string()
+                } else {
+                    format!("{}/", ns)
+                }
+            )
+        ))
+        .await
+        .expect("Failed to get structure attribute");
 
-    let timeout_duration = std::time::Duration::from_secs(15);
-    let result = tokio::time::timeout(timeout_duration, structure_initialized.notified()).await;
+    let structure = Structure::new(struct_query).await;
 
-    match result {
-        Ok(_) => Ok(Reactor::new(structure, handler)),
-        Err(_) => Err("Timeout while waiting for structure initialization".to_string()),
-    }
+    Ok(Reactor::new(session, structure, namespace))
 }

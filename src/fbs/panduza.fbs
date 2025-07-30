@@ -1,0 +1,195 @@
+// This file defines the FlatBuffers schema for the Panduza project.
+namespace panduza;
+
+// The Timestamp structure represents a point in time with seconds and nanoseconds.
+struct Timestamp {
+    secs: uint64;
+    nanos: uint32;
+}
+
+// The Header structure is used to encapsulate metadata for messages.
+table Header {
+    timestamp: Timestamp;
+    source: uint16;
+    sequence: uint16;
+}
+
+// The Payload union allows for different types of messages to be encapsulated in a single structure.
+union Payload {
+    StructureNode,
+    Context,
+    Status,
+    Notification,
+    Boolean,
+    Bytes,
+    Number,
+    Trigger,
+    String,
+    VectorF32
+}
+
+// The Message structure encapsulates a message with a header and a payload.
+table Message {
+    header: Header;
+    payload: Payload;
+}
+
+// ----------------------------------------------
+
+// Attribute Topic: "$NS/pza/_/structure"
+
+// Leaf
+table AttributeEntry {
+    name: string;
+    type: string;
+    mode: string;
+}
+
+// Node
+table StructureNode {
+    name: string;
+    tags: [string];
+    children: [StructureNode];
+    attributes: [AttributeEntry];
+}
+
+// ----------------------------------------------
+
+// Attribute Topic: "$NS/pza/_/context"
+// cmd => attribute or class topic
+// att => context
+
+table Context {
+    topic: string;
+    context: string; // empty on command
+}
+
+// ----------------------------------------------
+
+// Attribute Topic: "$NS/pza/_/users"
+
+table UserEntry {
+    id: uint16; // 0 for request
+    name: string; // unique name of the user
+}
+
+table Users {
+    // The users are stored as a vector of UserEntry
+    entries: [UserEntry];
+}
+
+// ----------------------------------------------
+
+table InstanceStatus {
+    instance: string;
+    state: uint16;
+    error_string: string;
+}
+
+table Status {
+    instances:[InstanceStatus];
+}
+
+// ----------------------------------------------
+
+table Notification {
+    type: uint16;
+    source: string;
+    message: string;
+}
+
+// ----------------------------------------------
+
+table Boolean {
+    value: bool;
+}
+
+// ----------------------------------------------
+
+table Bytes {
+    // The data is stored as a vector of bytes
+    data: [uint8];
+}
+
+// ----------------------------------------------
+
+// SI unit prefixes
+enum SIPrefix : uint8 {
+    NONE = 0,
+    // Smaller than 1
+    PICO = 1,    // p (10^-12)
+    NANO = 2,    // n (10^-9)
+    MICRO = 3,   // μ (10^-6)
+    MILLI = 4,   // m (10^-3)
+    // Larger than 1
+    KILO = 5,    // k (10^3)
+    MEGA = 6,    // M (10^6)
+    GIGA = 7,    // G (10^9)
+    TERA = 8     // T (10^12)
+}
+
+// SI base and derived units
+enum SIUnit : uint8 {
+    NONE = 0,
+    METER = 1,       // m (length)
+    KILOGRAM = 2,    // kg (mass)
+    SECOND = 3,      // s (time)
+    AMPERE = 4,      // A (electric current)
+    KELVIN = 5,      // K (temperature)
+    MOLE = 6,        // mol (amount of substance)
+    CANDELA = 7,     // cd (luminous intensity)
+    HERTZ = 8,       // Hz (frequency)
+    VOLT = 9,        // V (voltage)
+    OHM = 10,        // Ω (resistance)
+    WATT = 11,       // W (power)
+    FARAD = 12,      // F (capacitance)
+    HENRY = 13,      // H (inductance)
+    CELSIUS = 14     // °C (temperature)
+}
+
+table Unit {
+    // The SI unit prefix, e.g., milli, kilo, etc.
+    prefix: SIPrefix;
+    // The SI base or derived unit, e.g., meter, kilogram, hertz, etc.
+    unit: SIUnit;
+}
+
+table NumberRange {
+    min: float64;
+    max: float64;
+}
+
+table Number {
+    value: float64;
+    unit: Unit;
+    decimals: uint8;
+    range: NumberRange;
+    // Optional whitelist, turns this type into an enum
+    whitelist: [float64];
+}
+
+// ----------------------------------------------
+
+table Trigger {
+    // Send 0 to trigger immediately, or a positive number to set a refresh interval
+    refresh: float64;
+    // Range for the trigger, used to determine if the value is within acceptable limits
+    range: NumberRange;
+    // Optional whitelist, turns this type into an enum
+    whitelist: [float64];
+}
+
+// ----------------------------------------------
+
+table String {
+    value: string;
+    // Optional whitelist, turns this type into an enum
+    whitelist: [string];
+}
+
+// ----------------------------------------------
+
+table VectorF32 {
+   values:[float32];
+}
+

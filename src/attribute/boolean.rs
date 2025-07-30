@@ -1,171 +1,104 @@
-use crate::pubsub::Publisher;
-use crate::reactor::DataReceiver;
-use crate::AttributeMode;
-use crate::Topic;
-use bytes::Bytes;
-use std::sync::Arc;
-use std::sync::Mutex;
-use std::time::Duration;
-use tokio::sync::Notify;
-use tokio::time::timeout;
-
-use super::data_pack::AttributeDataPack;
+use super::std_obj::StdObjAttribute;
+use super::CallbackId;
+use crate::fbs::BooleanBuffer;
+use crate::AttributeMetadata;
+use zenoh::Session;
 
 #[derive(Clone, Debug)]
 /// Object to manage the BooleanAttribute
 ///
 pub struct BooleanAttribute {
-    ///
-    /// TODO: maybe add this into the data pack
-    topic: String,
-
-    
-    mode : AttributeMode,
-    
-    /// Object that all the attribute to publish
-    ///
-    cmd_publisher: Publisher,
-
-    /// Initial data
-    ///
-    pack: Arc<Mutex<AttributeDataPack<bool>>>,
-
-    /// Update notifier
-    ///
-    update_notifier: Arc<Notify>,
+    pub inner: StdObjAttribute<BooleanBuffer>,
 }
 
 impl BooleanAttribute {
     /// Create a new instance
     ///
-    pub async fn new(topic: String, mode:AttributeMode, cmd_publisher: Publisher, mut att_receiver: DataReceiver) -> Self {
-        //
-        // Create data pack
-        let pack = Arc::new(Mutex::new(
-            AttributeDataPack::<bool>::default()
-        ));
-
-        //
-        //
-        let update_1 = pack.lock().unwrap().update_notifier();
-
-        // Wait for the first message if mode is not readonly
-        if mode != AttributeMode::WriteOnly {
-            //
-            // Create the recv task
-            let pack_2 = pack.clone();
-            tokio::spawn({
-                let topic = topic.clone();
-                async move {
-                loop {
-                    //
-                    let message = att_receiver.recv().await;
-
-                    println!("new message on topic {:?}: {:?}", &topic, message);
-
-                    // Manage message
-                    if let Some(message) = message {
-                        // Deserialize
-                        let value: bool = serde_json::from_slice(&message).unwrap();
-                        // Push into pack
-                        pack_2.lock().unwrap().push(value);
-                    }
-                    // None => no more message
-                    else {
-                        break;
-                    }
-                }
-            }});
-
-            // Need a timeout here
-            update_1.notified().await;
-        }
-
-        //
-        // Return attribute
+    pub async fn new(session: Session, metadata: AttributeMetadata) -> Self {
         Self {
-            topic: topic,
-            cmd_publisher: cmd_publisher,
-            pack: pack,
-            update_notifier: update_1,
-            mode: mode,
+            inner: StdObjAttribute::<BooleanBuffer>::new(session, metadata).await,
         }
     }
 
     /// Send command and do not wait for validation
     ///
+    #[inline]
     pub async fn shoot(&mut self, value: bool) {
-        // Wrap value into payload
-        let pyl = Bytes::from(serde_json::to_string(&value).unwrap());
-
-        // Send the command
-        self.cmd_publisher.publish(pyl).await.unwrap();
+        self.inner
+            .shoot(
+                BooleanBuffer::builder()
+                    .with_value(value)
+                    .with_source(0)
+                    .with_random_sequence()
+                    .build()
+                    .expect("Failed to build BooleanBuffer"),
+            )
+            .await;
     }
 
-    /// Notify when new data have been received
-    ///
-    pub fn update_notifier(&self) -> Arc<Notify> {
-        self.update_notifier.clone()
-    }
-
     ///
     ///
+    #[inline]
     pub async fn set(&mut self, value: bool) -> Result<(), String> {
-        //
-        self.shoot(value).await;
-
-        if self.mode == AttributeMode::ReadWrite {
-
-            let delay = Duration::from_secs(5);
-
-            // Wait for change in the data pack
-            timeout(delay, self.update_notifier.notified())
-                .await
-                .map_err(|e| e.to_string())?;
-
-            while value != self.get().unwrap() {
-                // append 3 retry before failling if update received but not good
-                timeout(delay, self.update_notifier.notified())
-                    .await
-                    .map_err(|e| e.to_string())?;
-            }
-        }
-
-        Ok(())
+        self.inner
+            .set(
+                BooleanBuffer::builder()
+                    .with_value(value)
+                    .with_source(0)
+                    .with_random_sequence()
+                    .build()
+                    .expect("Failed to build BooleanBuffer"),
+            )
+            .await
     }
 
+    // ------------------------------------------------------------------------
+
+    #[inline]
+    pub async fn wait_for_value(&self, value: bool, timeout: Option<std::time::Duration>) {
+        self.inner
+            .wait_for_value(
+                move |buf: &BooleanBuffer| buf.value() == Some(value),
+                timeout,
+            )
+            .await
+            .ok();
+    }
+
+    // ------------------------------------------------------------------------
+
+    /// Get the last received value
     ///
+    #[inline]
+    pub async fn get(&self) -> Option<BooleanBuffer> {
+        self.inner.get().await
+    }
+
+    /// Add a callback that will be triggered when receiving BooleanBuffer messages
+    /// Optionally, a condition can be provided to filter when the callback is triggered
+    #[inline]
+    pub async fn add_callback<F, C>(&self, callback: F, condition: Option<C>) -> CallbackId
+    where
+        F: Fn(BooleanBuffer) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>
+            + Send
+            + Sync
+            + 'static,
+        C: Fn(&BooleanBuffer) -> bool + Send + Sync + 'static,
+    {
+        self.inner.add_callback(callback, condition).await
+    }
+
+    /// Remove a callback by its ID
     ///
-    pub fn get(&self) -> Option<bool> {
-        self.pack.lock().unwrap().last()
+    #[inline]
+    pub async fn remove_callback(&self, callback_id: CallbackId) -> bool {
+        self.inner.remove_callback(callback_id).await
     }
 
+    /// Get attribute metadata
     ///
-    ///
-    pub fn pop(&self) -> Option<bool> {
-        self.pack.lock().unwrap().pop()
+    #[inline]
+    pub fn metadata(&self) -> &AttributeMetadata {
+        self.inner.metadata()
     }
-
-    pub fn get_instance_status_topic(&self) -> String {
-        format!("pza/_/devices/{}", Topic::from_string(self.topic.clone(), true).instance_name())
-    }
-
-
-
-    
-    pub async fn wait_for_value(&self, value: bool) -> Result<(), String> {
-
-        if self.mode == AttributeMode::WriteOnly {
-            return Err("Cannot wait for value in WriteOnly mode".to_string());
-        }
-
-        while let Some(last_value) = self.get() {
-            if last_value == value {
-                return Ok(());
-            }
-            self.update_notifier.notified().await;
-        }
-        Ok(())
-    }
-
 }
