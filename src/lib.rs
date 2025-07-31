@@ -21,11 +21,12 @@ pub mod pubsub;
 // pub mod router;
 pub mod session;
 
-/// This module manage the reactor
+/// This module manage the Reactor and its builder
+///
+/// Maturity Level: good
+///
 pub mod reactor;
-pub use reactor::new_reactor;
 pub use reactor::Reactor;
-pub mod structure;
 
 ///
 pub mod attribute_mode;
@@ -48,6 +49,7 @@ pub use attribute::notification::NotificationAttribute;
 pub use attribute::number::NumberAttribute;
 pub use attribute::status::StatusAttribute;
 pub use attribute::string::StringAttribute;
+pub use attribute::structure::StructureAttribute;
 
 ///
 ///
@@ -58,7 +60,6 @@ pub use task_monitor::TaskMonitor;
 ///
 mod topic;
 pub use topic::Topic;
-
 
 /// FlatBuffers: Serialization and Deserialization
 ///
@@ -79,3 +80,8 @@ pub use instance_state::InstanceState;
 
 pub mod benchmark_config;
 pub use benchmark_config::BenchmarkConfig;
+
+/// Module for AI model interface with Panduza Reactor
+///
+pub mod executor;
+pub use executor::Executor;

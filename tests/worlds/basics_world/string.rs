@@ -1,6 +1,5 @@
-use std::time::Duration;
-
 use cucumber::{given, then, when};
+use std::time::Duration;
 
 use super::BasicsWorld;
 
@@ -11,7 +10,7 @@ async fn the_string_attribute_rw(world: &mut BasicsWorld, attribute_name: String
         .as_ref()
         .unwrap()
         .find_attribute(attribute_name)
-        .expect("Attribute not found");
+        .await;
     let attribute = attribute_builder.try_into_string().await.unwrap();
 
     world.string.att_rw = Some(attribute);
@@ -24,7 +23,7 @@ async fn the_string_attribute_ro(world: &mut BasicsWorld, attribute_name: String
         .as_ref()
         .unwrap()
         .find_attribute(attribute_name)
-        .expect("Attribute not found");
+        .await;
     let attribute = attribute_builder.try_into_string().await.unwrap();
 
     world.string.att_ro = Some(attribute);
@@ -37,7 +36,7 @@ async fn the_string_attribute_wo(world: &mut BasicsWorld, attribute_name: String
         .as_ref()
         .unwrap()
         .find_attribute(attribute_name)
-        .expect("Attribute not found");
+        .await;
     let attribute = attribute_builder.try_into_string().await.unwrap();
 
     world.string.att_wo = Some(attribute);

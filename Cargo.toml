@@ -27,6 +27,8 @@ tokio = { version = "1.45.1", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 # Json serialization & deserialization
 serde_json = "1.0.114"
+# JSON5 parsing and serialization
+json5 = "0.4.1"
 # Bytes zero copy mangement
 bytes = "1.10.1"
 # 
@@ -45,6 +47,8 @@ flatbuffers = "25.2.10"
 yash-fnmatch = "1.1.2"
 # 
 zenoh = { version = "1.4.0" }
+#
+anyhow = "1.0.80"
 
 [dev-dependencies]
 

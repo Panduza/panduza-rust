@@ -21,10 +21,10 @@ Then run
 
 ```bash
 # Run all basics tests
-cargo test --test basics
+cargo test --release --test basics
 
 # Run scenario with @focus tag
-cargo test --test basics_focus
+cargo test --release --test basics_focus
 ```
 
 ## Flat Buffers

@@ -1,5 +1,5 @@
 use cucumber::{given, then, when};
-use panduza::reactor::ReactorOptions;
+use panduza::Reactor;
 
 use super::BasicsWorld;
 
@@ -20,9 +20,15 @@ fn the_reactor_is_successfully_connected_to_the_platform(world: &mut BasicsWorld
 async fn a_reactor_trying_to_connect_to_an_invalid_platform(world: &mut BasicsWorld) {
     world.reactor.connection_failed = false;
 
-    let options = ReactorOptions::new("pok", 5894, "zaza.pem", "cert.pem", "key.pem", None);
-
-    match panduza::new_reactor(options).await {
+    match Reactor::builder()
+        .ip("pok".to_string())
+        .port(5894)
+        .ca_certificate("zaza.pem".to_string())
+        .connect_certificate("cert.pem".to_string())
+        .connect_private_key("key.pem".to_string())
+        .build()
+        .await
+    {
         Ok(reactor) => {
             world.r = Some(reactor);
         }
@@ -39,9 +45,15 @@ async fn a_reactor_trying_to_connect_to_an_invalid_platform(world: &mut BasicsWo
 async fn a_reactor_trying_to_connect_to_a_platform_with_a_wrong_certificate(world: &mut BasicsWorld) {
     world.reactor.connection_failed = false;
 
-    let options = ReactorOptions::new("127.0.0.1", 7447, "credentials/certificates/root_ca_certificate.pem", "credentials/certificates/bad_client_certificate.pem", "credentials/keys/bad_client_private_key.pem", None);
-
-    match panduza::new_reactor(options).await {
+    match Reactor::builder()
+        .ip("127.0.0.1".to_string())
+        .port(7447)
+        .ca_certificate("credentials/certificates/root_ca_certificate.pem".to_string())
+        .connect_certificate("credentials/certificates/bad_client_certificate.pem".to_string())
+        .connect_private_key("credentials/keys/bad_client_private_key.pem".to_string())
+        .build()
+        .await
+    {
         Ok(reactor) => {
             world.r = Some(reactor);
         }
@@ -58,9 +70,15 @@ async fn a_reactor_trying_to_connect_to_a_platform_with_a_wrong_certificate(worl
 async fn a_reactor_trying_to_connect_to_a_platform_with_an_expired_certificate(world: &mut BasicsWorld) {
     world.reactor.connection_failed = false;
 
-    let options = ReactorOptions::new("127.0.0.1", 7447, "credentials/certificates/root_ca_certificate.pem", "credentials/certificates/expired_client_certificate.pem", "credentials/keys/expired_client_private_key.pem", None);
-
-    match panduza::new_reactor(options).await {
+    match Reactor::builder()
+        .ip("127.0.0.1".to_string())
+        .port(7447)
+        .ca_certificate("credentials/certificates/root_ca_certificate.pem".to_string())
+        .connect_certificate("credentials/certificates/expired_client_certificate.pem".to_string())
+        .connect_private_key("credentials/keys/expired_client_private_key.pem".to_string())
+        .build()
+        .await
+    {
         Ok(reactor) => {
             world.r = Some(reactor);
         }
@@ -103,12 +121,12 @@ fn the_reactor_must_return_a_success(world: &mut BasicsWorld) {
 ///
 ///
 #[when(expr = "the reactor find function is called with the previously given attribute name")]
-fn the_reactor_find_function_is_called_with_the_previously_given_attribute_name(
+async fn the_reactor_find_function_is_called_with_the_previously_given_attribute_name(
     world: &mut BasicsWorld,
 ) {
     if let Some(attribute_name) = &world.reactor.att_name {
-        let result = world.r.as_ref().unwrap().find_attribute(attribute_name);
-        world.reactor.find_result = result;
+        let result = world.r.as_ref().unwrap().find_attribute(attribute_name).await;
+        world.reactor.find_result = Some(result);
     } else {
         panic!("Attribute name is not set");
     }
