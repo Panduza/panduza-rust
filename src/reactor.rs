@@ -1,6 +1,7 @@
 use crate::attribute::notification::NotificationAttribute;
 use crate::attribute::status::StatusAttribute;
 use crate::pubsub::Error;
+use crate::security::utils::get_default_certificate_paths;
 use crate::structure::Structure;
 
 use crate::{
@@ -43,6 +44,23 @@ impl ReactorOptions {
                 namespace,
             ),
         }
+    }
+}
+
+impl Default for ReactorOptions {
+    fn default() -> Self {
+        let (root_ca_path, client_cert_path, client_key_path) = get_default_certificate_paths();
+        let root_ca_path = root_ca_path.into_os_string().into_string().unwrap();
+        let client_cert_path = client_cert_path.into_os_string().into_string().unwrap();
+        let client_key_path = client_key_path.into_os_string().into_string().unwrap();
+        Self::new(
+            "127.0.0.1",
+            7447,
+            &root_ca_path,
+            &client_cert_path,
+            &client_key_path,
+            None,
+        )
     }
 }
 
