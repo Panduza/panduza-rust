@@ -67,6 +67,13 @@ pub fn generate_root_ca() -> (Certificate, KeyPair) {
     (root_ca_cert, key_pair)
 }
 
+/// Generate a root CA certificate with a key
+pub fn generate_root_ca_with_key(key: &KeyPair) -> Certificate {
+    let params = get_ca_params();
+    let cert = params.clone().self_signed(&key).unwrap();
+    cert
+}
+
 /// Get a root CA certificate and key from a .pem key file
 pub fn get_root_ca(key_path: &str) -> (Certificate, KeyPair) {
     let key_pair = load_key_from_pem(key_path).unwrap();
