@@ -2,9 +2,10 @@ use cucumber::{given, then, when};
 
 use super::{Boolean, SecurityWorld};
 use bytes::Bytes;
+use panduza::security::utils::ensure_panduza_dirs;
+use panduza::security::utils::ensure_panduza_programdata_dirs;
 use tokio::time::Duration;
 use zenoh::{open, Config};
-
 ///
 ///
 #[given(expr = "the json structure attribute")]
@@ -25,6 +26,26 @@ async fn given_the_json_structure_attribute(world: &mut SecurityWorld) {
 async fn i_modify_structure_attribute(world: &mut SecurityWorld) {
     let value = serde_json::to_string(&"test").unwrap();
 
+    let (root_key_dir, root_cert_dir) = ensure_panduza_programdata_dirs();
+    let root_cert_dir_display = root_cert_dir.display().to_string().replace("\\", "/");
+    let root_ca_certificate = format!("{}/root_ca_certificate.pem", root_cert_dir_display);
+
+    let (user_key_dir, user_cert_dir) = ensure_panduza_dirs();
+
+    let cert_filename = "writer_certificate.pem";
+    let key_filename = "writer_private_key.pem";
+
+    let client_certificate = user_cert_dir
+        .join(&cert_filename)
+        .display()
+        .to_string()
+        .replace("\\", "/");
+    let client_key = user_key_dir
+        .join(&key_filename)
+        .display()
+        .to_string()
+        .replace("\\", "/");
+
     let conf = format!(
         r#"{{
             "mode": "client",
@@ -34,10 +55,10 @@ async fn i_modify_structure_attribute(world: &mut SecurityWorld) {
             "transport": {{
                 "link": {{
                     "tls": {{
-                        "root_ca_certificate": "credentials/certificates/root_ca_certificate.pem",
+                        "root_ca_certificate": "{root_ca_certificate}",
                         "enable_mtls": true,
-                        "connect_private_key": "credentials/keys/writer_private_key.pem",
-                        "connect_certificate": "credentials/certificates/writer_certificate.pem"
+                        "connect_private_key": "{client_key}",
+                        "connect_certificate": "{client_certificate}"
                     }}
                 }}, 
             }}
@@ -101,8 +122,7 @@ async fn the_structure_attribute_is_not_modified(world: &mut SecurityWorld) {
     println!("Received value: {}", received_value);
 
     assert_ne!(
-        received_value,
-        "test",
+        received_value, "test",
         "Structure attribute has been modified but it should not"
     );
 }

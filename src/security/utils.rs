@@ -2,6 +2,7 @@ use rcgen::KeyPair;
 use std::fs;
 use std::path::PathBuf;
 use time::{Duration, OffsetDateTime};
+use super::certificate::{generate_cert_client_from_pem_with_san, CertParams};
 
 pub enum PanduzaFileType {
     Key,
@@ -22,6 +23,28 @@ pub fn ensure_panduza_dirs() -> (PathBuf, PathBuf) {
     (keys_dir, cert_dir)
 }
 
+/// Ensure a machine-wide directory under %PROGRAMDATA% (e.g. C:\\ProgramData\\panduza\\{keys,certificate})
+/// Falls back to user data dir if PROGRAMDATA is unavailable
+pub fn ensure_panduza_programdata_dirs() -> (PathBuf, PathBuf) {
+    #[cfg(target_os = "windows")]
+    let base_dir: PathBuf = std::env::var_os("PROGRAMDATA")
+        .map(PathBuf::from)
+        .or_else(|| dirs::data_dir())
+        .expect("Unable to find a suitable data folder");
+
+    #[cfg(not(target_os = "windows"))]
+    let base_dir: PathBuf = dirs::data_dir().expect("Unable to find a suitable data folder");
+
+    let panduza_dir = base_dir.join("panduza");
+    let keys_dir = panduza_dir.join("keys");
+    let cert_dir = panduza_dir.join("certificate");
+
+    fs::create_dir_all(&keys_dir).expect("Fail to create key folder in program data");
+    fs::create_dir_all(&cert_dir).expect("Fail to create certificate folder in program data");
+
+    (keys_dir, cert_dir)
+}
+
 /// Write a file in the panduza directories depending on the file type
 pub fn write_panduza_file(
     file_type: PanduzaFileType,
@@ -38,9 +61,35 @@ pub fn write_panduza_file(
     Ok(path)
 }
 
+/// Write a file in the panduza directories depending on the file type
+pub fn write_panduza_file_programdata(
+    file_type: PanduzaFileType,
+    filename: &str,
+    content: &str,
+) -> std::io::Result<PathBuf> {
+    let (keys_dir, cert_dir) = ensure_panduza_programdata_dirs();
+    let path = match file_type {
+        PanduzaFileType::Key => keys_dir.join(filename),
+        PanduzaFileType::Certificate => cert_dir.join(filename),
+        PanduzaFileType::Csr => cert_dir.join(filename),
+    };
+    std::fs::write(path.clone(), content)?;
+    Ok(path)
+}
+
 /// Get the path to the panduza directories depending on the file type
 pub fn get_panduza_dir(file_type: PanduzaFileType) -> PathBuf {
     let (keys_dir, cert_dir) = ensure_panduza_dirs();
+    match file_type {
+        PanduzaFileType::Key => keys_dir,
+        PanduzaFileType::Certificate => cert_dir,
+        PanduzaFileType::Csr => cert_dir,
+    }
+}
+
+/// Get the path to the panduza directories depending on the file type
+pub fn get_panduza_dir_programdata(file_type: PanduzaFileType) -> PathBuf {
+    let (keys_dir, cert_dir) = ensure_panduza_programdata_dirs();
     match file_type {
         PanduzaFileType::Key => keys_dir,
         PanduzaFileType::Certificate => cert_dir,
@@ -90,4 +139,51 @@ pub fn load_key_from_pem(key_path: &str) -> Result<KeyPair, Box<dyn std::error::
 /// Generate a key rcgen struct KeyPair
 pub fn generate_key() -> KeyPair {
     KeyPair::generate().expect("Fail to generate key")
+}
+
+
+/// Generates a client certificate and key for a given role (e.g., "writer", "logger") and stores them
+/// in the user's `.panduza/{certificate,keys}` directories.
+/// The CA used is read from `%PROGRAMDATA%/panduza/keys/root_ca_private_key.pem`.
+///
+/// Returns (root_ca_certificate_path, client_certificate_path, client_key_path)
+pub fn generate_and_store_client_credentials(
+    role: &str,
+    san: Vec<String>,
+    validity_days: i32,
+) -> Result<(String, String, String), Box<dyn std::error::Error>> {
+    let (root_key_dir, root_cert_dir) = ensure_panduza_programdata_dirs();
+    let root_key_dir_display = root_key_dir.display().to_string().replace("\\", "/");
+    let root_cert_dir_display = root_cert_dir.display().to_string().replace("\\", "/");
+
+    let root_ca_private_key = format!("{}/root_ca_private_key.pem", root_key_dir_display);
+    let root_ca_certificate = format!("{}/root_ca_certificate.pem", root_cert_dir_display);
+
+    let cert_params = CertParams {
+        san,
+        validity_days,
+        common_name: format!("{}.local", role),
+    };
+
+    let (cert, key) = generate_cert_client_from_pem_with_san(&root_ca_private_key, cert_params);
+
+    let cert_filename = format!("{}_certificate.pem", role);
+    let key_filename = format!("{}_private_key.pem", role);
+
+    write_panduza_file(PanduzaFileType::Certificate, &cert_filename, &cert.pem())?;
+    write_panduza_file(PanduzaFileType::Key, &key_filename, &key.serialize_pem())?;
+
+    let (user_key_dir, user_cert_dir) = ensure_panduza_dirs();
+    let client_certificate = user_cert_dir
+        .join(&cert_filename)
+        .display()
+        .to_string()
+        .replace("\\", "/");
+    let client_key = user_key_dir
+        .join(&key_filename)
+        .display()
+        .to_string()
+        .replace("\\", "/");
+
+    Ok((root_ca_certificate, client_certificate, client_key))
 }
