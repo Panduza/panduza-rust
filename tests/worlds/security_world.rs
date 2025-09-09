@@ -4,9 +4,15 @@ mod writer;
 
 use cucumber::Parameter;
 use cucumber::{given, then, World};
+use panduza::security::certificate::generate_cert_client_from_pem_with_san;
+use panduza::security::certificate::CertParams;
+use panduza::security::utils::{
+    ensure_panduza_dirs, ensure_panduza_programdata_dirs, write_panduza_file,
+};
+use panduza::security::utils::{generate_and_store_client_credentials, PanduzaFileType};
 use panduza::{
-    reactor::ReactorOptions, AttributeBuilder, BooleanAttribute,
-    BytesAttribute, Reactor, StringAttribute,
+    reactor::ReactorOptions, AttributeBuilder, BooleanAttribute, BytesAttribute, Reactor,
+    StringAttribute,
 };
 use panduza::{NotificationAttribute, StatusAttribute};
 use std::time::Duration;
@@ -15,13 +21,6 @@ use std::{fmt::Debug, str::FromStr};
 // --- TEST PARAMETERS ---
 const PLAFORM_LOCALHOST: &str = "127.0.0.1";
 const PLAFORM_PORT: u16 = 7447;
-const ROOT_CA_CERTIFICATE: &str = "credentials/certificates/root_ca_certificate.pem";
-const WRITER_PRIVATE_KEY: &str = "credentials/keys/writer_private_key.pem";
-const WRITER_CERTIFICATE: &str = "credentials/certificates/writer_certificate.pem";
-const DEFAULT_PRIVATE_KEY: &str = "credentials/keys/default_private_key.pem";
-const DEFAULT_CERTIFICATE: &str = "credentials/certificates/default_certificate.pem";
-const LOGGER_PRIVATE_KEY: &str = "credentials/keys/logger_private_key.pem";
-const LOGGER_CERTIFICATE: &str = "credentials/certificates/logger_certificate.pem";
 const NAMESPACE: &str = "";
 // -----------------------
 
@@ -126,8 +125,6 @@ pub struct BytesSubWorld {
     // pub topic_ro: Option<String>,
 }
 
-
-
 #[derive(Default, World)]
 pub struct SecurityWorld {
     /// Reactor object
@@ -169,7 +166,6 @@ pub struct SecurityWorld {
     /// Bytes sub world data
     ///
     pub bytes: BytesSubWorld,
-
 }
 
 impl Debug for SecurityWorld {
@@ -184,12 +180,16 @@ impl Debug for SecurityWorld {
 ///
 #[given(expr = "a writer reactor connected on a test platform")]
 async fn a_writer_connected_on_a_test_platform(world: &mut SecurityWorld) {
+    let (root_ca_certificate, writer_certificate, writer_private_key) =
+        generate_and_store_client_credentials("writer", vec!["127.0.0.1".into()], 730)
+            .expect("failed to generate writer credentials");
+
     let options = ReactorOptions::new(
         PLAFORM_LOCALHOST,
         PLAFORM_PORT,
-        ROOT_CA_CERTIFICATE,
-        WRITER_CERTIFICATE,
-        WRITER_PRIVATE_KEY,
+        root_ca_certificate.as_str(),
+        writer_certificate.as_str(),
+        writer_private_key.as_str(),
         Some(NAMESPACE),
     );
 
@@ -223,17 +223,22 @@ async fn a_writer_connected_on_a_test_platform(world: &mut SecurityWorld) {
     println!("reactor ready");
 }
 
-
 ///
 ///
-#[given(expr = "a default user connecting to the platform without getting notifications and status")]
+#[given(
+    expr = "a default user connecting to the platform without getting notifications and status"
+)]
 async fn a_default_user_connecting_to_the_platform(world: &mut SecurityWorld) {
+    let (root_ca_certificate, default_certificate, default_private_key) =
+        generate_and_store_client_credentials("default", vec!["127.0.0.1".into()], 730)
+            .expect("failed to generate default credentials");
+
     let options = ReactorOptions::new(
         PLAFORM_LOCALHOST,
         PLAFORM_PORT,
-        ROOT_CA_CERTIFICATE,
-        DEFAULT_CERTIFICATE,
-        DEFAULT_PRIVATE_KEY,
+        root_ca_certificate.as_str(),
+        default_certificate.as_str(),
+        default_private_key.as_str(),
         Some(NAMESPACE),
     );
 
@@ -247,12 +252,16 @@ async fn a_default_user_connecting_to_the_platform(world: &mut SecurityWorld) {
 ///
 #[given(expr = "a logger reactor connected on a test platform")]
 async fn a_logger_connected_on_a_test_platform(world: &mut SecurityWorld) {
+    let (root_ca_certificate, logger_certificate, logger_private_key) =
+        generate_and_store_client_credentials("logger", vec!["127.0.0.1".into()], 730)
+            .expect("failed to generate logger credentials");
+
     let options = ReactorOptions::new(
         PLAFORM_LOCALHOST,
         PLAFORM_PORT,
-        ROOT_CA_CERTIFICATE,
-        LOGGER_CERTIFICATE,
-        LOGGER_PRIVATE_KEY,
+        root_ca_certificate.as_str(),
+        logger_certificate.as_str(),
+        logger_private_key.as_str(),
         Some(NAMESPACE),
     );
 
