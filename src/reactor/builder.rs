@@ -1,3 +1,5 @@
+use crate::security::utils::get_default_certificate_paths;
+
 use super::Reactor;
 use anyhow::Result;
 use serde_json::json;
@@ -26,12 +28,17 @@ pub struct ReactorBuilder {
 impl Default for ReactorBuilder {
     /// Creates a new ReactorBuilder with default values
     fn default() -> Self {
+        let (root_ca_path, client_cert_path, client_key_path) = get_default_certificate_paths();
+        let root_ca_path = root_ca_path.into_os_string().into_string().unwrap();
+        let client_cert_path = client_cert_path.into_os_string().into_string().unwrap();
+        let client_key_path = client_key_path.into_os_string().into_string().unwrap();
+
         Self {
             address: None,
             port: None,
-            ca_certificate: None,
-            connect_certificate: None,
-            connect_private_key: None,
+            ca_certificate: Some(root_ca_path),
+            connect_certificate: Some(client_cert_path),
+            connect_private_key: Some(client_key_path),
             namespace: None,
         }
     }

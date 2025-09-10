@@ -13,6 +13,9 @@
 - `anyhow::Result` for error handling
 - `serde_json::json` for JSON configuration building
 
+### Internal Dependencies
+- `crate::security::utils::get_default_certificate_paths` for default certificate paths
+
 ## Core Structure
 
 ReactorBuilder is a builder pattern for Reactor in `src\reactor.rs`.
@@ -38,6 +41,45 @@ namespace: Option<String>
 ```
 
 Special warning on the fact that fields about certificate and private key refers to path (not the content).
+
+## Default Implementation
+
+### Default Certificate Paths
+The `Default` trait implementation automatically configures the builder with default certificate paths using `get_default_certificate_paths()` from the security utils module.
+
+**Default behavior:**
+- `address`: `None` (must be set by user)
+- `port`: `None` (must be set by user)
+- `ca_certificate`: Automatically set to default CA certificate path from user's `.panduza/certificate/` directory
+- `connect_certificate`: Automatically set to default client certificate path from user's `.panduza/certificate/` directory  
+- `connect_private_key`: Automatically set to default client private key path from user's `.panduza/keys/` directory
+- `namespace`: `None` (optional)
+
+**Implementation details:**
+```rust
+impl Default for ReactorBuilder {
+    fn default() -> Self {
+        let (root_ca_path, client_cert_path, client_key_path) = get_default_certificate_paths();
+        let root_ca_path = root_ca_path.into_os_string().into_string().unwrap();
+        let client_cert_path = client_cert_path.into_os_string().into_string().unwrap();
+        let client_key_path = client_key_path.into_os_string().into_string().unwrap();
+
+        Self {
+            address: None,
+            port: None,
+            ca_certificate: Some(root_ca_path),
+            connect_certificate: Some(client_cert_path),
+            connect_private_key: Some(client_key_path),
+            namespace: None,
+        }
+    }
+}
+```
+
+**Usage:**
+- `ReactorBuilder::new()` creates a builder with default certificate paths
+- Users only need to set `address` and `port` for basic usage
+- Certificate paths can be overridden if needed using the respective setter methods
 
 ## Manage Zenoh configuration
 
@@ -65,12 +107,14 @@ To create the Zenoh session, build the json config with this template
 ## Validation Requirements
 
 ### Required Fields Validation
-All security-related fields must be validated before use:
-- `address`: Address is required
-- `port`: Port is required  
-- `ca_certificate`: CA certificate path is required
-- `connect_certificate`: Connect certificate path is required
-- `connect_private_key`: Connect private key path is required
+Security-related fields must be validated before use, but note that certificate fields now have default values:
+- `address`: Address is required (no default)
+- `port`: Port is required (no default)
+- `ca_certificate`: CA certificate path is required (default provided)
+- `connect_certificate`: Connect certificate path is required (default provided)
+- `connect_private_key`: Connect private key path is required (default provided)
+
+**Note:** With the default implementation, only `address` and `port` typically need to be set by the user, as certificate paths are automatically configured to default locations.
 
 ### Error Messages
 Error messages should be descriptive and indicate which field is missing or what operation failed.
