@@ -21,13 +21,27 @@ pub mod pubsub;
 // pub mod router;
 pub mod session;
 
-/// This module manage the Reactor and its builder
+/// This module manage the Reactor
 ///
-/// Maturity Level: good
+/// *Maturity Level*: good
+///
+/// The reactor is the main entry point for the Panduza client library.
+/// Any user must create a reactor instance to be able to use the library.
+///
+/// The reactor create and manage a Zenoh session to communicate with Panduza Platform.
+///
+/// The reactor also provide a builder.
+///
+// ```rust
+/// let reactor = Reactor::builder()
+///     .address("127.0.0.1")
+///     .port(7447)
+///     .build();
+/// ```
 ///
 pub mod reactor;
 pub use reactor::Reactor;
-
+pub use reactor::ReactorBuilder;
 ///
 pub mod attribute_mode;
 pub use attribute_mode::AttributeMode;
@@ -89,4 +103,3 @@ pub use executor::Executor;
 ///
 ///
 pub mod security;
-
