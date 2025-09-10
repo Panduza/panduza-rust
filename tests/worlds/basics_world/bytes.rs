@@ -12,7 +12,7 @@ async fn the_bytes_attribute_rw(world: &mut BasicsWorld, attribute_name: String)
         .as_ref()
         .unwrap()
         .find_attribute(attribute_name)
-        .expect("Attribute not found");
+        .await;
     let attribute = attribute_builder.try_into_bytes().await.unwrap();
 
     world.bytes.att_rw = Some(attribute);
@@ -25,7 +25,7 @@ async fn the_bytes_attribute_ro(world: &mut BasicsWorld, attribute_name: String)
         .as_ref()
         .unwrap()
         .find_attribute(attribute_name)
-        .expect("Attribute not found");
+        .await;
     let attribute = attribute_builder.try_into_bytes().await.unwrap();
 
     world.bytes.att_ro = Some(attribute);
@@ -38,7 +38,7 @@ async fn the_bytes_attribute_wo(world: &mut BasicsWorld, attribute_name: String)
         .as_ref()
         .unwrap()
         .find_attribute(attribute_name)
-        .expect("Attribute not found");
+        .await;
     let attribute = attribute_builder.try_into_bytes().await.unwrap();
 
     world.bytes.att_wo = Some(attribute);

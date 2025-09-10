@@ -4,6 +4,7 @@ mod writer;
 
 use cucumber::Parameter;
 use cucumber::{given, then, World};
+
 use panduza::security::certificate::generate_cert_client_from_pem_with_san;
 use panduza::security::certificate::CertParams;
 use panduza::security::utils::{
@@ -14,6 +15,7 @@ use panduza::{
     reactor::ReactorOptions, AttributeBuilder, BooleanAttribute, BytesAttribute, Reactor,
     StringAttribute,
 };
+
 use panduza::{NotificationAttribute, StatusAttribute};
 use std::time::Duration;
 use std::{fmt::Debug, str::FromStr};
@@ -180,6 +182,7 @@ impl Debug for SecurityWorld {
 ///
 #[given(expr = "a writer reactor connected on a test platform")]
 async fn a_writer_connected_on_a_test_platform(world: &mut SecurityWorld) {
+
     let (root_ca_certificate, writer_certificate, writer_private_key) =
         generate_and_store_client_credentials("writer", vec!["127.0.0.1".into()], 730)
             .expect("failed to generate writer credentials");
@@ -195,7 +198,16 @@ async fn a_writer_connected_on_a_test_platform(world: &mut SecurityWorld) {
 
     // No additional setup required before connecting to the test platform
     println!("Connecting to {}:{}...", PLAFORM_LOCALHOST, PLAFORM_PORT);
-    let reactor = panduza::new_reactor(options).await.unwrap();
+    let reactor = Reactor::builder()
+        .address(PLAFORM_LOCALHOST.to_string())
+        .port(PLAFORM_PORT)
+        .ca_certificate(ROOT_CA_CERTIFICATE.to_string())
+        .connect_certificate(WRITER_CERTIFICATE.to_string())
+        .connect_private_key(WRITER_PRIVATE_KEY.to_string())
+        .namespace(NAMESPACE.to_string())
+        .build()
+        .await
+        .unwrap();
     println!("ok");
 
     println!("Getting status attribute...");
@@ -229,6 +241,7 @@ async fn a_writer_connected_on_a_test_platform(world: &mut SecurityWorld) {
     expr = "a default user connecting to the platform without getting notifications and status"
 )]
 async fn a_default_user_connecting_to_the_platform(world: &mut SecurityWorld) {
+
     let (root_ca_certificate, default_certificate, default_private_key) =
         generate_and_store_client_credentials("default", vec!["127.0.0.1".into()], 730)
             .expect("failed to generate default credentials");
@@ -244,7 +257,16 @@ async fn a_default_user_connecting_to_the_platform(world: &mut SecurityWorld) {
 
     // No additional setup required before connecting to the test platform
     println!("Connecting to {}:{}...", PLAFORM_LOCALHOST, PLAFORM_PORT);
-    let reactor = panduza::new_reactor(options).await.unwrap();
+    let reactor = Reactor::builder()
+        .address(PLAFORM_LOCALHOST.to_string())
+        .port(PLAFORM_PORT)
+        .ca_certificate(ROOT_CA_CERTIFICATE.to_string())
+        .connect_certificate(DEFAULT_CERTIFICATE.to_string())
+        .connect_private_key(DEFAULT_PRIVATE_KEY.to_string())
+        .namespace(NAMESPACE.to_string())
+        .build()
+        .await
+        .unwrap();
     println!("ok");
 }
 
@@ -252,6 +274,7 @@ async fn a_default_user_connecting_to_the_platform(world: &mut SecurityWorld) {
 ///
 #[given(expr = "a logger reactor connected on a test platform")]
 async fn a_logger_connected_on_a_test_platform(world: &mut SecurityWorld) {
+
     let (root_ca_certificate, logger_certificate, logger_private_key) =
         generate_and_store_client_credentials("logger", vec!["127.0.0.1".into()], 730)
             .expect("failed to generate logger credentials");
@@ -267,7 +290,16 @@ async fn a_logger_connected_on_a_test_platform(world: &mut SecurityWorld) {
 
     // No additional setup required before connecting to the test platform
     println!("Connecting to {}:{}...", PLAFORM_LOCALHOST, PLAFORM_PORT);
-    let reactor = panduza::new_reactor(options).await.unwrap();
+    let reactor = Reactor::builder()
+        .address(PLAFORM_LOCALHOST.to_string())
+        .port(PLAFORM_PORT)
+        .ca_certificate(ROOT_CA_CERTIFICATE.to_string())
+        .connect_certificate(LOGGER_CERTIFICATE.to_string())
+        .connect_private_key(LOGGER_PRIVATE_KEY.to_string())
+        .namespace(NAMESPACE.to_string())
+        .build()
+        .await
+        .unwrap();
     println!("ok");
 
     println!("Getting status attribute...");

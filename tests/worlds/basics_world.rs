@@ -7,10 +7,7 @@ mod string;
 use cucumber::Parameter;
 use cucumber::{given, then, World};
 use panduza::attribute::notification::notification_pack::NotificationPack;
-use panduza::{
-    reactor::ReactorOptions, AttributeBuilder, BooleanAttribute, BytesAttribute, Reactor,
-    StringAttribute,
-};
+use panduza::{AttributeBuilder, BooleanAttribute, BytesAttribute, Reactor, StringAttribute};
 use panduza::{NotificationAttribute, NumberAttribute, StatusAttribute};
 use std::time::Duration;
 use std::{fmt::Debug, str::FromStr};
@@ -163,7 +160,7 @@ impl Debug for BasicsWorld {
 }
 
 /// Main entry point for most scenarios
-/// 
+///
 /// This keyword create a reactor for the all scenario
 /// and connect it to the test platform.
 ///
@@ -172,24 +169,28 @@ async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
     // Enable trace printing for debugging
     let trace_print = false;
 
-    // Create reactor options
-    let options = ReactorOptions::new(
-        PLAFORM_LOCALHOST,
-        PLAFORM_PORT,
-        ROOT_CA_CERTIFICATE,
-        CLIENT_CERTIFICATE,
-        CLIENT_PRIVATE_KEY,
-        Some(NAMESPACE),
-    );
-
     // No additional setup required before connecting to the test platform
     {
         if trace_print {
             print!("Connecting to {}:{}...", PLAFORM_LOCALHOST, PLAFORM_PORT);
         }
-        let reactor = panduza::new_reactor(options)
+        let reactor = Reactor::builder()
+            .address(PLAFORM_LOCALHOST.to_string())
+            .port(PLAFORM_PORT)
+            .ca_certificate(ROOT_CA_CERTIFICATE.to_string())
+            .connect_certificate(CLIENT_CERTIFICATE.to_string())
+            .connect_private_key(CLIENT_PRIVATE_KEY.to_string())
+            .namespace(NAMESPACE.to_string())
+            .build()
             .await
             .expect("Failed to create reactor");
+
+        // Print the structure as pretty JSON
+        {
+            let flat_guard = reactor.structure.flat.lock().await;
+            println!("{}", serde_json::to_string_pretty(&*flat_guard).unwrap());
+        }
+
         world.r = Some(reactor);
         if trace_print {
             println!(" ok!");

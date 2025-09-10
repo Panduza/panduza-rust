@@ -15,7 +15,7 @@ async fn given_the_json_structure_attribute(world: &mut SecurityWorld) {
         .as_ref()
         .unwrap()
         .find_attribute("pza/_/structure/cmd")
-        .expect("Attribute not found");
+        .await;
     // let attribute: panduza::JsonAttribute = attribute_builder.expect_json().await.unwrap();
     // world.json.att_rw = Some(attribute);
 }
@@ -138,7 +138,7 @@ async fn given_the_attribute_rw(world: &mut SecurityWorld, attribute_name: Strin
         .as_ref()
         .unwrap()
         .find_attribute(attribute_name)
-        .expect("Attribute not found");
+        .await;
     let attribute: panduza::BooleanAttribute = attribute_builder.try_into_boolean().await.unwrap();
 
     world.boolean.att_rw = Some(attribute);
@@ -183,7 +183,7 @@ async fn given_the_writer_attribute_wo(world: &mut SecurityWorld, attribute_name
         .as_ref()
         .unwrap()
         .find_attribute(attribute_name)
-        .expect("Attribute not found");
+        .await;
     let attribute =
         tokio::time::timeout(Duration::from_secs(5), attribute_builder.try_into_boolean())
             .await
@@ -204,7 +204,7 @@ async fn given_the_writer_attribute_ro(world: &mut SecurityWorld, attribute_name
         .as_ref()
         .unwrap()
         .find_attribute(attribute_name)
-        .expect("Attribute not found");
+        .await;
     let attribute: panduza::BooleanAttribute = attribute_builder.try_into_boolean().await.unwrap();
 
     world.boolean.att_ro = Some(attribute);

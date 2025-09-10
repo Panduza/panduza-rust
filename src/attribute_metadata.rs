@@ -1,8 +1,9 @@
+use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 
 use crate::AttributeMode;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 /// Metadata for an attribute
 ///
 pub struct AttributeMetadata {

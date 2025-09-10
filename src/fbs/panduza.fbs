@@ -16,7 +16,7 @@ table Header {
 
 // The Payload union allows for different types of messages to be encapsulated in a single structure.
 union Payload {
-    StructureNode,
+    Structure,
     Context,
     Status,
     Notification,
@@ -38,19 +38,19 @@ table Message {
 
 // Attribute Topic: "$NS/pza/_/structure"
 
-// Leaf
-table AttributeEntry {
-    name: string;
-    type: string;
-    mode: string;
-}
+enum Node : byte { Undefined, Instance, Class, Attribute }
 
 // Node
-table StructureNode {
+table Structure {
     name: string;
+
+    node: Node;
+    children: [Structure];
+
     tags: [string];
-    children: [StructureNode];
-    attributes: [AttributeEntry];
+
+    type: string;
+    mode: string;
 }
 
 // ----------------------------------------------
@@ -60,8 +60,8 @@ table StructureNode {
 // att => context
 
 table Context {
-    topic: string;
-    context: string; // empty on command
+    topic: [string];
+    context: [string]; // empty on command
 }
 
 // ----------------------------------------------
