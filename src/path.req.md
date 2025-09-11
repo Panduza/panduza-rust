@@ -7,7 +7,11 @@
 `src/path.rs`
 
 ## Module Overview
-This module provides handy functions to access to all standardized paths of Panduza on systems.
+This module provides:
+- functions to access to all standardized paths of Panduza on systems.
+- functions to ensure that directory or file exist
+- functions to create directory structure
+
 This module must work for any OS (Windows, Linux, Mac).
 
 ## Standardized Paths

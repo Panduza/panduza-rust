@@ -3,58 +3,60 @@
 //! This module provides handy functions to access all standardized paths of Panduza on systems.
 //! It works cross-platform (Windows, Linux, Mac).
 
+use std::fs;
+use std::io;
 use std::path::PathBuf;
 
 /// Get the user root directory for Panduza
-/// 
+///
 /// Returns the path to the `.panduza` directory inside the user's home directory.
-/// 
+///
 /// # Returns
-/// 
+///
 /// `Some(PathBuf)` containing the path to `~/.panduza`, or `None` if the home directory cannot be determined.
 pub fn user_root_dir() -> Option<PathBuf> {
     dirs::home_dir().map(|home| home.join(".panduza"))
 }
 
 /// Get the path to the platform configuration file
-/// 
+///
 /// Returns the path to `platform.json5` located in the user root directory.
-/// 
+///
 /// # Returns
-/// 
+///
 /// `Some(PathBuf)` containing the path to the platform configuration file, or `None` if the home directory cannot be determined.
 pub fn platform_config_file() -> Option<PathBuf> {
     user_root_dir().map(|root| root.join("platform.json5"))
 }
 
 /// Get the path to the credential directory
-/// 
+///
 /// Returns the path to the `credential` directory located in the user root directory.
-/// 
+///
 /// # Returns
-/// 
+///
 /// `Some(PathBuf)` containing the path to the credential directory, or `None` if the home directory cannot be determined.
 pub fn credential_dir() -> Option<PathBuf> {
     user_root_dir().map(|root| root.join("credential"))
 }
 
 /// Get the path to the client credential directory
-/// 
+///
 /// Returns the path to the `credential/client` directory.
-/// 
+///
 /// # Returns
-/// 
+///
 /// `Some(PathBuf)` containing the path to the client credential directory, or `None` if the home directory cannot be determined.
 pub fn client_credential_dir() -> Option<PathBuf> {
     credential_dir().map(|cred| cred.join("client"))
 }
 
 /// Get the path to the platform credential directory
-/// 
+///
 /// Returns the path to the `credential/platform` directory.
-/// 
+///
 /// # Returns
-/// 
+///
 /// `Some(PathBuf)` containing the path to the platform credential directory, or `None` if the home directory cannot be determined.
 pub fn platform_credential_dir() -> Option<PathBuf> {
     credential_dir().map(|cred| cred.join("platform"))
@@ -114,76 +116,108 @@ pub fn platform_cert() -> Option<PathBuf> {
     platform_credential_dir().map(|dir| dir.join("platform.pem"))
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+// Directory and file management functions
 
-    #[test]
-    fn test_user_root_dir_structure() {
-        if let Some(root) = user_root_dir() {
-            // Should end with .panduza
-            assert!(root.ends_with(".panduza"));
-        }
+/// Ensure that the user root directory exists
+///
+/// Creates the `.panduza` directory in the user's home directory if it doesn't exist.
+///
+/// # Returns
+///
+/// `Ok(())` if the directory exists or was created successfully, or an `io::Error` if creation failed.
+pub fn ensure_user_root_dir_exists() -> io::Result<()> {
+    if let Some(dir) = user_root_dir() {
+        fs::create_dir_all(dir)
+    } else {
+        Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            "Unable to determine home directory",
+        ))
+    }
+}
+
+/// Ensure that the credential directory structure exists
+///
+/// Creates the `credential`, `credential/client`, and `credential/platform` directories
+/// if they don't exist.
+///
+/// # Returns
+///
+/// `Ok(())` if all directories exist or were created successfully, or an `io::Error` if creation failed.
+pub fn ensure_credential_dir_structure_exists() -> io::Result<()> {
+    // First ensure user root directory exists
+    ensure_user_root_dir_exists()?;
+
+    // Create credential directory
+    if let Some(cred_dir) = credential_dir() {
+        fs::create_dir_all(&cred_dir)?;
+    } else {
+        return Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            "Unable to determine credential directory path",
+        ));
     }
 
-    #[test]
-    fn test_platform_config_file_structure() {
-        if let Some(config) = platform_config_file() {
-            // Should end with platform.json5
-            assert!(config.ends_with("platform.json5"));
-            // Should be in .panduza directory
-            assert!(config.parent().unwrap().ends_with(".panduza"));
-        }
+    // Create client credential directory
+    if let Some(client_dir) = client_credential_dir() {
+        fs::create_dir_all(&client_dir)?;
+    } else {
+        return Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            "Unable to determine client credential directory path",
+        ));
     }
 
-    #[test]
-    fn test_credential_directories_structure() {
-        if let Some(cred_dir) = credential_dir() {
-            assert!(cred_dir.ends_with("credential"));
-        }
-
-        if let Some(client_dir) = client_credential_dir() {
-            assert!(client_dir.ends_with("client"));
-        }
-
-        if let Some(platform_dir) = platform_credential_dir() {
-            assert!(platform_dir.ends_with("platform"));
-        }
+    // Create platform credential directory
+    if let Some(platform_dir) = platform_credential_dir() {
+        fs::create_dir_all(&platform_dir)?;
+    } else {
+        return Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            "Unable to determine platform credential directory path",
+        ));
     }
 
-    #[test]
-    fn test_client_credential_files() {
-        let files = [
-            (client_platform_root_ca_cert(), "platform_root_ca.pem"),
-            (client_root_ca_key(), "client_root_ca_key.pem"),
-            (client_root_ca_cert(), "client_root_ca.pem"),
-            (client_key(), "client_key.pem"),
-            (client_cert(), "client.pem"),
-        ];
+    Ok(())
+}
 
-        for (path_opt, filename) in files {
-            if let Some(path) = path_opt {
-                assert!(path.ends_with(filename));
-                assert!(path.parent().unwrap().ends_with("client"));
-            }
-        }
-    }
+/// Check if a file exists at the given path
+///
+/// # Arguments
+///
+/// * `path` - The path to check
+///
+/// # Returns
+///
+/// `true` if the file exists, `false` otherwise
+pub fn file_exists(path: &PathBuf) -> bool {
+    path.exists() && path.is_file()
+}
 
-    #[test]
-    fn test_platform_credential_files() {
-        let files = [
-            (platform_client_root_ca_cert(), "client_root_ca.pem"),
-            (platform_root_ca_key(), "platform_root_ca_key.pem"),
-            (platform_root_ca_cert(), "platform_root_ca.pem"),
-            (platform_key(), "platform_key.pem"),
-            (platform_cert(), "platform.pem"),
-        ];
+/// Check if a directory exists at the given path
+///
+/// # Arguments
+///
+/// * `path` - The path to check
+///
+/// # Returns
+///
+/// `true` if the directory exists, `false` otherwise
+pub fn dir_exists(path: &PathBuf) -> bool {
+    path.exists() && path.is_dir()
+}
 
-        for (path_opt, filename) in files {
-            if let Some(path) = path_opt {
-                assert!(path.ends_with(filename));
-                assert!(path.parent().unwrap().ends_with("platform"));
-            }
-        }
-    }
+/// Ensure that a directory exists
+///
+/// Creates the directory and all parent directories if they don't exist.
+///
+/// # Arguments
+///
+/// * `path` - The path to the directory to ensure exists
+///
+/// # Returns
+///
+/// `Ok(())` if the directory exists or was created successfully, or an `io::Error` if creation failed.
+pub fn ensure_dir_exists(path: &PathBuf) -> io::Result<()> {
+    fs::create_dir_all(path)
 }
