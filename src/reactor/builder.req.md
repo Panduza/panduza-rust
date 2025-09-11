@@ -1,5 +1,10 @@
 # Reactor Builder Specification
 
+!!! TODO
+change ca_certificate into platform_root_ca, this certificate used to validate the platform validity
+connect_certificate into client_certificate
+connect_private_key into client_private_key
+
 ## Generic specification files
 - Coding rules of the project: `req\coding_rules.req.md`
 
