@@ -75,6 +75,11 @@ pub use task_monitor::TaskMonitor;
 mod topic;
 pub use topic::Topic;
 
+/// This module provides handy functions to access to all standardized paths of Panduza on systems.
+/// This module works for any OS (Windows, Linux, Mac)
+///
+pub mod path;
+
 /// FlatBuffers: Serialization and Deserialization
 ///
 /// Define and manage all the network payload for Panduza.
