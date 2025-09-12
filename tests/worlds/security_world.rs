@@ -183,15 +183,6 @@ async fn a_writer_connected_on_a_test_platform(world: &mut SecurityWorld) {
         generate_and_store_client_credentials("writer", vec!["127.0.0.1".into()], 730)
             .expect("failed to generate writer credentials");
 
-    let options = ReactorOptions::new(
-        PLAFORM_LOCALHOST,
-        PLAFORM_PORT,
-        root_ca_certificate.as_str(),
-        writer_certificate.as_str(),
-        writer_private_key.as_str(),
-        Some(NAMESPACE),
-    );
-
     // No additional setup required before connecting to the test platform
     println!("Connecting to {}:{}...", PLAFORM_LOCALHOST, PLAFORM_PORT);
     let reactor = Reactor::builder()
@@ -238,15 +229,6 @@ async fn a_default_user_connecting_to_the_platform(world: &mut SecurityWorld) {
         generate_and_store_client_credentials("default", vec!["127.0.0.1".into()], 730)
             .expect("failed to generate default credentials");
 
-    let options = ReactorOptions::new(
-        PLAFORM_LOCALHOST,
-        PLAFORM_PORT,
-        root_ca_certificate.as_str(),
-        default_certificate.as_str(),
-        default_private_key.as_str(),
-        Some(NAMESPACE),
-    );
-
     // No additional setup required before connecting to the test platform
     println!("Connecting to {}:{}...", PLAFORM_LOCALHOST, PLAFORM_PORT);
     let reactor = Reactor::builder()
@@ -266,15 +248,6 @@ async fn a_logger_connected_on_a_test_platform(world: &mut SecurityWorld) {
     let (root_ca_certificate, logger_certificate, logger_private_key) =
         generate_and_store_client_credentials("logger", vec!["127.0.0.1".into()], 730)
             .expect("failed to generate logger credentials");
-
-    let options = ReactorOptions::new(
-        PLAFORM_LOCALHOST,
-        PLAFORM_PORT,
-        root_ca_certificate.as_str(),
-        logger_certificate.as_str(),
-        logger_private_key.as_str(),
-        Some(NAMESPACE),
-    );
 
     // No additional setup required before connecting to the test platform
     println!("Connecting to {}:{}...", PLAFORM_LOCALHOST, PLAFORM_PORT);
