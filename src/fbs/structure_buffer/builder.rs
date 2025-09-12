@@ -15,6 +15,9 @@ use flatbuffers::WIPOffset;
 use rand::random;
 use std::fmt::Debug;
 
+#[cfg(test)]
+mod tests;
+
 /// Builder for StructureBuffer
 #[derive(Default, Clone, PartialEq, Debug)]
 pub struct StructureBufferBuilder {
