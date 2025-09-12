@@ -21,6 +21,27 @@ pub mod pubsub;
 // pub mod router;
 pub mod session;
 
+/// Configuration module for client settings
+///
+/// *Maturity Level*: good
+///
+/// This module provides configuration structures for platform and security settings.
+/// It supports serialization/deserialization with serde for easy integration with
+/// configuration files (JSON, TOML, etc.).
+///
+pub mod config;
+pub use config::{Config, PlatformConfig, SecurityConfig};
+
+/// Connection module for Zenoh session management
+///
+/// *Maturity Level*: good
+///
+/// This module provides easy functions to create Zenoh sessions for Panduza purpose.
+/// It handles different connection types based on security configuration.
+///
+pub mod connection;
+pub use connection::{create_client_connection, ConnectionError};
+
 /// This module manage the Reactor
 ///
 /// *Maturity Level*: good
