@@ -8,13 +8,13 @@
 
 ## Data Structures
 
-### `PlatformConfig`
+### `EndpointConfig`
 
-Configuration structure for platform settings.
+Configuration structure for endpoint settings.
 
 **Fields:**
-- `addr: Option<String>` - Platform address (default: "127.0.0.1")
-- `port: Option<u16>` - Platform port (default: 7447)
+- `addr: Option<String>` - Endpoint address (default: "127.0.0.1")
+- `port: Option<u16>` - Endpoint port (default: 7447)
 
 **Traits:** Debug, Serialize, Deserialize, Clone
 
@@ -32,7 +32,7 @@ Configuration structure for security settings.
 Main configuration structure containing all client settings.
 
 **Fields:**
-- `platform: Option<PlatformConfig>` - Broker configuration settings
+- `platform: Option<EndpointConfig>` - Platform configuration settings
 - `security: Option<SecurityConfig>` - Security configuration settings
 
 **Traits:** Debug, Serialize, Deserialize, Clone

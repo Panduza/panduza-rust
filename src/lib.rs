@@ -15,9 +15,6 @@
     unused_parens
 )]
 
-//
-pub mod pubsub;
-
 // pub mod router;
 pub mod session;
 
@@ -30,7 +27,7 @@ pub mod session;
 /// configuration files (JSON, TOML, etc.).
 ///
 pub mod config;
-pub use config::{Config, PlatformConfig, SecurityConfig};
+pub use config::{Config, EndpointConfig, SecurityConfig};
 
 /// Connection module for Zenoh session management
 ///

@@ -2,14 +2,14 @@ use serde::{Deserialize, Serialize};
 
 /// Configuration structure for platform settings.
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct PlatformConfig {
+pub struct EndpointConfig {
     /// Platform address (default: "127.0.0.1")
     pub addr: Option<String>,
     /// Platform port (default: 7447)
     pub port: Option<u16>,
 }
 
-impl Default for PlatformConfig {
+impl Default for EndpointConfig {
     fn default() -> Self {
         Self {
             addr: Some("127.0.0.1".to_string()),
@@ -37,7 +37,7 @@ impl Default for SecurityConfig {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {
     /// Broker configuration settings
-    pub platform: Option<PlatformConfig>,
+    pub platform: Option<EndpointConfig>,
     /// Security configuration settings
     pub security: Option<SecurityConfig>,
 }
@@ -45,7 +45,7 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            platform: Some(PlatformConfig::default()),
+            platform: Some(EndpointConfig::default()),
             security: Some(SecurityConfig::default()),
         }
     }
