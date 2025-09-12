@@ -105,7 +105,6 @@ impl<B: PzaBuffer> StdObjAttribute<B> {
                     .payload()
                     .clone(),
             );
-            println!("Initial value received for attribute {}", &metadata.topic);
             let mut last = last_value.lock().await;
             *last = Some(buffer);
         }

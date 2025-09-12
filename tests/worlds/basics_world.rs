@@ -7,7 +7,9 @@ mod string;
 use cucumber::Parameter;
 use cucumber::{given, then, World};
 use panduza::attribute::notification::notification_pack::NotificationPack;
-use panduza::{AttributeBuilder, BooleanAttribute, BytesAttribute, Reactor, StringAttribute};
+use panduza::{
+    AttributeBuilder, BooleanAttribute, BytesAttribute, PzaBuffer, Reactor, StringAttribute,
+};
 use panduza::{NotificationAttribute, NumberAttribute, StatusAttribute};
 use std::time::Duration;
 use std::{fmt::Debug, str::FromStr};
@@ -167,7 +169,7 @@ impl Debug for BasicsWorld {
 #[given(expr = "a reactor connected on a test platform")]
 async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
     // Enable trace printing for debugging
-    let trace_print = false;
+    let trace_print = true;
 
     // No additional setup required before connecting to the test platform
     {
@@ -183,7 +185,17 @@ async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
             .expect("Failed to create reactor");
 
         // Print the structure as pretty JSON
-        {
+        if trace_print {
+            println!(
+                "{:?}",
+                reactor
+                    .structure
+                    .get()
+                    .await
+                    .unwrap()
+                    .as_message()
+                    .payload_as_structure()
+            );
             let flat_guard = reactor.structure.flat.lock().await;
             println!("{}", serde_json::to_string_pretty(&*flat_guard).unwrap());
         }

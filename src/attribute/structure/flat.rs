@@ -40,7 +40,7 @@ impl FlatStructure {
     /// A new FlatStructure instance populated from the buffer
     pub fn from_buffer(buffer: &StructureBuffer) -> Self {
         let mut flat = Self::new();
-        flat.update_from_buffer(buffer, "pza");
+        flat.update_from_buffer(buffer);
         flat
     }
 
@@ -54,7 +54,7 @@ impl FlatStructure {
     /// # Arguments
     /// * `buffer` - The StructureBuffer to extract attributes from
     /// * `base_topic` - The base topic path for building complete topics
-    pub fn update_from_buffer(&mut self, buffer: &StructureBuffer, base_topic: &str) {
+    pub fn update_from_buffer(&mut self, buffer: &StructureBuffer) {
         // Clear existing attributes
         self.attributes.clear();
 
@@ -64,11 +64,7 @@ impl FlatStructure {
         // Extract the Structure from the payload
         if let Some(structure) = message.payload_as_structure() {
             // Extract instance path from base_topic (remove /att suffix if present)
-            let instance_path = if base_topic.ends_with("/att") {
-                &base_topic[..base_topic.len() - 4]
-            } else {
-                base_topic
-            };
+            let instance_path = "pza";
 
             // Start flattening from the root
             self.flatten_structure_node(instance_path.to_string(), &structure);
@@ -113,6 +109,7 @@ impl FlatStructure {
         } else {
             format!("{}/{}", current_path, node_name)
         };
+        println!("new_path: {}", new_path);
 
         // Insert entry only if node contains a 'mode' (indicating it's a valid attribute leaf)
         if let Some(attr_mode) = node.mode() {

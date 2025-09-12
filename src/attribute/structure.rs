@@ -63,13 +63,11 @@ impl StructureAttribute {
             .add_callback(
                 {
                     let flat_ref = flat.clone();
-                    let base_topic = instance.metadata().topic.clone();
                     move |buffer: StructureBuffer| {
                         let flat_clone = flat_ref.clone();
-                        let topic_clone = base_topic.clone();
                         Box::pin(async move {
                             let mut flat = flat_clone.lock().await;
-                            flat.update_from_buffer(&buffer, &topic_clone);
+                            flat.update_from_buffer(&buffer);
                         })
                     }
                 },
@@ -80,7 +78,7 @@ impl StructureAttribute {
         // Initialize flat from current buffer if available
         if let Some(buffer) = instance.inner.get().await {
             let mut flat_guard = instance.flat.lock().await;
-            flat_guard.update_from_buffer(&buffer, &instance.metadata().topic);
+            flat_guard.update_from_buffer(&buffer);
         }
 
         instance

@@ -61,3 +61,70 @@ fn test_flat_structure_conversion() {
         "Temperature attribute should be found by relative path"
     );
 }
+
+/// Creates a test StructureBuffer that reproduces the path issue
+/// Expected: "pza/tester/boolean/error"  
+/// Actual: "pza/_/structure/tester/boolean/error/error"
+fn create_problematic_test_buffer() -> StructureBuffer {
+    // Create the innermost error attribute
+    let error_attr = StructureBufferBuilder::default()
+        .with_name(s("error"))
+        .with_type(s("boolean"))
+        .with_mode(s("rw"));
+
+    // Create the boolean container
+    let boolean_container = StructureBufferBuilder::default()
+        .with_name(s("boolean"))
+        .with_children(vec![error_attr]);
+
+    // Create the tester container
+    let tester_container = StructureBufferBuilder::default()
+        .with_name(s("tester"))
+        .with_children(vec![boolean_container]);
+
+    // Create the root structure
+    StructureBufferBuilder::default()
+        .with_children(vec![tester_container])
+        .build()
+        .unwrap()
+}
+
+#[test]
+fn test_path_generation_issue() {
+    use crate::attribute::structure::flat::FlatStructure;
+
+    let buffer = create_problematic_test_buffer();
+    let flat = FlatStructure::from_buffer(&buffer);
+
+    // Print all generated paths for debugging
+    println!("Generated paths:");
+    for topic in flat.get_topics() {
+        println!("  {}", topic);
+    }
+
+    // Test what we expect vs what we get
+    let expected_path = "pza/tester/boolean/error";
+    let actual_attr = flat.get(expected_path);
+
+    if actual_attr.is_none() {
+        println!("Expected path '{}' not found!", expected_path);
+        println!("Available paths:");
+        for topic in flat.get_topics() {
+            println!("  {}", topic);
+        }
+    }
+
+    assert!(
+        actual_attr.is_some(),
+        "Should find error attribute at expected path: {}",
+        expected_path
+    );
+
+    if let Some(attr) = actual_attr {
+        assert_eq!(attr.r#type, "boolean");
+        println!(
+            "Successfully found attribute at expected path: {}",
+            expected_path
+        );
+    }
+}
