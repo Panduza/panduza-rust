@@ -35,13 +35,12 @@ impl FlatStructure {
     ///
     /// # Arguments
     /// * `buffer` - The StructureBuffer to convert to flat representation
-    /// * `base_topic` - The base topic path for building complete topics
     ///
     /// # Returns
     /// A new FlatStructure instance populated from the buffer
-    pub fn from_buffer(buffer: &StructureBuffer, base_topic: &str) -> Self {
+    pub fn from_buffer(buffer: &StructureBuffer) -> Self {
         let mut flat = Self::new();
-        flat.update_from_buffer(buffer, base_topic);
+        flat.update_from_buffer(buffer, "pza");
         flat
     }
 
@@ -50,7 +49,7 @@ impl FlatStructure {
     /// Updates the flat structure from a StructureBuffer
     ///
     /// This method clears the existing attributes and rebuilds them from the buffer.
-    /// Only nodes with both 'type' and 'mode' fields are considered valid attributes.
+    /// Only nodes with 'mode' fields are considered valid attributes.
     ///
     /// # Arguments
     /// * `buffer` - The StructureBuffer to extract attributes from
@@ -64,11 +63,6 @@ impl FlatStructure {
 
         // Extract the Structure from the payload
         if let Some(structure) = message.payload_as_structure() {
-            println!(
-                "Updating FlatStructure from buffer with base_topic: {}",
-                base_topic
-            );
-
             // Extract instance path from base_topic (remove /att suffix if present)
             let instance_path = if base_topic.ends_with("/att") {
                 &base_topic[..base_topic.len() - 4]
@@ -96,15 +90,22 @@ impl FlatStructure {
         current_path: String,
         node: &crate::fbs::panduza_generated::panduza::Structure,
     ) {
-        println!("pok 55");
+        // Check if this is the root node (name is None and node is Undefined)
+        // According to specification, root structure object has name=None and node=Undefined
+        // In this case, we should start processing only with its children
+        if node.name().is_none() || (node.name().is_some() && node.name().unwrap().is_empty()) {
+            // Process child nodes directly without adding to path
+            if let Some(children) = node.children() {
+                for i in 0..children.len() {
+                    let child = children.get(i);
+                    self.flatten_structure_node(current_path.clone(), &child);
+                }
+            }
+            return;
+        }
 
-        // Get node name, if empty skip this node
-        let node_name = match node.name() {
-            Some(name) if !name.is_empty() => name,
-            _ => return,
-        };
-
-        println!("Processing node: {} at path: {}", node_name, current_path);
+        // Get node name for non-root nodes
+        let node_name = node.name().unwrap();
 
         // Build the current topic path
         let new_path = if current_path.is_empty() {
@@ -113,17 +114,18 @@ impl FlatStructure {
             format!("{}/{}", current_path, node_name)
         };
 
-        // If this node has both type and mode, it's a leaf attribute
         // Insert entry only if node contains a 'mode' (indicating it's a valid attribute leaf)
-        if let (Some(attr_type), Some(attr_mode)) = (node.type_(), node.mode()) {
-            // Create AttributeMetadata from the structure information
-            if let Ok(metadata) = crate::AttributeMetadata::from_structure_buffer_attribute(
-                new_path.clone(),
-                attr_type,
-                attr_mode,
-            ) {
-                // Insert with complete Panduza topic (without final cmd/att)
-                self.attributes.insert(new_path.clone(), metadata);
+        if let Some(attr_mode) = node.mode() {
+            if let Some(attr_type) = node.type_() {
+                // Create AttributeMetadata from the structure information
+                if let Ok(metadata) = crate::AttributeMetadata::from_structure_buffer_attribute(
+                    new_path.clone(),
+                    attr_type,
+                    attr_mode,
+                ) {
+                    // Insert with complete Panduza topic (without final cmd/att)
+                    self.attributes.insert(new_path.clone(), metadata);
+                }
             }
         }
 
@@ -206,16 +208,16 @@ impl FlatStructure {
 
 // ------------------------------------------------------------------------
 
-impl From<(&StructureBuffer, &str)> for FlatStructure {
-    /// Creates a FlatStructure from a StructureBuffer and base topic
+impl From<&StructureBuffer> for FlatStructure {
+    /// Creates a FlatStructure from a StructureBuffer
     ///
     /// # Arguments
-    /// * `(buffer, base_topic)` - Tuple containing the buffer and base topic
+    /// * `buffer` - The StructureBuffer to convert
     ///
-    /// # Returns
+    /// # Returns  
     /// A new FlatStructure instance
-    fn from((buffer, base_topic): (&StructureBuffer, &str)) -> Self {
-        Self::from_buffer(buffer, base_topic)
+    fn from(buffer: &StructureBuffer) -> Self {
+        Self::from_buffer(buffer)
     }
 }
 
