@@ -175,12 +175,9 @@ async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
             print!("Connecting to {}:{}...", PLAFORM_LOCALHOST, PLAFORM_PORT);
         }
         let reactor = Reactor::builder()
-            .address(PLAFORM_LOCALHOST.to_string())
-            .port(PLAFORM_PORT)
-            .ca_certificate(ROOT_CA_CERTIFICATE.to_string())
-            .connect_certificate(CLIENT_CERTIFICATE.to_string())
-            .connect_private_key(CLIENT_PRIVATE_KEY.to_string())
-            .namespace(NAMESPACE.to_string())
+            .with_platform_addr(PLAFORM_LOCALHOST.to_string())
+            .with_platform_port(PLAFORM_PORT)
+            .disable_security()
             .build()
             .await
             .expect("Failed to create reactor");

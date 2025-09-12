@@ -52,8 +52,9 @@ pub use connection::{create_client_connection, ConnectionError};
 ///
 // ```rust
 /// let reactor = Reactor::builder()
-///     .address("127.0.0.1")
-///     .port(7447)
+///     .with_platform_addr("127.0.0.1")
+///     .with_platform_port(7447)
+///     .disable_security()
 ///     .build();
 /// ```
 ///
