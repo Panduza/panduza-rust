@@ -21,5 +21,14 @@ fn test_insert_node_simple() {
     println!("Root after insertions: {:?}", root);
 
     // Verify the child was inserted
-    assert!(root.is_children_exists_with_name("child"));
+    assert!(root.is_children_exists_with_name("tototot"));
+    // Ensure that "child" is not a direct child of root, but of "tototot"
+    assert!(!root.is_children_exists_with_name("child"));
+
+    // Optionally, check that "child" is a child of "tototot"
+    let tototot = root
+        .get_child_by_name("tototot")
+        .expect("tototot should exist");
+    assert!(tototot.is_children_exists_with_name("tototot") == false);
+    assert!(tototot.is_children_exists_with_name("child"));
 }

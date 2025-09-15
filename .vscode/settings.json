@@ -16,5 +16,7 @@
         "src/test/**/*.java",
         "tests/**/*.py",
         "tests/**/*.rs"
-    ]
+    ],
+    "python-envs.defaultEnvManager": "ms-python.python:system",
+    "python-envs.pythonProjects": []
 }

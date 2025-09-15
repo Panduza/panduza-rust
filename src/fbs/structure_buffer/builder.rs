@@ -274,6 +274,17 @@ impl StructureBufferBuilder {
 
     // -------------------------------------------------------------------------------
 
+    /// Get a child by name, returns a reference to the child if found
+    pub fn get_child_by_name(&self, name: &str) -> Option<&StructureBufferBuilder> {
+        if let Some(children) = &self.children {
+            children.iter().find(|c| c.name.as_deref() == Some(name))
+        } else {
+            None
+        }
+    }
+
+    // -------------------------------------------------------------------------------
+
     /// Recursively insert a node at the given path
     pub fn insert_node(&mut self, mut path: Vec<String>, node: StructureBufferBuilder) {
         if path.is_empty() {
