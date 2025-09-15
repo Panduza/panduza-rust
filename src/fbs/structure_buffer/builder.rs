@@ -292,6 +292,14 @@ impl StructureBufferBuilder {
             return;
         }
         let next = path.remove(0);
+
+        // Special case: if this is the last element in the path and the node has the same name,
+        // insert the node directly instead of creating an intermediate node
+        if path.is_empty() && node.name.as_deref() == Some(&next) {
+            self.insert_child(node);
+            return;
+        }
+
         if let Some(children) = &mut self.children {
             if let Some(child) = children
                 .iter_mut()
