@@ -169,7 +169,7 @@ impl Debug for BasicsWorld {
 #[given(expr = "a reactor connected on a test platform")]
 async fn a_client_connected_on_a_test_platform(world: &mut BasicsWorld) {
     // Enable trace printing for debugging
-    let trace_print = true;
+    let trace_print = false;
 
     // No additional setup required before connecting to the test platform
     {

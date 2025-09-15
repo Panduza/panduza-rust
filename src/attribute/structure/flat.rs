@@ -109,7 +109,7 @@ impl FlatStructure {
         } else {
             format!("{}/{}", current_path, node_name)
         };
-        println!("new_path: {}", new_path);
+        // println!("new_path: {}", new_path);
 
         // Insert entry only if node contains a 'mode' (indicating it's a valid attribute leaf)
         if let Some(attr_mode) = node.mode() {
