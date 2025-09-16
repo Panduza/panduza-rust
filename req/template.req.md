@@ -38,7 +38,7 @@ Long description of scruct2
 
 ...
 
-## Specific Algorithms
+## Specifics Points
 
 ### `Algo1`
 Free and long description
