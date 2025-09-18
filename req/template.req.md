@@ -1,8 +1,14 @@
 # Module Name
+General overview of the module and its main purpose in the project.
+
+Responsabilites in the project:
+- element 1
+- element 2
+- element 3
 
 ## General specifications
 You have to read those rules before coding anything:
-- Coding rules of the project: `req\coding_rules.req.md`
+- Coding rules of the project: `req/coding_rules.req.md`
 
 ## File Path
 This module must be coded into the following file:
@@ -39,6 +45,9 @@ Long description of scruct2
 ...
 
 ## Specifics Points
+
+### `Dependencies`
+- use crate xxx for...
 
 ### `Algo1`
 Free and long description

@@ -63,3 +63,5 @@ structure: StructureAttribute,
   - **Async**: Yes
   - **Purpose**: Create a new notification attribute on "pza/_/notifications"
 
+- `create_executor(&self) -> Executor`
+  - **Purpose**: Create a new Executor from this reactor
