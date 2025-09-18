@@ -11,10 +11,7 @@ use panduza::security::utils::{
     ensure_panduza_dirs, ensure_panduza_programdata_dirs, write_panduza_file,
 };
 use panduza::security::utils::{generate_and_store_client_credentials, PanduzaFileType};
-use panduza::{
-    reactor::ReactorOptions, AttributeBuilder, BooleanAttribute, BytesAttribute, Reactor,
-    StringAttribute,
-};
+use panduza::{AttributeBuilder, BooleanAttribute, BytesAttribute, Reactor, StringAttribute};
 
 use panduza::{NotificationAttribute, StatusAttribute};
 use std::time::Duration;
@@ -182,29 +179,16 @@ impl Debug for SecurityWorld {
 ///
 #[given(expr = "a writer reactor connected on a test platform")]
 async fn a_writer_connected_on_a_test_platform(world: &mut SecurityWorld) {
-
     let (root_ca_certificate, writer_certificate, writer_private_key) =
         generate_and_store_client_credentials("writer", vec!["127.0.0.1".into()], 730)
             .expect("failed to generate writer credentials");
 
-    let options = ReactorOptions::new(
-        PLAFORM_LOCALHOST,
-        PLAFORM_PORT,
-        root_ca_certificate.as_str(),
-        writer_certificate.as_str(),
-        writer_private_key.as_str(),
-        Some(NAMESPACE),
-    );
-
     // No additional setup required before connecting to the test platform
     println!("Connecting to {}:{}...", PLAFORM_LOCALHOST, PLAFORM_PORT);
     let reactor = Reactor::builder()
-        .address(PLAFORM_LOCALHOST.to_string())
-        .port(PLAFORM_PORT)
-        .ca_certificate(ROOT_CA_CERTIFICATE.to_string())
-        .connect_certificate(WRITER_CERTIFICATE.to_string())
-        .connect_private_key(WRITER_PRIVATE_KEY.to_string())
-        .namespace(NAMESPACE.to_string())
+        .with_platform_addr(PLAFORM_LOCALHOST.to_string())
+        .with_platform_port(PLAFORM_PORT)
+        .disable_security()
         .build()
         .await
         .unwrap();
@@ -241,29 +225,16 @@ async fn a_writer_connected_on_a_test_platform(world: &mut SecurityWorld) {
     expr = "a default user connecting to the platform without getting notifications and status"
 )]
 async fn a_default_user_connecting_to_the_platform(world: &mut SecurityWorld) {
-
     let (root_ca_certificate, default_certificate, default_private_key) =
         generate_and_store_client_credentials("default", vec!["127.0.0.1".into()], 730)
             .expect("failed to generate default credentials");
 
-    let options = ReactorOptions::new(
-        PLAFORM_LOCALHOST,
-        PLAFORM_PORT,
-        root_ca_certificate.as_str(),
-        default_certificate.as_str(),
-        default_private_key.as_str(),
-        Some(NAMESPACE),
-    );
-
     // No additional setup required before connecting to the test platform
     println!("Connecting to {}:{}...", PLAFORM_LOCALHOST, PLAFORM_PORT);
     let reactor = Reactor::builder()
-        .address(PLAFORM_LOCALHOST.to_string())
-        .port(PLAFORM_PORT)
-        .ca_certificate(ROOT_CA_CERTIFICATE.to_string())
-        .connect_certificate(DEFAULT_CERTIFICATE.to_string())
-        .connect_private_key(DEFAULT_PRIVATE_KEY.to_string())
-        .namespace(NAMESPACE.to_string())
+        .with_platform_addr(PLAFORM_LOCALHOST.to_string())
+        .with_platform_port(PLAFORM_PORT)
+        .disable_security()
         .build()
         .await
         .unwrap();
@@ -274,29 +245,16 @@ async fn a_default_user_connecting_to_the_platform(world: &mut SecurityWorld) {
 ///
 #[given(expr = "a logger reactor connected on a test platform")]
 async fn a_logger_connected_on_a_test_platform(world: &mut SecurityWorld) {
-
     let (root_ca_certificate, logger_certificate, logger_private_key) =
         generate_and_store_client_credentials("logger", vec!["127.0.0.1".into()], 730)
             .expect("failed to generate logger credentials");
 
-    let options = ReactorOptions::new(
-        PLAFORM_LOCALHOST,
-        PLAFORM_PORT,
-        root_ca_certificate.as_str(),
-        logger_certificate.as_str(),
-        logger_private_key.as_str(),
-        Some(NAMESPACE),
-    );
-
     // No additional setup required before connecting to the test platform
     println!("Connecting to {}:{}...", PLAFORM_LOCALHOST, PLAFORM_PORT);
     let reactor = Reactor::builder()
-        .address(PLAFORM_LOCALHOST.to_string())
-        .port(PLAFORM_PORT)
-        .ca_certificate(ROOT_CA_CERTIFICATE.to_string())
-        .connect_certificate(LOGGER_CERTIFICATE.to_string())
-        .connect_private_key(LOGGER_PRIVATE_KEY.to_string())
-        .namespace(NAMESPACE.to_string())
+        .with_platform_addr(PLAFORM_LOCALHOST.to_string())
+        .with_platform_port(PLAFORM_PORT)
+        .disable_security()
         .build()
         .await
         .unwrap();

@@ -15,6 +15,9 @@ use flatbuffers::WIPOffset;
 use rand::random;
 use std::fmt::Debug;
 
+#[cfg(test)]
+mod tests;
+
 /// Builder for StructureBuffer
 #[derive(Default, Clone, PartialEq, Debug)]
 pub struct StructureBufferBuilder {
@@ -271,6 +274,17 @@ impl StructureBufferBuilder {
 
     // -------------------------------------------------------------------------------
 
+    /// Get a child by name, returns a reference to the child if found
+    pub fn get_child_by_name(&self, name: &str) -> Option<&StructureBufferBuilder> {
+        if let Some(children) = &self.children {
+            children.iter().find(|c| c.name.as_deref() == Some(name))
+        } else {
+            None
+        }
+    }
+
+    // -------------------------------------------------------------------------------
+
     /// Recursively insert a node at the given path
     pub fn insert_node(&mut self, mut path: Vec<String>, node: StructureBufferBuilder) {
         if path.is_empty() {
@@ -278,6 +292,14 @@ impl StructureBufferBuilder {
             return;
         }
         let next = path.remove(0);
+
+        // Special case: if this is the last element in the path and the node has the same name,
+        // insert the node directly instead of creating an intermediate node
+        if path.is_empty() && node.name.as_deref() == Some(&next) {
+            self.insert_child(node);
+            return;
+        }
+
         if let Some(children) = &mut self.children {
             if let Some(child) = children
                 .iter_mut()

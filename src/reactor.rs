@@ -3,6 +3,7 @@ use crate::attribute::status::StatusAttribute;
 
 use crate::attribute::structure::StructureAttribute;
 use crate::attribute_builder::AttributeBuilder;
+use crate::executor::Executor;
 use crate::AttributeMetadata;
 use crate::AttributeMode;
 use zenoh::Session;
@@ -103,5 +104,13 @@ impl Reactor {
     pub async fn find_attribute<A: Into<String>>(&self, pattern: A) -> AttributeBuilder {
         let metadata = self.structure.find_attribute(pattern).await;
         AttributeBuilder::new(self.clone(), metadata)
+    }
+
+    /// Create a new Executor from this reactor
+    ///
+    /// # Returns
+    /// A new Executor instance that uses this reactor for its operations
+    pub fn create_executor(&self) -> Executor {
+        Executor::new(self.clone())
     }
 }

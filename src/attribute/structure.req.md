@@ -24,6 +24,7 @@ This module provides a high-level wrapper for managing `StructureBuffer` attribu
 - `crate::fbs::StructureBuffer` (FlatBuffers structure buffer)
 - `crate::AttributeMetadata` (attribute metadata)
 - `crate::fbs::PzaBuffer` (If you need to use trait functions)
+- `super::structure::flat::FlatStructure` (flattened structure representation)
 
 ## Core Structure
 
@@ -35,7 +36,7 @@ This module provides a high-level wrapper for managing `StructureBuffer` attribu
 **Fields**:
 ```rust
 /// Flat version of the structure to ease find algorithms
-pub flat: HashMap<String, AttributeMetadata>,
+pub flat: FlatStructure,
 
 // Internal generic implementation based on an already design manager
 pub inner: StdObjAttribute<StructureBuffer>,
@@ -43,12 +44,14 @@ pub inner: StdObjAttribute<StructureBuffer>,
 
 ## Specific management of `flat`
 
-Field `flat` contains a modified structure of data contained in StructureBuffer to ease operations of finding metadata based on topic input.
+Field `flat` is a `FlatStructure` instance that contains a flattened representation of the hierarchical StructureBuffer data to ease operations of finding metadata based on topic input.
 
-- Each time we recieved a StructureBuffer, `flat` must be updated. (you can use add_callback for this)
-- Insert a entry in the map only if StructureBuffer node contains a `mode`, it means that it is a leaf of the tree and a valid attribute to insert.
-- Each key is a complete Panduza topic without the final [cmd|att] see `req\panduza_topics.req.md` for more information
-- To build a topic take root elements as instance of the topics
+- Each time we receive a StructureBuffer, `flat` must be updated using `FlatStructure::update_from_buffer()` (you can use add_callback for this)
+- The `FlatStructure` automatically handles the flattening logic:
+  - Only inserts entries for nodes that contain both 'type' and 'mode' fields (indicating valid attribute leaves)
+  - Each key is a complete Panduza topic without the final [cmd|att] suffix (see `req\panduza_topics.req.md` for more information)
+  - Recursively processes the structure tree to build topic paths from root elements as instance topics
+- Use `FlatStructure` methods like `get()`, `find_attributes()`, and `get_topics()` for attribute lookup operations
 
 ## Implementation Methods
 
@@ -93,10 +96,25 @@ Field `flat` contains a modified structure of data contained in StructureBuffer 
   - **Async**: Yes
   - **Purpose**: Return the last structure value recieved as json string
 
-- `find_attribute<A: Into<String>>(&self, pattern: A) -> Option<AttributeMetadata>`
+- `find_attribute<A: Into<String>>(&self, pattern: A) -> Option<&AttributeMetadata>`
   - **Async**: No
-  - **Purpose**: Use the flat field to find the topic that match the wildcard `pattern`
+  - **Purpose**: Use the flat field to find attributes matching the `pattern` using `FlatStructure::find_attributes()`
   - **Returns**: Reference to metadata if found
+
+- `get_attribute_by_topic(&self, topic: &str) -> Option<&AttributeMetadata>`
+  - **Async**: No
+  - **Purpose**: Get a specific attribute by its exact topic path using `FlatStructure::get()`
+  - **Returns**: Reference to metadata if found
+
+- `get_all_topics(&self) -> Vec<&String>`
+  - **Async**: No
+  - **Purpose**: Get all available attribute topics using `FlatStructure::get_topics()`
+  - **Returns**: Vector of all topic paths
+
+- `flat_structure_len(&self) -> usize`
+  - **Async**: No
+  - **Purpose**: Get the number of flattened attributes using `FlatStructure::len()`
+  - **Returns**: Number of attributes in the flat structure
 
 ## Design Patterns
 
@@ -108,6 +126,13 @@ All operations except metadata access are asynchronous, following Zenoh's async 
 
 ### Generic Callback System
 Supports flexible callback registration with optional conditions, enabling reactive programming patterns for structure data changes.
+
+### Flat Structure Integration
+The `FlatStructure` type encapsulates the flattening logic and provides a clean API for:
+- Automatic hierarchy traversal and topic path construction
+- Efficient attribute lookup by topic or pattern matching
+- Deref traits for direct HashMap-like access when needed
+- Type-safe operations on the flattened representation
 
 ## Usage Context
 This module is part of the Panduza attribute system, specifically handling tree-structured data represented as FlatBuffers. It's typically used for device discovery, capability advertisement, and hierarchical data representation in IoT systems.

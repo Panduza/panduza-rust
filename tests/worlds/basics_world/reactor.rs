@@ -21,11 +21,9 @@ async fn a_reactor_trying_to_connect_to_an_invalid_platform(world: &mut BasicsWo
     world.reactor.connection_failed = false;
 
     match Reactor::builder()
-        .ip("pok".to_string())
-        .port(5894)
-        .ca_certificate("zaza.pem".to_string())
-        .connect_certificate("cert.pem".to_string())
-        .connect_private_key("key.pem".to_string())
+        .with_platform_addr("pok".to_string())
+        .with_platform_port(5894)
+        .disable_security()
         .build()
         .await
     {
@@ -42,15 +40,15 @@ async fn a_reactor_trying_to_connect_to_an_invalid_platform(world: &mut BasicsWo
 ///
 ///
 #[given(expr = "a reactor trying to connect to a platform with a wrong certificate")]
-async fn a_reactor_trying_to_connect_to_a_platform_with_a_wrong_certificate(world: &mut BasicsWorld) {
+async fn a_reactor_trying_to_connect_to_a_platform_with_a_wrong_certificate(
+    world: &mut BasicsWorld,
+) {
     world.reactor.connection_failed = false;
 
     match Reactor::builder()
-        .ip("127.0.0.1".to_string())
-        .port(7447)
-        .ca_certificate("credentials/certificates/root_ca_certificate.pem".to_string())
-        .connect_certificate("credentials/certificates/bad_client_certificate.pem".to_string())
-        .connect_private_key("credentials/keys/bad_client_private_key.pem".to_string())
+        .with_platform_addr("127.0.0.1".to_string())
+        .with_platform_port(7447)
+        .disable_security()
         .build()
         .await
     {
@@ -67,15 +65,15 @@ async fn a_reactor_trying_to_connect_to_a_platform_with_a_wrong_certificate(worl
 ///
 ///
 #[given(expr = "a reactor trying to connect to a platform with an expired certificate")]
-async fn a_reactor_trying_to_connect_to_a_platform_with_an_expired_certificate(world: &mut BasicsWorld) {
+async fn a_reactor_trying_to_connect_to_a_platform_with_an_expired_certificate(
+    world: &mut BasicsWorld,
+) {
     world.reactor.connection_failed = false;
 
     match Reactor::builder()
-        .ip("127.0.0.1".to_string())
-        .port(7447)
-        .ca_certificate("credentials/certificates/root_ca_certificate.pem".to_string())
-        .connect_certificate("credentials/certificates/expired_client_certificate.pem".to_string())
-        .connect_private_key("credentials/keys/expired_client_private_key.pem".to_string())
+        .with_platform_addr("127.0.0.1".to_string())
+        .with_platform_port(7447)
+        .disable_security()
         .build()
         .await
     {
@@ -125,7 +123,12 @@ async fn the_reactor_find_function_is_called_with_the_previously_given_attribute
     world: &mut BasicsWorld,
 ) {
     if let Some(attribute_name) = &world.reactor.att_name {
-        let result = world.r.as_ref().unwrap().find_attribute(attribute_name).await;
+        let result = world
+            .r
+            .as_ref()
+            .unwrap()
+            .find_attribute(attribute_name)
+            .await;
         world.reactor.find_result = Some(result);
     } else {
         panic!("Attribute name is not set");

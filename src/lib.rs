@@ -15,19 +15,52 @@
     unused_parens
 )]
 
-//
-pub mod pubsub;
-
 // pub mod router;
 pub mod session;
 
-/// This module manage the Reactor and its builder
+/// Configuration module for client settings
 ///
-/// Maturity Level: good
+/// *Maturity Level*: good
+///
+/// This module provides configuration structures for platform and security settings.
+/// It supports serialization/deserialization with serde for easy integration with
+/// configuration files (JSON, TOML, etc.).
+///
+pub mod config;
+pub use config::{Config, EndpointConfig, SecurityConfig};
+
+/// Connection module for Zenoh session management
+///
+/// *Maturity Level*: good
+///
+/// This module provides easy functions to create Zenoh sessions for Panduza purpose.
+/// It handles different connection types based on security configuration.
+///
+pub mod connection;
+pub use connection::{create_client_connection, ConnectionError};
+
+/// This module manage the Reactor
+///
+/// *Maturity Level*: good
+///
+/// The reactor is the main entry point for the Panduza client library.
+/// Any user must create a reactor instance to be able to use the library.
+///
+/// The reactor create and manage a Zenoh session to communicate with Panduza Platform.
+///
+/// The reactor also provide a builder.
+///
+// ```rust
+/// let reactor = Reactor::builder()
+///     .with_platform_addr("127.0.0.1")
+///     .with_platform_port(7447)
+///     .disable_security()
+///     .build();
+/// ```
 ///
 pub mod reactor;
 pub use reactor::Reactor;
-
+pub use reactor::ReactorBuilder;
 ///
 pub mod attribute_mode;
 pub use attribute_mode::AttributeMode;
@@ -61,6 +94,11 @@ pub use task_monitor::TaskMonitor;
 mod topic;
 pub use topic::Topic;
 
+/// This module provides handy functions to access to all standardized paths of Panduza on systems.
+/// This module works for any OS (Windows, Linux, Mac)
+///
+pub mod path;
+
 /// FlatBuffers: Serialization and Deserialization
 ///
 /// Define and manage all the network payload for Panduza.
@@ -89,4 +127,3 @@ pub use executor::Executor;
 ///
 ///
 pub mod security;
-

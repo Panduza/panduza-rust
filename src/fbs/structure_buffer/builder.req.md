@@ -73,4 +73,5 @@ pub sequence: Option<u16>,         // Message sequence
 - `build_wip_offset<'a>(&self, builder: &mut FlatBufferBuilder<'a>) -> WIPOffset<Structure<'a>>`
 - `insert_child(&mut self, child: StructureBufferBuilder)`
 - `is_children_exists_with_name(&self, name: &str) -> bool`
+- `get_child_by_name(&self, name: &str) -> Option<&StructureBufferBuilder>` (returns reference to child with matching name)
 - `insert_node(&mut self, path: Vec<String>, node: StructureBufferBuilder)` (recursive tree insertion)

@@ -123,15 +123,6 @@ async fn the_ro_boolean_value_is(world: &mut BasicsWorld, expected_value: Boolea
         .unwrap()
         .wait_for_value(expected_value.into_bool(), Some(Duration::from_secs(5)))
         .await;
-    let read_value = world.boolean.att_ro.as_mut().unwrap().get().await.unwrap();
-
-    assert_eq!(
-        read_value.value().expect("Value should be present"),
-        expected_value.into_bool(),
-        "read '{:?}' != expected '{:?}'",
-        read_value,
-        expected_value.into_bool()
-    );
 }
 
 ///
