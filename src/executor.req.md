@@ -29,8 +29,15 @@ Main struct that provides tool functions for MCP server operations. Takes an ini
 **Methods:**
 - `new(reactor: Reactor) -> Self`
   - **Purpose**: Constructor method to create a new Executor instance with the provided Reactor.
+
 - `structure_get(&self) -> Result<String, Error>`
   - **Purpose**: Provide the JSON structure of all test bench attributes using the last structure received by the Structure attribute of the reactor.
+
+- `attribute_boolean_get(&self, &topic: String) -> Result<bool, Error>`
+  - **Purpose**: Return the value of the given boolean attribute topic
+
+- `attribute_boolean_set(&self, &topic: String, value: bool) -> Result<(), Error>`
+  - **Purpose**: Set the value of the given boolean attribute topic
 
 ## Specifics Points
 
